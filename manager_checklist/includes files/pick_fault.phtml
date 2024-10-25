@@ -1,0 +1,217 @@
+<?
+
+if (!isset($campaign)) 
+	$campaign = false;
+
+echo "<input type=hidden name=faultclass value=14616>";
+
+$mylink=$_SERVER["REQUEST_URI"];
+if (strstr($mylink,"?"))
+	$oldlink=$mylink."&oldtab=Y";
+else
+{
+	// ADD POST VARIABLES??
+
+	$oldlink=$mylink."?oldtab=Y";
+	reset($_POST);
+	foreach($_POST as $key => $val)
+		$oldlink.="&$key=$val";
+
+}
+
+if (!isset($hideguide))
+echo "<br><a href='$oldlink'>click here if the menu below doesnt work</a><br>";
+
+//<input type=button onclick='document.location.reload(true);' value='Reload'>  
+?>
+
+<script>
+	var lastshown = -1;
+	var faultSupplied = false;
+	var needsExplanation = false
+
+	function showgroup(group, parents, haskids) {
+		needsExplanation = false;
+		try {
+			document.getElementById('f' + lastshown).style.background = '#CCCCCC';
+		} catch (error) { }
+
+			let found = false;
+		try {
+			parents.forEach( element => { 
+				console.log('compare ' + element + ' to ' + lastshown); 
+				if (element == lastshown) {
+					found = true; 
+				}
+			});	
+		} catch (error) {} 
+
+			if (!found) {
+//				console.log('Removing ' + lastshown);
+				try { 
+				document.getElementById('group' + lastshown).style.display = 'none';
+				} catch (error) {} 
+			}
+			try {
+			document.getElementById('fo' + lastshown).style.background = '#CCCCCC';
+			} catch (error) { }
+
+
+		lastshown = group;
+		try {
+			document.getElementById('f' + group).style.background = 'lightblue';
+		} catch (error) { }
+		try {
+			document.getElementById('group' + group).style.display = 'block'; 
+		} catch (error) {
+		}
+
+//                document.getElementById('other').style.display = 'none';
+		try {
+		document.getElementById('rf' + group).checked = true;
+		} catch (error) {}
+		
+		if (haskids) {
+//			console.log('haskids');
+		
+			document.getElementById('notok').style.display = 'block';
+			document.getElementById('ok').style.display = 'none';
+			faultSupplied = false;
+			document.getElementById('otherwarning').style.display = 'none';
+
+		} else {
+//			console.log('nokids');
+			document.getElementById('ok').style.display = 'block';
+                        document.getElementById('notok').style.display = 'none';
+			faultSupplied = true;
+			document.getElementById('otherfault').focus();
+			otherstatus();
+		}	
+
+
+	}
+
+        function useOther(group) {
+                try {
+                        document.getElementById('f' + lastshown).style.background = '#CCCCCC';
+//			document.getElementById('group' + lastshown).style.display = 'none';
+                        document.getElementById('fo' + lastshown).style.background = '#CCCCCC';
+                }
+                catch (error) {
+                }
+                lastshown = group;
+                try {
+                        document.getElementById('fo' + group).style.background = 'lightblue';
+                } catch (error) {
+                }
+
+//		document.getElementById('other').style.display = 'block';
+		document.getElementById('rfo' + group).checked = true;
+
+		document.getElementById('notok').style.display = 'none';
+		document.getElementById('ok').style.display = 'none';
+		document.getElementById('otherfault').focus();
+		needsExplanation = true;
+		faultSupplied = true;
+		otherstatus();
+
+        }
+
+
+	function otherstatus() {
+
+		console.log('LEN: ' + document.getElementById('otherfault').value.length);
+		if (document.getElementById('otherfault').value.length>5 || !needsExplanation) {
+			document.getElementById('otherwarning').style.display = 'none';
+			if (faultSupplied)
+				document.getElementById('submit').style.display = 'block';
+			else
+				document.getElementById('submit').style.display = 'none';
+		} else {
+			document.getElementById('otherwarning').style.display = 'block';
+			document.getElementById('submit').style.display = 'none';
+		}
+	}
+
+</script>
+
+<?
+
+function process_tree($parent, $level, $parents) {
+	global $fault, $childrenof;
+	
+	$gap = "";
+	$gap2 = "";
+	for ($a = 0; $a < $level; $a++) {
+		$gap .= "&nbsp;&nbsp;&nbsp;";
+		$gap2 .= " ";
+	}
+	$extragap = $gap . "&nbsp;&nbsp;&nbsp;";
+
+	
+	echo "$gap2<div id=group$parent";
+	if ($parent != -1)
+		echo " style='display: none'";
+	echo ">\n";
+
+	$parents[]=$parent;
+	$parentstext=json_encode($parents);
+
+	foreach( $childrenof[$parent] as $key => $serial)  {
+		if (isset($childrenof[$serial])) {
+			$haskids=1;
+		} else {
+			$haskids=0;
+		}
+		echo "$gap2  <div id='f$serial' style='background: #CCCCCC'  onclick='showgroup($serial, $parentstext, $haskids);'>". $gap . "<input type=radio name=fault onclick=\"needsExplanation=false;\" id='rf$serial' value='f$serial'> " . $fault[$serial]["TFC_NAME"]."</div>\n";
+		if (isset($childrenof[$serial]))
+		{
+			process_tree($serial, $level + 1, $parents); // recursively go down the tree
+		}
+	}
+	if ($parent != -1) {
+	        echo "$gap2  <div id='fo$parent'  style='background: #CCCCCC' onclick='useOther($parent);'>". $gap . "<input type=radio name=fault id='rfo$parent' value='fo$parent'> Other: " .$fault[$parent]["TFC_NAME"]."</div>\n";
+	}
+
+
+	echo "$gap2</div>\n";
+
+}
+
+		
+ora_parse($cursor,"select * from technical_faults_category where tfc_is_deleted = 0  and tfc_is_other = 0");
+ora_exec($cursor);
+while (ora_fetch_into($cursor,$data,ORA_FETCHINTO_ASSOC)) {
+	$fault[$data["TFC_ID"]]=$data;
+	$parent=$data["TFC_REF_CATEGORY"];
+	if ($parent=="")
+		$parent=-1; // top level	
+	$childrenof[$parent][]=$data["TFC_ID"];
+	unset($data);
+}
+
+$level=0;
+echo "<div id='toplevel'>";
+$parents=array();
+process_tree(-1,0, $parents);
+echo "</div>";
+
+if (!isset($otherfaultdefault))
+{
+	$otherfaultdefault = "";
+}
+if ($campaign)
+	$namefault="what work to carry out";
+else	
+	$namefault="fault";
+echo "<div id='other'>Please type in details of $namefault:<Br><textarea id='otherfault'  onkeyup='otherstatus()' name=faultdescription maxlength=1000 rows=4 cols=80>$otherfaultdefault</textarea></div>\n";
+echo "<div id='otherwarning' style='display:none'><font color=red>PLEASE TYPE IN DESCRIPTION</font></div>";
+if ($campaign)
+        $faultname="category";
+else
+        $faultname="fault";
+echo "<div id=notok><font color=red>Please select a $faultname</font></div>";
+echo "<div id=ok style='display: none'><font color=green>A $faultname has been selected</font></div>";
+
+
+?>

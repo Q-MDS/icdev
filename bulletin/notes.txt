@@ -1,0 +1,2 @@
+From Keith - how to get user_id
+select person_serial from user_Details where username='Keith' and is_current='Y';

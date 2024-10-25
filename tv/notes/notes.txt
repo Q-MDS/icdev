@@ -1,0 +1,45 @@
+- TV's in 2 stations, tv will send url + variable saying which TV it is eg JHB1
+- Boarding gate needs: Route number and description
+- Arrival boards: url has digits at the end which is the stop (Brllvile in the pic).
+- Create table: DEPARTURE_TVS - Static data - Holds list of TV's and location
+  - SCREEN_ID - NUMBER - UNIQUE/PRIMARY KEY
+  - NAME - VC2(10) - eg ct1 / ct2 / jhb1 – the name used in the URL the TV calls
+  - BRANCH - VC(20) eg JNB Station – from select branch_name from branch_info where is_dealer='N' order by 1; 
+  - STOP_SERIAL - NUMBER eg 219 for JNB Station
+
+- Create table: DEPARTURE_TV_SETTINGS
+  - SCREEN_ID - NUMBER - 
+  - BRAND - CHAR(2) - e.g.  IM   /  BI  /  IC  -> this determines the logo at the top.  route_details.carrier_code
+  - ROUTE_NO - CHAR(4)
+  - ROUTE_DESCRIPTION VC2(100)
+
+PROCESS
+The TV checks every 30 seconds for data/what to display. If it is OFFLINE, it must display "Please check back later".
+Suggestion: On initial call get the screen_id and data which is a heavy db lookup and then use the screen_id in api call (async)
+If no settings (guessing boarding data) then fetch the arrival/departure data and display.
+Arrival/departure also has a refresh every 30 seconds so I'm guessing if it finds boarding daat then switch to boarding display which is shown until bus has left and settings is cleared
+
+Office Management Tool
+- Mobile friendly
+- User logs in and are returned the list of TV's for their branch (looked up via in db on login - select branch from user_Details where is_current=’Y’ and username=’$user’)
+- User select TV and sees the following form:
+  - TV Name eg. JHB1
+  - Input field/search/dropdown of routes
+    - If input is empty then button is ADD
+    - If something is there then REMOVE
+  - select carrier_code,route_no,description from route_details where date_to>=20241023 and date_from<=20241023; 
+
+IT MANAGEMENT TOOLS
+- CRUD for DEPARTURE_TVS_TABLE - Dev as standalone...
+
+Process
+- 1 html layout for boarding - add 30 second refresh - use returned data (BRAND) to decide which logo to show
+- 1 html layout for arrivals - add 30 second refresh
+
+- api: receives url (https://secure.intercape.co.za/g.php?ct1), checks DEPARTURE_TVS for the screen_id WHERE NAME = ct1 (passed in URL). Then use the DEPARTURE_TV_SETTINGS to get data for that TV. If no data is found then get the arrival data for that branch (get from DEPARTURE_TVS)
+- if TV must display the arrival data a new api call is made with the station id in the url params
+
+
+Need info/questions/unknowns
+1. Where do I get the arrival data
+2. Must I create the arrival screen?

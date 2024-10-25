@@ -1,0 +1,121 @@
+http://192.168.10.239/move/jobcard_daily_auth.phtml?stage=4&subjob_more=true&jobserial=16213330&goback=Y
+
+http://192.168.10.239/move/dev_jobcard_daily_auth.phtml?stage=4&subjob_more=true&jobserial=16213330&goback=Y
+http://192.168.10.239/move/jobcard_daily_auth.phtml?stage=4&subjob_more=true&goback=Y&jobserial=16213330
+
+
+http://192.168.10.239/move/dev_jobcard_daily_auth.phtml?stage=7&subjob_more=true&jobserial=16213330&goback=Y
+http://192.168.10.239/move/dev_jobcard_daily_auth.phtml?stage=4&subjob_more=true&jobserial=16211540&goback=Y
+
+TEST PUSH NOTIFICATIONS
+http://192.168.10.239/booking/push/test.php
+
+
+insert at 687
+insert at 1328 (new)
+1558
+
+Jobcard serial number: 16213330
+
+move_jobcards_comments
+Column name		Data Type   	Nullable	Data Default 	Column_ID	Comments
+JOBCARDSERIAL	NUMBER			No 			NULL 			1			NULL 
+CREATE_DATE		NUMBER			Y			''
+PERSON 			VARCHAR2(35)	Y			''
+COMMENT_DESC	VARCHAR2(300)	Y			''
+
+Array ( [jobcard_id] => 16213330 [comment_date] => 2024-08-28 15:35:07 [comment_person] => A [comment_msg] => 1 )
+
+Process cancel array, delete the ticket if a match
+
+2 more items:
+1. Snippets: keyword, admin page, table: tour_note_categories, tour_note_detail
+http://192.168.10.239/booking/tour-day.phtml?depot=CA&ser=87829&ss=103449
+
+9:35
+pops up from http://192.168.10.239/booking/edit-tour.phtml?depot=CA&ser=87829&myss=103449
+
+3. OC
+new detail table
+-reason - tick boxes
+Link: http://192.168.10.239/move/dev_oc.phtml?stage=0
+
+vechile_oc: 
+==========
+ENTRY_SERIAL	NUMBER				Yes		1	
+VEHICLE			NUMBER				Yes		2	
+FLAGGED_BY		NUMBER				Yes		3	
+CLEARED_BY		NUMBER				Yes		4	
+START_DATE		NUMBER				Yes		5	
+END_DATE		NUMBER				Yes		6	
+NOTES			VARCHAR2(100 BYTE)	Yes		7	
+REPLACED_BY		NUMBER				Yes		8	
+FLAGGED_DATE	DATE				Yes		9	
+CLEARED_DATE	DATE				Yes		10	
+TIME_READY		NUMBER				Yes		11	
+DEPOT			VARCHAR2(3 BYTE)	Yes		12	
+
+901	3306	623271449	N	20060822	20060823	C SERVICE	N	20/JUN/21	N	12	N
+
+vehicle_oc_reasons
+==================
+ENTRY_SERIAL	NUMBER				Yes		1
+CREATE_DATE		NUMBER				Yes		2
+CREATE_BY		VARCHAR2 (35)		Yes		3
+REASON_DESC		VARCHAR2 (120)		YES 	4
+
+recall
+
+/tour
+/oc
+-- remove REASON_DESC in vehicle_oc_reasons
+-- update insert sql
+-- SQL: oc_reasons
+CREATE TABLE "ICAPE"."OC_REASONS" 
+   (	"ID" NUMBER NOT NULL ENABLE, 
+	"REASON_DESC" VARCHAR2(100 BYTE) COLLATE "USING_NLS_COMP", 
+	"IS_ACTIVE" CHAR(1 BYTE) COLLATE "USING_NLS_COMP" DEFAULT 'Y'
+   )  DEFAULT COLLATION "USING_NLS_COMP" SEGMENT CREATION IMMEDIATE 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 
+ NOCOMPRESS LOGGING
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1
+  BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "ICAPE" ;
+
+-- SQL  vehicle_oc_reasons
+CREATE TABLE "ICAPE"."VEHICLE_OC_REASONS" 
+   (	"ENTRY_SERIAL" NUMBER NOT NULL ENABLE, 
+	"REASON_ID" NUMBER NOT NULL ENABLE
+   )  DEFAULT COLLATION "USING_NLS_COMP" SEGMENT CREATION IMMEDIATE 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 
+ NOCOMPRESS LOGGING
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1
+  BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "ICAPE" ;
+
+-- SQL Sequence
+CREATE SEQUENCE  "ICAPE"."OC_REASON_ID_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL ;
+
+
+
+4. android app - source -> priority
+
+5. Tickets to buy to home
+
+
+Morning. I finished the add comments and uploaded it to : http://192.168.10.239/move/dev_jobcard_daily_auth.phtml?stage=4&subjob_more=true&jobserial=16213330&goback=Y. I tried to upload a small change (form validation so user cant add a blank record) and the VPN is not working again, same problem as yesterday.
+
+Huawei not working on P40 onwards:
+https://stackoverflow.com/questions/61623792/i-cant-get-firebase-token-from-huawei-p40-series-device
+
+Bulletin
+- Show read/use √
+- add order to manage  √
+- priority: date
+- Cant select 0 in availabe ~
+
+2265 3744 = 1479
+
+3518

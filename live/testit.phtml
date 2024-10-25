@@ -1,0 +1,57 @@
+
+<html>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+vcpk("20050103");
+
+function vcpk($rundate) {
+	global $conn, $cursor;
+	$stage=1;
+	$included="Y";
+	$_POST['subGo']="Summary";
+	$subGo="Summary";
+        $date_from="0101".substr($rundate,0,4);
+	$_POST['date_from']=$date_from;
+	$date_to=substr($rundate,6,2).substr($rundate,4,2).substr($rundate,0,4);
+	$_POST['date_to']=$date_to;
+	$_POST['chkAll']="on";
+	$chkAll="on";
+	$_POST['FleetNumber']=3197;
+	$FleetNumber=3197;
+	$_POST['txtFleetNumber']="all";
+	$txtFleetNumber="all";
+	$_POST['fuel_cost']=0;
+	$fuel_cost=0;
+	$_POST['chkrate']="on";
+	$chkrate="on";
+	$_POST['rate']=150;
+	$rate=150;
+	$_POST['start']=10072005;
+	$start=10072005;
+	$_POST['end']=13072005;
+	$end=13072005;
+	require_once ("vehicle_cpk_report.phtml");
+	
+//?date_from=10072005&date_to=13072005&txtFleetNumber=3197&chkAll=on&chkfuel=on&fuel_cost=4.50&chkrate=on&rate=150
+
+} // vcpk
+
+
+
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>

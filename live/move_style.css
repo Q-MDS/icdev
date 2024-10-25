@@ -1,0 +1,200 @@
+a {
+        cursor:pointer;
+        cursor:hand
+}
+
+body { 
+	color: black; 
+	background: white; 
+}
+
+table {
+	border = 0;
+}
+
+table.noborder {
+	border = 0;
+	background = white;
+}
+
+table.printnoborder {
+    border = 0;
+    background = white;
+	font-family = Arial;
+}
+
+table.headcolour {
+	border = 0;
+	background: lavender;
+}
+
+table.menu {
+	border = 0;
+	background = white;
+}
+
+table.print {
+	border = 0;
+	background = black;
+}
+
+table.choices {
+	border = 0;
+	background = white;
+	width = 100%;
+}
+
+table.inner {
+	border = 0;
+	background = lightsteelblue;
+	width = 100%;
+}
+
+tr.title {
+	background: lightsteelblue;
+	font-weight: bold;
+}
+
+tr.head {
+	background: lavender;
+	font-weight: bold;
+}
+
+tr.cell {
+	background: whitesmoke;
+}
+
+tr.alttitle {
+	background: gray;
+	font-weight: bold;
+}
+
+tr.althead {
+	background: silver;
+	font-weight: bold;
+}
+
+tr.altcell {
+	background: gainsboro;
+}
+
+div.info {
+	width: 80%;
+	background: lightsteelblue;
+	border-left: solid;
+	border-right: none;
+	border-top: none;
+	border-bottom: none;
+	border-left-width: thin;
+	border-color: red;
+	padding-left: 1em;
+	padding-top: 0.3em;
+	padding-bottom: 0.3em;
+}
+
+div.menu {
+	border: none;
+	width: 80%;
+	background: white;
+	border-left: solid;
+	border-right: none;
+	border-top: none;
+	border-bottom: solid;
+	border-left-width: thin;
+	border-bottom-width: thin;
+	border-color: black;
+	padding-left: 0.5em;
+	padding-top: 0.0em;
+	padding-bottom: 0.0em;
+}
+
+div.choices {
+	border: none;
+	width: 80%;
+	background: white;
+	border-left: solid;
+	border-right: none;
+	border-top: none;
+	border-bottom: none;
+	border-left-width: thin;
+	border-color: red;
+	padding-left: 1em;
+	padding-top: 0.0em;
+	padding-bottom: 0.0em;
+}
+
+:link {
+	color: blue;
+	text-decoration: none
+}
+
+:visited {
+	color: blue;
+	text-decoration: none
+}
+
+:hover {
+	color: blue;
+	background: lavender;
+	text-decoration: underline overline;
+}
+
+table.tyre {
+	border = 0;
+
+}
+
+tr.tyre {
+
+}
+
+
+
+BODY.diag {
+        FONT-SIZE: 11px; FONT-FAMILY: Verdana, Tahoma, Arial, Helvetica,sans-serif
+}
+
+TABLE.diag {
+        FONT-SIZE: 11px; FONT-STYLE: normal; FONT-FAMILY: Verdana, Tahoma, Arial, Helvetica, sans-serif
+	border = 0;
+	background = "#FFFFFF";        
+}
+
+TBODY.diag {
+        FONT-SIZE: 11px; FONT-STYLE: normal; FONT-FAMILY: Verdana, Tahoma, Arial, Helvetica, sans-serif
+}
+
+TD.diag {
+        FONT-SIZE: 11px; FONT-STYLE: normal; FONT-FAMILY: Verdana, Tahoma, Arial, Helvetica, sans-serif
+}
+
+TFOOT.diag {
+        FONT-SIZE: 11px; FONT-STYLE: normal; FONT-FAMILY: Verdana, Tahoma, Arial, Helvetica, sans-serif
+}
+
+TH.diag {
+        FONT-SIZE: 11px; FONT-STYLE: normal; FONT-FAMILY: Verdana, Tahoma, Arial, Helvetica, sans-serif
+}
+
+THEAD.diag {
+        FONT-SIZE: 11px; FONT-STYLE: normal; FONT-FAMILY: Verdana, Tahoma, Arial, Helvetica, sans-serif
+}
+TR.diag {
+        FONT-SIZE: 11px; FONT-STYLE: normal; FONT-FAMILY: Verdana, Tahoma, Arial, Helvetica, sans-serif
+	background = "#FFFFFF";        
+}
+
+BLOCKQUOTE.diag {
+        FONT-SIZE: 11px; FONT-FAMILY: Verdana,Tahoma,Arial,Helvetica
+}
+
+DIV.diag {
+        FONT-SIZE: 11px; FONT-STYLE: normal; FONT-FAMILY: Verdana, Tahoma, Arial, Helvetica, sans-serif
+	background = "#FFFFFF";        
+}
+
+.valueR {text-align: right; text-transform: capitalize;}
+
+.valueL {text-align: left; text-transform: capitalize;}
+
+.valueC {text-align: center; text-transform: capitalize;}

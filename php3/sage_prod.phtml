@@ -1,0 +1,26 @@
+<?php
+ini_set('default_socket_timeout','300');
+ini_set('max_execution_time','0');
+
+// PILOI2 247 ,  DRY_RUN 242 ,  
+
+// Get the SOAP structures from the Web Service
+   $client = new SoapClient('http://192.168.10.237:8124/soap-wsdl/syracuse/collaboration/syracuse/CAdxWebServiceXmlCC?wsdl',    array(
+        'login' => 'admin',
+        'password' => 'IC@dm1nX3'
+    ));
+// $client = new SoapClient('http://192.168.10.140:28880/adxwsvc/services/CAdxWebServiceXmlCC?wsdl');
+
+
+//The Calling Context
+//The next step in calling the web service is building the Calling Context structure. It is a string structure that must conform to the wsdl definition published for the web service:
+// Build Calling Context array for connecting to the Web Service
+$CContext["codeLang"] = "ENG";
+//$CContext["codeUser"] = "admin";
+//$CContext["password"] = "admin";
+$CContext["poolAlias"] = "V9PRD"; // context to type in to web service tester
+$CContext["requestConfig"] = "adxwss.trace.on=on&adxwss.trace.size=16384
+                              &adonix.trace.on=on&adonix.trace.level=3&adonix.trace.size=8";
+
+
+?>

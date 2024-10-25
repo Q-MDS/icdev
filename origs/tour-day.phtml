@@ -1,0 +1,1405 @@
+<? 
+
+ob_start();
+
+if (!isset($airport) || $airport != "Y")
+	$airport = "N";
+
+unset($override);
+if ($ss==-1) {
+	echo "There is no charter scheduled, so there is no day info for this combination.";
+	exit;
+}
+
+if (is_numeric($tql))
+	$frame=2;
+
+if (!isset($frame)): ?>
+
+		<IFRAME style='width: 120px; height: 100%' ID=tourdates NAME="tourdates" SRC="tour-day.phtml?frame=1&depot=<?=$depot?>&ss=<? echo "$ss&ser=$ser"; ?>" SCROLLING="AUTO" FRAMEBORDER="YES"></iframe>
+  		<IFRAME NAME="tourday" style='width:calc(100% - 125px); height: 100%' SRC="tour-day.phtml?depot=<?=$depot?>&frame=2&ss=<? echo "$ss&ser=$ser"; ?>" SCROLLING="AUTO" FRAMEBORDER="YES">
+		</iframe>
+
+<script>
+	function doresize() {
+		try {
+		document.getElementById('tourdates').style.width='600px';
+		}
+		catch (error) {
+		}
+
+	}
+
+	function dosmallresize() {
+                try {
+                document.getElementById('tourdates').style.width='120px';
+                }
+                catch (error) {
+                }
+
+        }
+
+</script>
+
+<? endif;   ?>
+<html>
+<body xoncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ topmargin=2 leftmargin=2 link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+
+$SHIFTS=3;
+
+
+
+function goback()
+{
+        echo "<form>";
+        echo "<input type=button value='Go Back' ";
+        echo "onclick='javascript:history.back()'>";
+        echo "</form>";
+}
+
+
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+require_once ("../php3/opstimes.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+require_once("tour-include.phtml");
+
+
+
+$canedit=AllowedFlag("TOUR_EDIT");
+if (getenv("REMOTE_USER")=="Keith")
+{
+	//$canedit=false;
+}
+
+if ($ss=="" && is_numeric($tql)) {
+	ora_parse($cursor,"select quote_serial from tour_Quote_lines where serial=$tql");
+	ora_exec($cursor);
+	ora_fetch($cursor);
+	$qs=getdata($cursor,0);
+		
+	ora_parse($cursor,"select sched_serial, rundate from tour_day_sched where tql_serial=$tql");
+	ora_Exec($cursor);
+	if (ora_fetch($cursor)) {
+		$ss=getdata($cursor,0);
+		$date=getdata($cursor,1);
+		$shift=1;
+		$frame=2;
+		ora_parse($cursor,"select ts_depot from tour_sched where sched_serial=$ss");
+		ora_exec($cursor);
+		if (ora_fetch($cursor))
+		{
+			$depot=getdata($cursor,0);	
+		}
+		
+	} else {
+		if ($company==5) {
+			ora_parse($cursor,"select A.depot, B.travel_date, nvl(A.orig_serial, A.serial), A.serial from tour_quotes A, tour_quote_lines B where B.serial=$tql and B.quote_serial=A.serial");
+			ora_Exec($cursor);
+			if (ora_fetch($cursor)) {
+				$date=getdata($cursor,1);
+				$team=getdata($cursor,2);
+				$qs=getdata($cursor,3);
+				ora_parse($cursor,"select tour_sched_serial.nextval from dual");
+				ora_exec($cursor);
+				ora_fetch($cursor);
+				$ss=getdata($cursor,0);
+				ora_parse($cursor,"insert into tour_day_sched ( sched_serial, rundate, ops_team_number, shift, pattern, serial, drivers, tql_serial, cross_border) values ($ss, $date, $team, 1, '111', tour_dss.nextval, 1, $tql,'$crossborder')");
+				ora_Exec($cursor);
+				$shift=1;
+				$frame=2;
+
+			}
+
+		} else {	
+			echo "Not found.";
+			goback();
+			exit;
+		}
+	}
+//https://secure.intercape.co.za/booking/tour-day.phtml?depot=PTA&ss=75371&shift=1&date=20210504&frame=2&hirein=
+
+}
+
+	ora_parse($cursor,"select depot,tour_serial, quote_serial from tour_details where tour_serial in (select tour_serial from tour_sched where sched_serial='$ss')");
+        ora_exec($cursor);
+        if ( ora_fetch($cursor))
+	{
+	        $qs=getdata($cursor,2);
+        	if (trim($depot)=="") {
+               	 $depot=getdata($cursor,0);
+               	 $ser=getdata($cursor,1);
+		}
+	}
+
+
+if ($function=="docopy"):
+	// which ones to update and which to insert?
+	ora_parse($cursor,"select rundate,shift from tour_day_sched where sched_serial=$ss");
+	ora_exec($cursor);
+	while (ora_fetch($cursor)) {
+		$update[getdata($cursor,0)][getdata($cursor,1)]=true;
+	} // while
+	// get date range...
+	ora_parse($cursor,"select start_date,end_date,shift_pattern from tour_sched where sched_serial=$ss");
+	ora_exec($cursor);
+	if (!ora_fetch($cursor)) {
+		echo "ERROR!  Cannot find serial $ss!";
+		goback();
+		exit;
+	} // not found
+	$sdate=getdata($cursor,0);
+	$edate=getdata($cursor,1);
+	$tsp=getdata($cursor,2);
+	$days=(vgetdate($edate)-vgetdate($sdate))/ (60*60*24);
+	$days++;
+	echo "Copying to $sdate - $edate = $days days<br>";
+
+        // get date range...
+        ora_parse($cursor,"select start_date,end_date,shift_pattern from tour_sched where sched_serial=$fromss");
+        ora_exec($cursor);
+        if (!ora_fetch($cursor)) {
+                echo "ERROR!  Cannot find serial $fromss!";
+                goback();
+                exit;
+        } // not found
+        $fsdate=getdata($cursor,0);
+        $fedate=getdata($cursor,1);
+	$fsp=getdata($cursor,2);
+        $fdays=(vgetdate($fedate)-vgetdate($fsdate))/ (60*60*24);
+	$fdays++;
+        echo "Copying from $fsdate - $fedate = $fdays days<br>";
+
+	if ($fdays!=$days) {
+		echo "ERROR! Number of days do not match!<bR>";
+		goback();
+		exit;
+	}
+	// now copy..
+	$todate=$sdate;
+	$day=1;
+	for ($fromdate=$fsdate;$fromdate<=$fedate;$fromdate=nextdate($fromdate)) {
+	  for ($shift=1;$shift<=$SHIFTS;$shift++) {
+		ora_parse($cursor,"select * from tour_day_sched where shift=$shift and rundate='$fromdate' and scheD_serial='$fromss'");
+		ora_exec($cursor);
+		unset($data);
+		if (ora_fetch_into($cursor,$data)) {
+			$notes=trim($data[2]);
+			if (trim($data[5])=="")
+				$data[5]="null";
+			if ($notes=="") {
+	                        if ($update[$todate][$shift]) {
+       		                         echo "WARNING: On day $day (".afrikdate($fromdate)."), shift $shift there is no itinerary, but there is an itenerary on ".afrikdate($todate)."<br>";
+
+       		                 } // warn
+			} // no notes
+			else {
+				if ($update[$todate][$shift])
+					$qry="update tour_day_sched set notes='$notes',pattern=$data[5],depot_depart='$data[7]',numdrivers='$data[8]', cross_border='$data[11]',airport_transfer='$data[12]'  where sched_serial='$ss' and rundate='$todate' and shift=$shift";
+				else
+					$qry="insert into tour_day_sched values ('$ss','$todate','$notes',null,$shift,$data[5],tour_dss.nextval,'$data[7]',$data[8],'$data[9]','$data[10]','$data[11]','$data[12]')"; 
+				//echo "$qry<br>";
+				ora_parse($cursor,$qry);
+				ora_exec($cursor);
+
+	
+			}
+		} else {
+	                        if ($update[$todate][$shift]) {
+       		                         echo "WARNING: On day $day (".afrikdate($fromdate)."), shift $shift there is no itinerary, but there is an itenerary on ".afrikdate($todate)."<br>";
+
+                	        }
+
+
+		}
+
+
+		$day++;
+	  } // for shift
+  	 $todate=nextdate($todate);
+
+	} // for fromdate;
+
+
+
+	
+	echo "<input type=button value='Done - Refresh' onclick=parent.location.reload()>";	
+
+	show_links($qs);
+	exit;	
+
+
+
+endif;
+
+if ($function=="copy"):
+
+
+	ora_parse($cursor,"Select A.customer,company_name from tour_customers  A,tour_details B,tour_sched C where C.sched_serial=$ss and C.tour_serial=B.tour_serial and B.customer=A.customer and A.company=$company and B.company=$company");
+	ora_exec($cursor);
+	if (!ora_fetch_into($cursor,$data)) {
+		echo "ERROR!  Cannot find serial $ss<Br>";
+		goback();
+		exit;
+	}
+	echo "Other trips for $data[1]:<br>";
+	ora_parse($cursor,"select A.group_name,B.* from tour_details A,tour_sched B where A.tour_serial=B.tour_serial and A.customer=$data[0] and A.company=$company");
+	ora_exec($cursor);
+	echo "<table>";	
+	echo "<tr bgcolor=#$table_title><td>Group Name</td><td>Dates</td><td>St</td><td>Copy</td></tr>";
+	unset($data);
+	while (ora_fetch_into($cursor,$data)) {
+		if ($data[7]!=$ss)
+		echo "<tr bgcolor=#$table_cell><td>$data[0]</td><td>".afrikdate($data[2])." to ".afrikdate($data[4])."</td><td>$data[9]</td><td><input type=button onclick=window.location='tour-day.phtml?function=docopy&frame=2&ss=$ss&fromss=$data[7]' value='Copy'></td></tr>";
+		unset($data);
+	} // while
+	echo "</table>";
+	exit;
+endif;
+
+
+if ($frame==1):
+	// first, find out what info we actually have:
+	ora_parse($cursor,"select rundate,shift,notes from tour_day_sched where scheD_serial='$ss'");
+	ora_exeC($cursor);
+	while (ora_fetch($cursor)) {
+		if (getdata($cursor,2)!="") {
+			$got[getdata($cursor,0)][getdata($cursor,1)]=true;
+			$todisp[getdata($cursor,0)][getdata($cursor,1)]=true;	}
+		$update[getdata($cursor,0)][getdata($cursor,1)]=true;
+
+	} // while fetch	
+
+
+	ora_parse($cursor,"select start_date,start_shift,end_date,end_shift,shift_pattern,ts_depot, tour_serial, hire_in from tour_sched where sched_serial=$ss");
+	ora_exec($cursor);
+	if (!ora_fetch($cursor)):
+		echo "Schedule Not Found!<bR>";
+		exit;
+	endif;	
+	$sdate=getdata($cursor,0);
+	$sshift=getdata($cursor,1);
+	$edate=getdata($cursor,2);
+	$eshift=getdata($cursor,3);
+	$bgc=$table_title;
+	echo "<table cellpadding=0 cellspacing=0>";
+        $pattern=getdata($cursor,4);
+	$tsdepot=getdata($cursor,5);
+	$tour_serial=getdata($cursor,6);
+	$hirein=getdata($cursor,7);
+
+	ora_parse($cursor,"select quote_serial from tour_details where tour_serial=$tour_serial");
+	ora_exec($cursor);
+ 	ora_fetch($cursor);
+	$quote_serial=getdata($cursor,0);
+
+	if ($tsdepot!="")
+		$depot=$tsdepot;
+//      echo "Pattern is $pattern ";
+        $pat="";
+        for ($a=1;$a<=$SHIFTS;$a++)
+        {
+                if ($pattern%10==1)
+                {
+//                      echo "$aT ";
+                        $box[$a]=true;
+                        $pat.="1";
+                }
+                else
+                {
+                        $box[$a]=false;
+                        $pat.="0";
+//                      echo "$aNT ";
+
+                }
+                $pattern=floor($pattern/10);
+        }
+
+
+	for ($date=$sdate;$date<=$edate;$date=nextdate($date))
+	{
+		
+		if ($date==$sdate)
+			$ssh=$sshift;
+		else
+			$ssh=1;
+		if ($date==$edate)
+			$esh=$eshift;
+		else
+			$esh=$SHIFTS;
+		$last=false;
+		for ($sh=$ssh;$sh<=$esh;$sh++)
+		{
+		  if ($got[$date][$sh])
+			$star="*";
+		  else
+			$star="";
+
+		  if ($box[$sh]&& !$last):
+
+//			if ($bgc==$table_title)
+//				$bgc=$table_cell;
+//			else
+				$bgc=$table_title;
+
+			echo "<tr bgcolor=#$bgc nowrap><td nowrap><font size=2><a target=tourday href=tour-day.phtml?depot=$depot&ss=$ss&shift=$sh&date=$date&frame=2&hirein=$hirein>".afrikdate($date)."/$sh$star</a></td></tr>";
+			$todisp[$date][$sh]=false;
+			$depot_time=trim(str_replace(":","",$depot_time));
+			$depot_arrive=trim(str_replace(":","",$depot_arrive));
+			if (strlen($depot_time)>4 || strlen($depot_arrive)>4) {
+
+				ora_rollback($conn);
+				echo "<font color=red>ERROR!  The time you gave does not make sense</font>";
+				exit;
+			}
+
+
+			$last=true;
+			if (!is_numeric($numdrivers))
+				$numdrivers=1;
+			if (!$update[$date][$sh]): // create
+				if (!is_numeric($_POST["qtl_$date"."_$sh"])) {
+					if (!isset($tqlform)) {
+						$tqlform=true;
+						$tqform= "<form method=post action=tour-day.phtml>Please select the quote line item for each day:<br>";
+						reset($_POST);
+						foreach ($_POST as $key => $val) {
+							$tqform.= "<input type=hidden name='$key' value='$val'>";
+						}
+						reset($_GET);
+						foreach ($_GET as $key => $val) {
+                                                        $tqform.= "<input type=hidden name='$key' value='$val'>";
+                                                }
+
+						ora_parse($cursor,"select serial, travel_date, description from tour_quote_lines where quote_serial=$quote_serial order by travel_date");
+						ora_exec($cursor);
+						while (ora_fetch_into($cursor,$tqdata)) {
+							$tqselect[$tqdata[1]]=$tqdata[0]; // pre select option for each date
+							$tqoptions[$tqdata[0]]="$tqdata[1]: $tqdata[2]";
+							unset($tqdata);
+						}
+					}
+					$tqform.= afrikdate($date)." <select name=qtl_$date"."_$sh>".makeselect2($tqoptions,$tqselect[$date])."</select><Br>";
+
+				} else {
+					ora_parse($cursor,"insert into tour_day_sched values('$ss','$date','',null,$sh,null,tour_dss.nextval,'$depot_time',$numdrivers,'$depot_arrive',".$_POST["qtl_$date"."_$sh"].",'$crossborder','$airport')");
+					ora_exec($cursor);
+				}
+
+
+			endif;
+	   	  else:
+				if (!$box[$sh]):
+					$last=false;
+				endif;
+				if ($got[$date][$sh]):
+					echo "<tr bgcolor=#$table_cell nowrap><td nowrap><font size=2><a target=tourday href=tour-day.phtml?depot=$depot&ss=$ss&shift=$sh&date=$date&frame=2>".afrikdate($date)."/$sh$star</a></td></tr>";
+				$todisp[$date][$sh]=false;
+
+
+				endif;
+		  endif;
+		}
+			
+
+
+	}
+	if ($tqlform) {
+		ob_end_clean();
+		echo "\n<script>  try {  parent.doresize(); } catch (error) { } </script>\n";
+		echo $tqform;
+		echo "<hr><input type=submit value='Continue'></form>";	
+		exit;
+	}
+	else
+		echo "\n<script>  try {  parent.dosmallresize(); } catch (error) { } </script>\n";
+
+	reset($todisp);
+	while (list($tdk1,$tdv1)=each($todisp)):
+		reset($tdv1);
+		while (list($tdk2,$tdv2)=each($tdv1))
+			if ($tdv2)
+			{
+				echo "<tr bgcolor=#$table_cell nowrap><td nowrap><font size=2><a target=tourday href=tour-day.phtml?depot=$depot&ss=$ss&shift=$tdk2&date=$tdk1&frame=2&fixme=Y>".afrikdate($tdk1)."/!$tdk2!</a></td></tr>";
+				$badentries=true;
+			}
+	
+
+
+	endwhile;
+	echo "<tr><td>&nbsp</td></tR><tr bgcolor=#$table_alt><td><a target=edit href=edit-tour.phtml?ser=$ser>Back</a></td></tR>";
+	echo "<tr bgcolor=#$table_alt><td><a target=tourday href=tour-day.phtml?frame=2&function=copy&ss=$ss>Copy</a></td></tR>";
+	echo "<tr bgcolor=#$table_alt><td><a target=edit href=print_tour.phtml?ser=$ser>Print All</a></td></tR>";
+	echo "<tr bgcolor=yellow><td><a target=edit href=print_tour.phtml?ser=$ser&ss=$ss>Print This</a></td></tR>";
+	if ($hirein=="Y")
+		echo "<tr  bgcolor=yellow><td><b>SUBHIRE</td></tR>";
+	
+
+	echo "</table>";
+	if ($badentries)
+		echo "<script>alert('Please fix up the entries for shifts that are not part of the charter.\\nThey are marked in pink'); </script>";
+
+	show_links($qs,true);
+
+	exit;
+endif;
+
+if ($frame==2):
+	$kcur=ora_open($conn);
+	if (!is_numeric($date)):
+		echo "Please click on a date/shift combination on the left<br>";
+		exit;
+	endif;
+
+	if (is_numeric($copyfrom)) {
+		$bits=explode(".",$copyfrom);
+		ora_parse($cursor,"select * from tour_day_sched where tql_serial=$bits[0] and rundate=$bits[1]");
+		ora_exec($cursor);
+		if (!ora_fetch_into($cursor,$override)) 
+			unset($override);
+	}
+
+	if ($action=="update"):
+		               $factor=1;
+                $pattern=0;
+	        for ($a=1;$a<=$SHIFTS;$a++)
+	        {
+       	        	$var="pat_$a";
+               		$pattern+=$factor*$$var;
+                	$factor=$factor*10;
+	        }
+                if ($pattern==0):
+                        echo "<font color=red>ERROR! Blank Pattern!</font><br>";
+
+       		         goback();
+               		 exit;
+
+                endif;
+
+		$notes=str_replacE("'","`",$notes);
+		$notes=str_replacE("\`","`",$notes);
+		$depot_time=trim(str_replace(":","",$depot_time));
+		$depot_arrive=trim(str_replace(":","",$depot_arrive));
+		$depot_time=trim(str_replace(";","",$depot_time));
+                $depot_arrive=trim(str_replace(";","",$depot_arrive));
+
+
+		if (!is_numeric($numdrivers))	
+			$numdrivers=1;
+
+		if ($crossborder!="Y" && $crossborder!="N")
+			$crossborder="X";
+
+		if ($delete=="Delete")
+			$qry="delete from tour_day_sched where  rundate='$date' and shift='$shift' and sched_serial='$ss'";	
+		
+		elseif ($new=="Y")
+			$qry="insert into tour_day_sched values ('$ss','$date','$notes','$team','$shift',$pattern,tour_dss.nextval,'$depot_time',$numdrivers,'$depot_arrive',null,'$crossborder','$airport')";
+		else
+			$qry="update tour_day_sched set notes='$notes',ops_team_number='$team',pattern=$pattern, depot_depart='$depot_time', depot_arrive='$depot_arrive', drivers=$numdrivers, cross_border='$crossborder', airport_transfer='$airport' where rundate='$date' and shift='$shift' and sched_serial='$ss'";
+		//echo "$qry<br>";
+		ora_parse($cursor,$qry);
+		if (!ora_exec($cursor)):
+			echo "There was a problem updating the information<br>$qry<br>size=".strlen($notes)."<br>";
+			goback();
+			exit;
+		else:
+			echo "UPDATED!<hr>";
+			if (isset($submit)):
+				ora_parse($cursor,"update tour_day_sched set ops_team_number='$team' where sched_serial='$ss'"); 
+				ora_exec($cursor);
+			endif; // ops team for whole tour
+		endif;
+	
+
+	endif;
+
+	$teams[0]="0|None Yet";
+	if ($company==5)
+		$maxteam=20;
+	else
+		$maxteam=70;
+	for ($a=1;$a<$maxteam;$a++)
+		$teams[$a]=$a;
+	if ($fixme=="Y")
+		echo "<b><font color=red>THIS IS NOT PART OF THE CHARTER... PLEASE FIX!</b></font><br>";
+	echo "Shift $shift on date $date:<Br>";
+	ora_parse($cursor,"select shift_pattern from tour_sched where sched_serial=$ss");
+	ora_exec($cursor);
+	ora_fetch($cursor);
+	$bigpattern=getdata($cursor,0);
+		ora_parse($cursor,"select A.depot,A.tour_serial,B.cross_border from tour_details A left join tour_quotes B on A.quote_serial=B.serial where A.tour_serial in (select tour_serial from tour_sched where sched_serial='$ss') and A.company=$company");
+		ora_exec($cursor);
+		ora_fetch($cursor);
+		if (trim($depot)==""):
+			$depot=getdata($cursor,0);
+			$ser=getdata($cursor,1);
+		endif;
+		$crossborder=getdata($cursor,2);
+	if ($crossborder=="N")
+		echo "<font style='background: yellow'><B>THIS TRIP GOES CROSS BORDER TO NAMIBIA AT SOME POINT</b></font><bR>";
+	elseif ($crossborder=="Y")
+		echo "<font style='background: yellow'><B>THIS TRIP GOES CROSS BORDER AT SOME POINT</b></font><br>";
+	ora_parse($cursor,"select * from tour_day_sched where sched_serial=$ss and rundate=$date and shift=$shift");
+	ora_exec($cursor);
+	echo "<form method=post action=tour-day.phtml><input type=hidden name=depot value='$depot'><input type=hidden name=ser value=$ser><input type=hidden name=ss value=$ss><input type=hidden name=action value=update><input type=hidden name=date value=$date><input type=hidden name=shift value=$shift><input type=hidden name=frame value=2>";
+	echo "<input type=hidden name=iframe value='$iframe'>";
+	if (!ora_fetch_into($cursor,$data)):
+		echo "<input type=hidden name=new value=Y>";
+	endif;	
+	if (isset($override)) {
+		$data[2]=$override[2]; // notes
+		$data[3]=$override[3]; //ops team
+		$data[4]=$override[4]; //shift
+		$data[7]=$override[7]; // depot depart
+		$data[8]=$override[8]; // drivers
+		$data[9]=$override[9]; // depot arrive
+		echo "<font style='background: red' color=yellow><b>PLEASE REVIEW AND CLICK UPDATE TO SAVE</b></font><bR>";
+	}
+	if ($hirein=="Y")
+		echo "<font style='background: yellow'><b>THIS IS A SUBHIRE</b></font><bR>";
+	echo "<b>Time Vehicle leaves the depot: </b><input name=depot_time size=4 maxlength=4 value='$data[7]'><br>";
+	$opsdepottime = $data[7];
+	echo "<b>Time Vehicle Arrives back @ Depot";
+	if ($company==5)
+		echo " or end of trip";
+	echo ": </b><input name=depot_arrive size=5 maxlength=5 value='$data[9]'><br>";
+
+	if ($data[2]=="" && $company!=5) {
+		$data[2]="00H00 : Be at the depot to check your vehicle\n\n00H00 : Depart the depot and proceed to\n        Address :\n\n00H00 : Be at                  to meet and load pax\n\n00H00 : Depart and proceed to                         ,\n        Address:\nOff load  pax and wait\n\n00h00 : Depart                 and proceed back to                   \n\nOff load pax and return to depot\n\n00h00 : Estimated time of arrival back at the depot\n";
+	}
+
+                        // CROSS BORDER
+                         echo "Cross Border</td><td><select name=crossborder";
+			if ($data[11]!="X" && $data[11]!="") {
+				echo " style='background: yellow'";
+			}
+			echo "><option value='X'>No";
+                        echo "<option value=N";
+                        if ($data[11]=="N")
+                                echo " selected";
+                        echo ">Namibia<option value=Y";
+                        if ($data[11]=="Y")
+                                echo " selected";
+                        echo ">YES - Cross border, NOT Namibia";
+                        echo "</select><bR>";
+			echo "<span id=airport ";
+			if ($data[12]=="Y")
+				echo "style='background: yellow'";
+			echo ">AIRPORT Transfer <input type=checkbox id=aircheck name=airport onchange='check_airport()' value=Y ";
+			if ($data[12]=="Y")
+				echo "CHECKED";
+			echo "></span><br>";
+?>
+<script>
+	function check_airport() {
+
+		let a = document.getElementById('airport');
+		if ( document.getElementById('aircheck').checked ) {
+				a.style.background = 'yellow';
+		} else {
+				a.style.background = '#FFFFFF';
+		}
+
+	}
+</script>
+<?
+echo '<div style="display: flex; flex-direction: row; justify-content: space-between;">';
+	echo '<div>';
+		echo "Notes:<bR><textarea id='notes' maxlength=1495 name=notes cols=50 rows=15 maxlenth=255>$data[2]</textarea>	";
+        $related="";
+        if (is_numeric($data[10])) {
+                $related = "<hr><font color=magenta>Details on Related Quote Line:<br>";
+                ora_parse($cursor,"select A.travel_date, A.description, nvl(B.orig_serial,B.serial),B.company from tour_quote_lines A, tour_Quotes B where A.serial=$data[10] and A.quote_serial=B.serial");
+                ora_exec($cursor);
+                if (ora_fetch($cursor)) {
+                        $linedesc=getdata($cursor,1);
+                        $related.= afrikdate(getdata($cursor,0),true).": $linedesc<br>";
+			if (getdata($cursor,3)==5) {
+               	        	$qser=getdata($cursor,2);
+				if ($data[3]=="")
+					$data[3]=$qser;
+			}
+                } else $related.= "Not found<br>";
+        }
+	echo '</div>';
+	?>
+	<?php
+	/*
+	* Date: 03-10-2024
+	* Desc: Snippet pad
+	* Code block description: Show snippets that the user can click on to add to the textarea. Facility provided add, edit and delete snippets.
+	* 
+	* START
+	*/
+	// Fetch snippets
+	$common = array();
+	$trip = array();
+	$places = array();
+	$other = array();
+	
+	//$rcur = ora_open($conn);
+	$sql = "SELECT * FROM tour_day_snippets ORDER BY id";
+	ora_parse($cursor, $sql);
+	ora_exec($cursor);
+	
+	$snippets = array();
+	
+	while (ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC))
+	{
+		$category = $data['CATEGORY'];
+		switch ($category) {
+			case 1:
+				$common[] = $data;
+				break;
+			case 2:
+				$trip[] = $data;
+				break;
+			case 3:
+				$places[] = $data;
+				break;
+			case 4:
+				$other[] = $data;
+				break;
+		}
+	}
+	?>
+	<div style="flex-direction: column; margin-left: 20px; width: 800px; max-height: 280px; overflow: hidden; overflow-y: auto;">
+		<!-- Title, Buttons -->
+		<div style="display: flex; flex-direction: 'row'; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid #000000">
+			<div id="snippet_title" style="flex: 1">Snippets: Common</div>
+			<div id="action" style="background: #eaeaea; padding: 2px 5px; font-size: 13px; border: 1px solid #000000; border-radius: 3px; font-family: Arial, Helvetica, sans-serif; margin-bottom: 3px; cursor: pointer" onclick="manage();">Manage</div>
+			<div onclick="addSpecial('\n');" style="display: flex; flex-direction: row; align-items: center; justify-content: center; margin-left: 5px; background: #eaeaea; padding: 2px 5px; font-size: 13px; border: 1px solid #000000; border-radius: 3px; font-family: Arial, Helvetica, sans-serif; margin-bottom: 3px; cursor: pointer">CR</div>
+			<div onclick="addSpecial('- ');" style="display: flex; flex-direction: row; align-items: center; justify-content: center; margin-left: 5px; background: #eaeaea; padding: 2px 5px; font-size: 13px; border: 1px solid #000000; border-radius: 3px; font-family: Arial, Helvetica, sans-serif; margin-bottom: 3px; cursor: pointer">-</div>
+		</div>
+		<!-- Selct category buttons -->
+		<div id="select" style="display: block">
+			<div style="display: flex; flex-direction: 'row'; justify-content: space-between; column-gap: 10px; margin-bottom: 5px;">
+				<div style="font-size: 12px; border: 1px solid #000000; flex: 1; padding: 2px 5px; cursor: pointer;  font-family: Arial, Helvetica, sans-serif" onclick="showHide(1)">Common</div>
+				<div style="font-size: 12px; border: 1px solid #000000; flex: 1; padding: 2px 5px; cursor: pointer;  font-family: Arial, Helvetica, sans-serif" onclick="showHide(2)">Trip</div>
+				<div style="font-size: 12px; border: 1px solid #000000; flex: 1; padding: 2px 5px; cursor: pointer;  font-family: Arial, Helvetica, sans-serif" onclick="showHide(3)">Places</div>
+				<div style="font-size: 12px; border: 1px solid #000000; flex: 1; padding: 2px 5px; cursor: pointer;  font-family: Arial, Helvetica, sans-serif" onclick="showHide(4)">Other</div>
+			</div>
+			<!-- Column 1: Times AM | Column: 2: Category (5 cols) | Column 3: Times PM -->
+			<div style="display: flex; flex-direction: row; align-items: flex-start; column-gap: 5px; font-size: 11px; font-family: Arial, Helvetica, sans-serif; border: 1px solid #000000; ">
+				<div>
+					<div style="display: grid; grid-template-columns: repeat(2, 45px); row-gap: 2px; font-family: Courier New; font-size: 12; border-right: 1px solid #000000;  text-align: center; cursor: pointer">
+						<div onclick="addKeyword(this.innerText)">00:00</div>
+						<div onclick="addKeyword(this.innerText)">00:30</div>
+						<div onclick="addKeyword(this.innerText)">01:00</div>
+						<div onclick="addKeyword(this.innerText)">01:30</div>
+						<div onclick="addKeyword(this.innerText)">02:00</div>
+						<div onclick="addKeyword(this.innerText)">02:30</div>
+						<div onclick="addKeyword(this.innerText)">03:00</div>
+						<div onclick="addKeyword(this.innerText)">03:30</div>
+						<div onclick="addKeyword(this.innerText)">04:00</div>
+						<div onclick="addKeyword(this.innerText)">04:30</div>
+						<div onclick="addKeyword(this.innerText)">05:00</div>
+						<div onclick="addKeyword(this.innerText)">05:30</div>
+						<div onclick="addKeyword(this.innerText)">06:00</div>
+						<div onclick="addKeyword(this.innerText)">06:30</div>
+						<div onclick="addKeyword(this.innerText)">07:00</div>
+						<div onclick="addKeyword(this.innerText)">07:30</div>
+						<div onclick="addKeyword(this.innerText)">08:00</div>
+						<div onclick="addKeyword(this.innerText)">08:30</div>
+						<div onclick="addKeyword(this.innerText)">09:00</div>
+						<div onclick="addKeyword(this.innerText)">09:30</div>
+						<div onclick="addKeyword(this.innerText)">10:00</div>
+						<div onclick="addKeyword(this.innerText)">10:30</div>
+						<div onclick="addKeyword(this.innerText)">11:00</div>
+						<div onclick="addKeyword(this.innerText)">11:30</div>
+					</div>
+				</div>
+				<div style="flex: 1;">
+					<div id="common" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px">
+						<?php foreach ($common as $snippet) { ?>
+							<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start;">
+								<div onclick="addKeyword(this.innerText);" style="background-color: #f5f5f5; width: 100%; font-family: Courier New; font-size: 13; padding: 4px 5px; cursor: pointer"><?php echo $snippet['SNIPPET']; ?></div>
+							</div>
+						<?php } ?>
+					</div>
+					<div id="trip" style="display: none; grid-template-columns: repeat(5, 1fr); gap: 2px">
+						<?php foreach ($trip as $snippet) { ?>
+							<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start;">
+								<div onclick="addKeyword(this.innerText);" style="background-color: #f5f5f5; width: 100%; font-family: Courier New; font-size: 13; padding: 4px 5px; cursor: pointer"><?php echo $snippet['SNIPPET']; ?></div>
+							</div>
+						<?php } ?>
+					</div>
+					<div id="places" style="display: none; grid-template-columns: repeat(5, 1fr); gap: 2px">
+						<?php foreach ($places as $snippet) { ?>
+							<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start;">
+								<div onclick="addKeyword(this.innerText);" style="background-color: #f5f5f5; width: 100%; font-family: Courier New; font-size: 13; padding: 4px 5px; cursor: pointer"><?php echo $snippet['SNIPPET']; ?></div>
+							</div>
+						<?php } ?>
+					</div>
+					<div id="other" style="display: none; grid-template-columns: repeat(5, 1fr); gap: 2px">
+						<?php foreach ($other as $snippet) { ?>
+							<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start;">
+								<div onclick="addKeyword(this.innerText);" style="background-color: #f5f5f5; width: 100%; font-family: Courier New; font-size: 13; padding: 4px 5px; cursor: pointer"><?php echo $snippet['SNIPPET']; ?></div>
+							</div>
+						<?php } ?>
+					</div>
+				</div>
+				<div>
+				<div style="display: grid; grid-template-columns: repeat(2, 45px); row-gap: 2px; font-family: Courier New; font-size: 12; border-left: 1px solid #000000; text-align: center; cursor: pointer">
+						<div onclick="addKeyword(this.innerText)">12:00</div>
+						<div onclick="addKeyword(this.innerText)">12:30</div>
+						<div onclick="addKeyword(this.innerText)">13:00</div>
+						<div onclick="addKeyword(this.innerText)">13:30</div>
+						<div onclick="addKeyword(this.innerText)">14:00</div>
+						<div onclick="addKeyword(this.innerText)">14:30</div>
+						<div onclick="addKeyword(this.innerText)">15:00</div>
+						<div onclick="addKeyword(this.innerText)">15:30</div>
+						<div onclick="addKeyword(this.innerText)">16:00</div>
+						<div onclick="addKeyword(this.innerText)">16:30</div>
+						<div onclick="addKeyword(this.innerText)">17:00</div>
+						<div onclick="addKeyword(this.innerText)">17:30</div>
+						<div onclick="addKeyword(this.innerText)">18:00</div>
+						<div onclick="addKeyword(this.innerText)">18:30</div>
+						<div onclick="addKeyword(this.innerText)">19:00</div>
+						<div onclick="addKeyword(this.innerText)">19:30</div>
+						<div onclick="addKeyword(this.innerText)">20:00</div>
+						<div onclick="addKeyword(this.innerText)">20:30</div>
+						<div onclick="addKeyword(this.innerText)">21:00</div>
+						<div onclick="addKeyword(this.innerText)">21:30</div>
+						<div onclick="addKeyword(this.innerText)">22:00</div>
+						<div onclick="addKeyword(this.innerText)">22:30</div>
+						<div onclick="addKeyword(this.innerText)">23:00</div>
+						<div onclick="addKeyword(this.innerText)">23:30</div>
+					</div>
+				</div>
+			</div>
+			
+		</div>
+		<div id="manage" style="display: none">
+			<!-- <div>Manage keyword</div> -->
+			<div style="display: flex; flex-direction: row; padding-bottom: 5px; border-bottom: 1px solid #000000">
+				<div style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; font-weight: bold;">Category 
+					<select name=category id="category" onChange="showHideEdit(this.value)" style="height: 21px">
+						<option value='0'>Select...</option>
+						<option value='1'>Common</option>
+						<option value='2'>Trip</option>
+						<option value='3'>Places</option>
+						<option value='4'>Other</option>
+					</select>
+				</div>
+				<div style="margin-left: 5px; flex: 1">
+					<input type="text" name="snippet" id="snippet" placeholder="Snippet description">
+					<input type="text" name="snippet_id" id="snippet_id" value="1" style="display: none;">
+				</div>
+				<div id="form_btn_add" style="display: block; padding-left: 5px;"><input  type="button" value="Add" style=" cursor: pointer;" onclick="sendData(0);"></div>
+				<div id="form_btn_edit" style="display: none; padding-left: 5px;"><input type="button" value="Update" style=" cursor: pointer;" onclick="sendData(1);"></div>
+			</div>
+
+			<div id="common_edit" style="display: none;">
+				<?php foreach ($common as $snippet) { ?>
+					<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eaeaea;">
+						<div style="flex: 1; font-family: Courier New; font-size: 13; padding: 4px 5px;"><?php echo $snippet['SNIPPET']; ?></div>
+						<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="editSnippet(<?php echo $snippet['ID']; ?>, '<?php echo $snippet['SNIPPET']; ?>')">Edit</div>
+						<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="deleteSnippet(<?php echo $snippet['ID']; ?>)">Delete</div>
+					</div>
+				<?php } ?>
+			</div>
+			<div id="trip_edit" style="display: none">
+				<?php foreach ($trip as $snippet) { ?>
+					<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eaeaea;">
+						<div style="flex: 1; font-family: Courier New; font-size: 13; padding: 4px 5px;"><?php echo $snippet['SNIPPET']; ?></div>
+						<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="editSnippet(<?php echo $snippet['ID']; ?>, '<?php echo $snippet['SNIPPET']; ?>')">Edit</div>
+						<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="deleteSnippet(<?php echo $snippet['ID']; ?>)">Delete</div>
+					</div>
+				<?php } ?>
+			</div>
+			<div id="places_edit" style="display: none">
+				<?php foreach ($places as $snippet) { ?>
+					<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eaeaea;">
+						<div style="flex: 1; font-family: Courier New; font-size: 13; padding: 4px 5px;"><?php echo $snippet['SNIPPET']; ?></div>
+						<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="editSnippet(<?php echo $snippet['ID']; ?>, '<?php echo $snippet['SNIPPET']; ?>')">Edit</div>
+						<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="deleteSnippet(<?php echo $snippet['ID']; ?>)">Delete</div>
+					</div>
+				<?php } ?>
+			</div>
+			<div id="other_edit" style="display: none">
+				<?php foreach ($other as $snippet) { ?>
+					<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eaeaea;">
+						<div style="flex: 1; font-family: Courier New; font-size: 13; padding: 4px 5px;"><?php echo $snippet['SNIPPET']; ?></div>
+						<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="editSnippet(<?php echo $snippet['ID']; ?>, '<?php echo $snippet['SNIPPET']; ?>')">Edit</div>
+						<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="deleteSnippet(<?php echo $snippet['ID']; ?>)">Delete</div>
+					</div>
+				<?php } ?>
+			</div>
+		</div>
+			<!-- <div style="display: flex; flex-direction: 'row'; justify-content: space-between;"> -->
+	</div>
+	<div style="flex: 1">&nbsp;</div>
+</div>
+<!-- Javascript functions for Snippet pad: START -->
+<script>
+document.addEventListener('DOMContentLoaded', (event) => 
+{
+    const notesTextarea = document.getElementById('notes');
+    notesTextarea.focus();
+});	
+function addKeyword(keyword) 
+{
+	let notes = document.getElementById('notes');
+	notes.value += keyword + ' ';
+	focustoCursor();
+}
+function addSpecial(snippet) 
+{
+	let notes = document.getElementById('notes');
+	notes.value += snippet;
+	focustoCursor();
+}
+function focustoCursor()
+{
+	const notesTextarea = document.getElementById('notes');
+    notesTextarea.focus();
+    notesTextarea.selectionStart = notesTextarea.value.length;
+    notesTextarea.selectionEnd = notesTextarea.value.length;
+}	
+function keywords() {
+	let select = document.getElementById('select');
+	select.style.display = select.style.display === 'block' ? 'none' : 'block';
+	let manage = document.getElementById('manage');
+	manage.style.display = manage.style.display === 'block' ? 'none' : 'block';
+}
+function manage()
+{
+	let action = document.getElementById('action');
+	action.innerText = action.innerText === 'Manage' ? 'Close' : 'Manage';
+	let select = document.getElementById('select');
+	select.style.display = select.style.display === 'block' ? 'none' : 'block';
+	let manage = document.getElementById('manage');
+	manage.style.display = manage.style.display === 'block' ? 'none' : 'block';
+
+	if (action.innerText === 'Manage')
+	{
+		let formBtnAdd = document.getElementById('form_btn_add');
+		let formBtnEdit = document.getElementById('form_btn_edit');
+		formBtnAdd.style.display = 'block';
+		formBtnEdit.style.display = 'none';
+
+		let snippet = document.getElementById('snippet');
+		snippet.value = '';
+		setDefaultData();
+	}
+}
+function showHide(category) 
+{
+	let snippetTitle = document.getElementById('snippet_title');
+	let common = document.getElementById('common');
+	let trip = document.getElementById('trip');
+	let places = document.getElementById('places');
+	let other = document.getElementById('other');
+
+	switch (category) {
+		case 1:
+			snippetTitle.innerHTML = 'Snippets: <span style="font-weight: normal; opacity: 0.5">Common</span>';
+			common.style.display = 'grid';
+			trip.style.display = 'none';
+			places.style.display = 'none';
+			other.style.display = 'none';
+			break;
+		case 2:
+			snippetTitle.innerHTML = 'Snippets: <span style="font-weight: normal; opacity: 0.5">Trip</span>';
+			common.style.display = 'none';
+			trip.style.display = 'grid';
+			places.style.display = 'none';
+			other.style.display = 'none';
+			break;
+		case 3:
+			snippetTitle.innerHTML = 'Snippets: <span style="font-weight: normal; opacity: 0.5">Places</span>';
+			common.style.display = 'none';
+			trip.style.display = 'none';
+			places.style.display = 'grid';
+			other.style.display = 'none';
+			break;
+		case 4:
+			snippetTitle.innerHTML = 'Snippets: <span style="font-weight: normal; opacity: 0.5">Other</span>';
+			common.style.display = 'none';
+			trip.style.display = 'none';
+			places.style.display = 'none';
+			other.style.display = 'grid';
+			break;
+	}
+}
+
+function showHideEdit(category)
+{
+	console.log('GOT HERE: ', category);
+	let common = document.getElementById('common_edit');
+	let trip = document.getElementById('trip_edit');
+	let places = document.getElementById('places_edit');
+	let other = document.getElementById('other_edit');
+
+	switch (category)
+	{
+		case '1':
+			console.log('AAAA');
+			common.style.display = 'grid';
+			trip.style.display = 'none';
+			places.style.display = 'none';
+			other.style.display = 'none';
+			break;
+		case '2':
+			common.style.display = 'none';
+			trip.style.display = 'block';
+			places.style.display = 'none';
+			other.style.display = 'none';
+			break;
+		case '3':
+			common.style.display = 'none';
+			trip.style.display = 'none';
+			places.style.display = 'block';
+			other.style.display = 'none';
+			break;
+		case '4':
+			common.style.display = 'none';
+			trip.style.display = 'none';
+			places.style.display = 'none';
+			other.style.display = 'block';
+			break;
+	}
+}
+
+function editSnippet(id, desc)
+{
+	let formBtnAdd = document.getElementById('form_btn_add');
+	let formBtnEdit = document.getElementById('form_btn_edit');
+	let snippetId = document.getElementById('snippet_id');
+	let snippetCategory = document.getElementById('category').value;
+	let snippet = document.getElementById('snippet');
+	
+	snippetId.value = id;
+	formBtnAdd.style.display = 'none';
+	formBtnEdit.style.display = 'block';
+	snippet.value = desc;
+}
+
+function deleteSnippet(id)
+{
+	let snippetId = document.getElementById('snippet_id');
+	snippetId.value = id;
+
+	if (confirm('Are you sure you want to delete this snippet?'))
+	{
+		sendData(2);
+	}
+}
+
+async function fetchSnippets(category)
+{
+	console.log('CATEGORY: ', category);
+	let data = {};
+	let formData = {};
+
+	data = {
+		category: category
+	};
+
+	formData = { "action": 3, "data": data };
+	
+	// const phpUrl = 'http://localhost/icdev/tour_day_snippets.php';
+	const phpUrl = 'http://192.168.10.239/booking/tour_day_snippets.php';
+    const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
+    const result = await response.text();
+	setEditData(category, JSON.parse(result));
+    console.log('Result:', result);
+}
+
+async function setDefaultData()
+{
+	let data = {};
+	let formData = {};
+
+	formData = { "action": 4 };
+	
+	// const phpUrl = 'http://localhost/icdev/tour_day_snippets.php';
+	const phpUrl = 'http://192.168.10.239/booking/tour_day_snippets.php';
+    const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
+    const result = await response.text();
+	let snippets = JSON.parse(result);
+
+	const commonData = snippets.common;
+	const tripData = snippets.trip;
+	const placesData = snippets.places;
+	const otherData = snippets.other;
+
+	console.log('Common: ', commonData, 'Trip: ', tripData, 'Places: ', placesData, 'Other: ', otherData);
+
+	let common = document.getElementById('common');
+	common.innerHTML = '';
+	commonData.forEach(snippet => {
+		common.innerHTML += `<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; ">
+		<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start;">
+			<div onclick="addKeyword(this.innerText);" style="font-family: Courier New; font-size: 13; padding: 4px 5px; cursor: pointer">${snippet.SNIPPET}</div>
+		</div>
+		</div>`;
+	});
+	let trip = document.getElementById('trip');
+	trip.innerHTML = '';
+	tripData.forEach(snippet => {
+		trip.innerHTML += `<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; ">
+		<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start;">
+			<div onclick="addKeyword(this.innerText);" style="font-family: Courier New; font-size: 13; padding: 4px 5px; cursor: pointer">${snippet.SNIPPET}</div>
+		</div>
+		</div>`;
+	});
+	let places = document.getElementById('places');
+	places.innerHTML = '';
+	placesData.forEach(snippet => {
+		places.innerHTML += `<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; ">
+		<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start;">
+			<div onclick="addKeyword(this.innerText);" style="font-family: Courier New; font-size: 13; padding: 4px 5px; cursor: pointer">${snippet.SNIPPET}</div>
+		</div>
+		</div>`;
+	});
+	let other = document.getElementById('other');
+	other.innerHTML = '';
+	otherData.forEach(snippet => {
+		other.innerHTML += `<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; ">
+		<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start;">
+			<div onclick="addKeyword(this.innerText);" style="font-family: Courier New; font-size: 13; padding: 4px 5px; cursor: pointer">${snippet.SNIPPET}</div>
+		</div>
+		</div>`;
+	});
+}
+
+function setEditData(category, data)
+{
+	console.log('GOT HERE: ', category, data);
+	let formBtnAdd = document.getElementById('form_btn_add');
+	let formBtnEdit = document.getElementById('form_btn_edit');
+	formBtnAdd.style.display = 'block';
+	formBtnEdit.style.display = 'none';
+
+	let snippet = document.getElementById('snippet');
+	snippet.value = '';
+
+	switch (category)
+	{
+		case '1':
+			let common = document.getElementById('common_edit');
+			common.innerHTML = '';
+			data.forEach(snippet => {
+				common.innerHTML += `<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eaeaea; ">
+					<div style="flex: 1; font-family: Courier New; font-size: 13; padding: 4px 5px;">${snippet.SNIPPET}</div>
+					<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="editSnippet(${snippet.ID}, '${snippet.SNIPPET}')">Edit</div>
+					<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="deleteSnippet(${snippet.ID})">Delete</div>
+				</div>`;
+			});
+		break;
+		case '2':
+			let trip = document.getElementById('trip_edit');
+			trip.innerHTML = '';
+			data.forEach(snippet => {
+				trip.innerHTML += `<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eaeaea; ">
+					<div style="flex: 1; font-family: Courier New; font-size: 13; padding: 4px 5px;">${snippet.SNIPPET}</div>
+					<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="editSnippet(${snippet.ID}, '${snippet.SNIPPET}')">Edit</div>
+					<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="deleteSnippet(${snippet.ID})">Delete</div>
+				</div>`;
+			});
+		break;
+		case '3':
+			let places = document.getElementById('places_edit');
+			places.innerHTML = '';
+			data.forEach(snippet => {
+				places.innerHTML += `<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eaeaea; ">
+					<div style="flex: 1; font-family: Courier New; font-size: 13; padding: 4px 5px;">${snippet.SNIPPET}</div>
+					<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="editSnippet(${snippet.ID}, '${snippet.SNIPPET}')">Edit</div>
+					<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="deleteSnippet(${snippet.ID})">Delete</div>
+				</div>`;
+			});
+		break;
+		case '4':
+			let other = document.getElementById('other_edit');
+			other.innerHTML = '';
+			data.forEach(snippet => {
+				other.innerHTML += `<div style="display: flex; flex-direction: 'row'; align-items: center; justify-content: flex-start; border-bottom: 1px solid #eaeaea; ">
+					<div style="flex: 1; font-family: Courier New; font-size: 13; padding: 4px 5px;">${snippet.SNIPPET}</div>
+					<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="editSnippet(${snippet.ID}, '${snippet.SNIPPET}')">Edit</div>
+					<div style="width: 40px; font-family: Arial, Helvetica, sans-serif; font-size: 12; opacity: 0.7; cursor: pointer" onclick="deleteSnippet(${snippet.ID})">Delete</div>
+				</div>`;
+			});
+		break;
+	}
+}
+
+async function sendData(action) 
+{
+	const type = document.getElementById('category').value;
+
+	let data = {};
+	let formData = {};
+	if (action == 0)
+	{
+		const category = document.getElementById('category').value;
+		const snippet = document.getElementById('snippet').value;
+		
+		data = {
+			category: category,
+			snippet: snippet
+		};	
+		// formData = { "action": action, "data": data };
+	} 
+	else if(action == 1)
+	{
+		const snippet_id = document.getElementById('snippet_id').value;
+		const category = document.getElementById('category').value;
+		const snippet = document.getElementById('snippet').value;
+		
+		data = {
+			snippet_id: snippet_id,
+			category: category,
+			snippet: snippet
+		};	
+	} 
+	else 
+	{
+		const snippet_id = document.getElementById('snippet_id').value;
+		
+		data = {
+			snippet_id: snippet_id
+		};
+	}
+
+	formData = { "action": action, "data": data };
+	
+	// const phpUrl = 'http://localhost/icdev/tour_day_snippets.php';
+	const phpUrl = 'http://192.168.10.239/booking/tour_day_snippets.php';
+    const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
+    const result = await response.text();
+    console.log('Result:', result);
+
+	if (result == 1)
+	{
+		fetchSnippets(type);
+	}
+    return result;
+}
+</script>
+<!-- Javascript functions for Snippet pad: END -->
+<?php
+/* 
+* END 
+*/
+echo '</div>';
+
+	echo "<p>Ops Team: <select name=team>";
+	if ($data[3]>100) {
+
+		ora_parse($cursor,"select A.company_name, B.group_name from tour_quotes B, tour_customers A  where A.customer=B.customer and nvl(B.orig_serial,B.serial)=$data[3] and latest='Y'");
+		ora_exec($cursor);
+		if (ora_fetch_into($cursor,$cusdata)) {
+			$cusdata[0]=substr($cusdata[0],0,30);
+			$teams[$data[3]]="Load $data[3]: $cusdata[1] - $cusdata[0]";
+		} else {
+			$teams[$data[3]]="Load $data[3]"; // todo - add company details
+	
+		}
+	}
+	echo makeselect2($teams,$data[3]);
+	echo "</select> ($depot)<br>";
+                echo "Number of Drivers Requested: 1 <input type=radio name=numdrivers value=1 ";
+                if ($data[8]!=2)
+                        echo " CHECKED";
+                echo "> / 2 <input type=radio name=numdrivers value=2 ";
+                if ($data[8]==2)
+                        echo " CHECKED";
+                echo "><bR>";
+
+	if (is_numeric($data[3])):
+		// try to get ops info
+		  switch (trim($depot)) {
+			case "CA" : $what="CT-Tour"; break;
+			case "PTA" : $what="PTA-TOUR";  break;
+			case "DBN" : $what="Dbn-Tour"; break;
+			case "CBS" : $what="Cbs-Tour"; break;
+			case "PE"  : $what="PE-Tour"; break;
+			case "UPT" : $what="Upt-Tour"; break;
+			case "PFH" : $what="Pfh-Tour"; break;
+
+			default   :  $what="$depot-Tour"; break;
+
+		  } // switch	
+		if ($data[3]>0):
+		$whatu=strtoupper($what);
+
+		if ($company==5) {
+			ora_parse($cursor,"select A.* from ops_info A, ops_routes B where A.info=B.short_name and B.route_type='T' and A.rundate=$date and A.team=$data[3] order by entry_type ");
+		} else {
+			ora_parse($cursor,"select * from ops_info where rundate=$date and team=$data[3] and (upper(info) like '%$whatu%') order by entry_type desc");
+		}
+		ora_exec($cursor);
+		$fnd=false;
+		while (ora_fetch_into($cursor,$opsdata)):
+			if (!$fnd):
+				$fnd=true;
+				echo "<b><u>DATA ON OPS SYSTEM FOR TEAM $data[3]</u>:</b><br>";
+			endif;
+			$opsdepottime=trim($opsdepottime);
+			if (is_numeric($opsdepottime)) {
+				if (strlen($opsdepottime)==3)
+					$opsdepottime="0".$opsdepottime;
+				if ($opsdepottime != $opsdata[16]) {
+					ora_parse($kcur,"update ops_info set scheduled_depot_depart='$opsdepottime' where seq=$opsdata[7]");
+					ora_Exec($kcur);
+				} 
+			} 
+			switch ($opsdata[0]) {
+				case "a": 
+					$who="Attendant"; 
+					$qry="select name,surname,tel_1,tel_2 from attendants where attendant_serial=$opsdata[1]";
+					break;
+				case "o":
+					$who="Operator";
+					$qry="select firstname,surname,cellno,home_phone from operators where operator_serial=$opsdata[1]";
+					break;
+				case "c":
+					$who="Coach";
+					$qry="select code,reg_no from coaches where coach_serial=$opsdata[1]";
+					break;
+				case "t":
+					$who="Trailer";
+					$qry="select code,reg_no from trailers where trailer_serial=$opsdata[1]";
+					break;
+				case "k":
+					$who="Truck";
+					$qry="select code,reg_no from vehicles where serial=$opsdata[1]";
+					break;
+				case "s":
+                                        $who="Superlink";
+                                        $qry="select code,reg_no from vehicles where serial=$opsdata[1]";
+                                        break;
+
+
+			}	
+			ora_parse($kcur,$qry);
+			ora_exec($kcur);
+			if (ora_fetch_into($kcur,$whodata)):
+				echo "<font color=green>$opsdata[4] </font><font color=blue><b>$who:</b> $whodata[0] $whodata[1]</font> <font color=purple>$whodata[2]</font> <font color=magenta>$whodata[3]</font><br>";
+				unset($whodata);
+			endif;
+			
+			unset($opsdata);
+		endwhile;
+		
+		endif;
+
+	endif; // end of get ops info
+
+
+	
+	echo "Pattern Override:";
+	// override
+	if (!is_numeric($data[5]))
+			$data[5]=$bigpattern;
+	if ($data[5]==$bigpattern)
+		echo "(SAME)";
+ 	$value=(int)$data[5];
+        for ($a=1;$a<=$SHIFTS;$a++)
+        {
+                echo "<input $style type=checkbox name=pat_$a value=1";
+                if ($value%10==1)
+                        echo " CHECKED";
+                $value=floor($value/10);
+                echo ">";
+        }
+	echo "<br>";
+
+		
+	if ($canedit)
+	echo "<p><input type=submit value='Update'><br><input type=submit name=submit value='Update & Set Ops team for WHOLE quote'>";
+	if ($canedit && $fixme)
+		echo "<br><br><input type=submit name=delete value='Delete'>";
+		
+	
+	show_links($qs);
+
+/*
+	$related="";
+	if (is_numeric($data[10])) {
+		$related = "<hr><font color=magenta>Details on Related Quote Line:<br>";
+		ora_parse($cursor,"select A.travel_date, A.description, nvl(B.orig_serial,B.serial) from tour_quote_lines A, tour_Quotes B where A.serial=$data[10] and A.quote_serial=B.quote_serial");
+		ora_exec($cursor);
+		if (ora_fetch($cursor)) {
+			$linedesc=getdata($cursor,1);
+			$related.= afrikdate(getdata($cursor,0),true).": $linedesc<br>";
+			$qser=getdata($cursor,2);
+			
+		} else $related.= "Not found<br>";
+	}
+*/
+	echo $related."</font>";
+
+	echo "<a href=# onclick=\"document.getElementById('prevlist').style.display='block'; \"><font color=green><u>Copy previous itinerary:</u></font></a><br>";
+	echo "<div id=prevlist style='display: none'>";
+/*
+	print_r($data);
+	echo $_SERVER["REQUEST_URI"];	
+	echo "QS: $qs<br>";
+*/
+	ora_parse($cursor,"select company, customer, group_name from tour_quotes where serial=$qs");
+	ora_exec($cursor);
+	ora_fetch_into($cursor,$quoteinfo);
+	$back30=prevdate($date,30);
+	echo "company is $quoteinfo[0] from $qs<br>";
+	exit;
+
+	ora_parse($cursor,"select A.serial,A.group_name,B.travel_date,B.description,C.notes,B.serial from tour_quotes A, tour_quote_lines B, tour_day_sched C where A.customer=$quoteinfo[1] and A.serial=B.quote_serial and B.serial=C.tql_serial and B.travel_date>=$back30 and B.travel_date<$date and A.company=$quoteinfo[0] and ( (A.group_name='$quoteinfo[2]')  or (B.description='$linedesc')  ) order by B.travel_date desc");
+	ora_exec($cursor);
+	while (ora_fetch_into($cursor,$hist)) {
+		if ($hist[1]==$quoteinfo[2])
+			$hist[1]="<b>$hist[1]</b>";
+                else
+                        $hist[1]="<font size=2>$hist[1]</font>";
+
+		if ($hist[3]==$linedesc)
+			$hist[3]="<b>$hist[3]</b>";
+		else
+			$hist[3]="<font size=2>$hist[3]</font>";
+		if (strlen($hist[4])>50) {
+			$hist[4]=substr($hist[4],0,50)."...";
+		}
+		echo "<a href=tour-day.phtml?depot=$depot&ss=$ss&shift=$shift&date=$date&frame=$frame&hirein=$hirein&copyfrom=$hist[5].$hist[2]>$hist[1] on $hist[2]: $hist[3] (<i><font size=1>$hist[4]</font></i>)";
+
+		echo "</a><Br>";	
+	}
+	echo "</div>";
+	exit;
+endif;
+
+function show_links($qs,$short=false) {
+	global $company,$iframe;
+
+	if ($company==5)
+		$thename="Load";
+	else
+		$thename="Quote";
+	if (is_numeric($qs)) {
+		if ($iframe=="Y")
+			 echo "<p><a href=tour_km.phtml?ts=$qs>KM page</a><Br><a  href='tour_quotes.phtml?iframe=$iframe&mode=edit&ser=$qs'>$thename</a>";
+
+		elseif ($short)
+
+			echo "<p><a target=parent href=tour_km.phtml?ts=$qs>KM page</a><Br><a target=parent href='tour_quotes.phtml?iframe=$iframe&mode=edit&ser=$qs'>$thename</a>";
+		else
+			echo "<p><a href=tour_km.phtml?ts=$qs>Go to KM page</a> | <a target='_blank' href='tour_quotes.phtml?iframe=$iframe&mode=edit&ser=$qs'>Go to $thename</a>";
+	}
+
+} // show links
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>

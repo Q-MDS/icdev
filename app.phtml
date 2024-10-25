@@ -1,0 +1,51 @@
+<html>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<?php require_once ("../php3/context.inc"); ?>
+<?php
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("DEVELOPERS")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+ora_parse($cursor,"alter session set nls_date_format ='YYYY/MM/DD HH24:MI'");
+ora_Exec($cursor);
+ora_parse($cursor,"select * from app_device");
+ora_Exec($cursor);
+echo "<table border=1 cellspacing=0>";
+$header=false;
+while (ora_Fetch_into($cursor,$data,ORA_FETCHINTO_ASSOC)) {
+	if (!$header) {
+		echo "<tr>";
+		echo "<td>Message</td>";
+		foreach ($data as $key => $val)
+			echo "<td>$key</td>";
+		echo "</tr>";
+		$header=true;
+	}
+	echo "<tr>";
+	$token = urlencode($data["APD_FCM_TOKEN"]);
+	echo "<Td><a href='push.php?token=$token'>Message</a></td>";
+	
+	foreach ($data as $key => $val)
+                        echo "<td>$val</td>";
+
+	echo "</tr>";
+
+
+}
+echo "</table>";
+
+
+
+
+?>
+</form>
+</body>
+</html>
+<?php close_oracle() ?>

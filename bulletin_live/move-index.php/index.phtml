@@ -1,0 +1,129 @@
+<?php 
+
+include ("../booking/daily_pass_check.phtml");
+
+?>
+
+<html>
+	<head><link type="text/css" rel="stylesheet" href="style.css"><title>MOVE Index</title></head>
+	<body>
+	<? 
+	require_once ( "menu.inc" ); 
+	require_once( "../php3/oracle.inc" );
+	require_once ("../php3/misc.inc");
+
+	$included="Y";
+	require_once("../booking/fixmail.phtml");
+	unset($included);
+//	echo "<font color=red>New!: <a href=/booking/voting.phtml><b>VOTING STATION</b></a><br></font>";
+	
+	if (!isset($conn))
+		if( !open_oracle() )
+			exit;
+
+	//// staff only...
+$myus=getuserserial();
+if ($is_staff_flag!="Y") {
+        echo "Sorry, this page is for Intercape staff only!<bR>";
+        exit;
+
+}
+
+		
+	ora_parse( $cursor, "SELECT serial FROM MOVE_COMPANY WHERE serial=$cookiecompany AND name='$cookiecompanyname'" );
+	ora_exec( $cursor );
+	if( !ora_fetch( $cursor ) ) {
+		print "<div class=info>Invalid Company. Please <a href='changedepot.phtml'>click here</a> ";
+		print "and set your company.</div>";
+		exit;
+	}
+	?>
+
+
+    	<li>Job Cards - <? // <a href=/kiosk/jobcard.phtml>MECHANICS - Click here!</a> ?>
+    	<ul>
+    		<li><a href="newjobcard.phtml?stage=1&rnd=<? echo time(); ?>">Create a new job card</a>
+    		<li><a href="checkjobcard.phtml?type=1">Work on/Search for Jobcard</a>
+		<li><a href="newadhocitem.phtml?stage=1">Add ad hoc faults</a>
+		<li><a href="newmiscwork.phtml?stage=0">Add miscellaneous work</a>
+
+    	</ul></ul>
+
+	<li><a href=certificate.phtml target='_blank'>Departure Certificates</a> <font color=red>* NEW: ALL DEPOTS</font></li>
+	<bR>
+
+    	<li>Tyres &nbsp; <b><i>NB: Tyre purchase + delivery must be done in MOVE.  Everything else in Intasect</i></b>
+    	<ul>
+		<li><a href="tyre_depot_report.phtml">Depot Tyre Report (Vehicles Arriving/Leaving)</a>
+		<li><a href="tyre_survey_report.phtml">Tyre Intasect Survey Report</a>
+		<li><a href="tyre_count.phtml">Tyre count - per bus</a>
+<? /*
+    		<li><a href="tyres_in.phtml"><s>Add additional tyre information</s></a>
+    		<li><a href="tyre_change_slip.phtml"><s>Tyre Change Slip</s></a>
+    	    <li><a href="tyre_slip.phtml"><s>Audit a vehicles tyres</s></a>
+    	    <?php / * <li><a href="tyres_booked_out.phtml">3rd Party Repair</a> * / ?>
+    	    <li><a href="tyre_information.phtml"><s>Information</s></a>
+*/ ?>
+    	 </ul>  </ul>
+    	   
+    	<li>Purchase Orders
+    	<ul>
+            <li><a href="requestorder.phtml">Make a requisition</a> (Create a Q Number)
+		<li><a href="recurring.phtml">Recurring Purchases</a> <font color=red> NEW</font>
+	   <li><a href="pricemoves.phtml">M-Part Price deviation report</a> <font size=2>(Looks at prices  over the last 90 days and shows anything with prices differing more than 20%)</font>
+
+        	<li><a href="requestorder.phtml?stage=1&submitted=<?=$REMOTE_USER?>&filter=ALL">ALL <b>My</b> requisitions/orders</a>
+		<li><a href="requestorder.phtml?stage=1&depot=<?=$cookiedepot?>&filter=ALL">All <?=$cookiedepot?> depot requisitions/orders</a> (My depot)
+		<li><a href="requestorder.phtml?stage=1&submitted=<?=$REMOTE_USER?>&filter=2">My outstanding requisitions (Not approved yet)</a>
+    		<li><a href="requestorder.phtml?stage=1&filter=2&cleardates=Y">Authorise requisitions</a> (Generate an order or reject a requisition)
+    		<li><a href="requestorder.phtml?stage=1&filter=ALL">View all requisitions and orders</a>
+		<li><a href="pricecheck.phtml">M-Part Price History</a> (Price Check)
+		
+	        <li><a href="requestorder.phtml?stage=43">Who is in charge of each budget</a> (List of budget Masters)
+		<li><a href="requestorder.phtml?stage=80">Budget status - actual vs budgeted</a>
+		<li><a href=notall_delivered.phtml>RFPed orders with outstanding deliveries</a>
+
+
+        </ul>
+
+    	<li>Stock
+    <ul>    	
+    <li><a href="captureparts2.phtml?stage=0">Manage Stock</a>
+    <li><a href="managestock.phtml?stage=30">Move Stock</a>
+    <li><a href="partsrequest.phtml">Parts Request</a>
+    <li><a href="stock_request.phtml">Cleaning Material Stock Request</a> 
+    <li><a href="seal_lookup.phtml">Look up a seal</a>
+    </ul>
+<br>            
+		</ul>
+    </ul>
+
+<?//    <li><a href="engine_info/ADEPARTmenu.pdf">Vehicle Engine Diagrams</a>
+?>
+    <li><a target='_blank' href='https://secure.intercape.co.za/ignite/index.php?c=technical&m=vdash_planner&stop=414&page_id=2741'>Technical Planner</a>
+    <li><a target='_new' href="/ops/bus_ready_board.phtml">Bus Ready-Line board</a>
+    <li><a href="changedepot.phtml">Change your depot or company</a>    
+    <li><a href="nexttrip.phtml">Next trip scheduled for a coach</a>
+<? //    <li><a href="parthistory.phtml?stage=0">Engine/Gearbox/Diff History</a>
+  // <li><a href="/booking/overtime.phtml">Overtime</a>
+?>
+<li><a href="/ignite/index.php?c=overtime_staff&m=vdash_overtime_preapprove&page_id=1561">Overtime Pre-Approval</a>
+<li><a href="/ignite/index.php?c=reports&m=overtime_report&page_id=134" target="_parent">Overtime Report</a>
+	<li><a href="/booking/boards.phtml?mycat=T">Whiteboards</a>
+	<li><a href=move_documents.phtml>Manage Brake Tests + COFs</a>
+   <br><br>
+
+
+<br>            
+		</ul>
+    </ul>
+
+    <li><a href="move_invoice_payandbatch.phtml">Creditors System</a>
+ 
+	
+    <li><a target='_new' href="http://192.168.10.239/move/index.phtml">Test MOVE system</a> (<font color=darkred>This allows you to log on to the <b>test system</b>. Uses the same username and password</font>)
+<?
+//	<li><a href="/booking/webbackup/index.phtml">My Backups</a>
+?>
+	</body>
+</html>

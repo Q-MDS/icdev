@@ -1,0 +1,118 @@
+*** /root/misc.inc	2020-02-21 14:00:18.998433631 +0200
+--- ./misc.inc	2020-02-21 15:28:02.779433631 +0200
+***************
+*** 870,879 ****
+--- 872,892 ----
+  		while (ora_Fetch($ascur)) {
+  			$stopgroup[getdata($ascur,0)]=getdata($ascur,1);
+  		}
+  	}
+  
++ 	$cap_stop="";
++ 	$cap_at=99999;
++ 	ora_parse($ascur,"select stop_name,max_pax from cap_pax_at_stop where coach_serial='$coachserial' and stop_name in ('$gofrom','$goto')");
++ 	ora_exec($ascur);
++ 	if (ora_fetch($ascur)) {
++ 		$cap_stop=getdata($ascur,0);
++ 		$cap_at=getdata($ascur,1);
++ 	}
++ 	if ($debug) {
++ 		echo "CAP STOP: select stop_name,max_pax from cap_pax_at_stop where coach_serial='$coachserial' and stop_name in ('$gofrom','$goto')<Br>Gets $cap_stop / $cap_at<br>";
++ 	}
+  
+  	//                  0              1             2              3            4             5              6                  7
+  	$qry = "select A.stop_order, A.short_name, A.route_serial, B.max_seats, B.run_date, A.start_include, A.end_include, A.new_partition from $tblprefix"."route_stops A, $tblprefix"."open_coach B where A.route_serial = B.route_serial and B.coach_serial='$coachserial' order by stop_order";
+  	tcshow($qry);
+  	ora_parse($ascur, $qry);
+***************
+*** 1034,1058 ****
+  		} // extendedmode
+  
+  	} // while
+  
+  
+  	$availNum = $max;
+  	$min = $max;
+  
+  	reset($stopOrders);
+  
+  	while(list($k,$v) = each($stopOrders))
+  	{
+  		$availNum -= $getOn[$k];
+  		$availNum += $getOff[$k];
+  
+! 		$global_availseats[$coachserial][$v]=$availNum; // NEW: Used for new pricing model, 2006
+  	
+! 		if($startat <= $v && $v < $endat && $min > $availNum)
+  		{
+! 			$min = $availNum;
+  		}
+  	}
+  	ora_close($ascur); /* added by kw 15/2/2001 */
+  
+  	if ($extendedmode) {
+--- 1047,1110 ----
+  		} // extendedmode
+  
+  	} // while
+  
+  
++ 	if ($cap_stop!="")
++         {
++                 $cap_stop=$stopOrders[$cap_stop];
++ 		$cap_difference=$totSeatsAtStop[$cap_stop]-$cap_at;
++ //                $totSeatsAtStop[$cap_stop]=$cap_at; - dont do this - it will create a partition
++                 if ($debug) {
++                         echo "CAP STOP is $cap_stop<bR>";
++                         print_r($totSeatsAtStop);
++                 }
++         } else {
++ 		$cap_stop=-1;
++ 	}
++ 
++ 
++ 
+  	$availNum = $max;
+  	$min = $max;
+  
+  	reset($stopOrders);
+  
+  	while(list($k,$v) = each($stopOrders))
+  	{
+  		$availNum -= $getOn[$k];
+  		$availNum += $getOff[$k];
+  
+! 		// new Feb 2020 - capping of stops
+! 		if ($cap_stop==$v) 
+! 		{
+! 			if ($k==$gofrom)
+! 			{
+! 				$usenum=$cap_at-$getOn[$k];
+! 				if ($debug || getenv("REMOTE_USER")=="Keith")
+! 	                                echo "First calc is $usenum = $cap_at-$getOn[$k] getting on here<bR>";
+! 			}
+! 			else {
+! 				$usenum=$cap_at-$getOff[$k];
+! 				if ($debug || getenv("REMOTE_USER")=="Keith")
+!                                         echo "First calc is $usenum = $cap_at-$getOff[$k] getting OFF here<bR>";
+! 				if ($min > $usenum)
+! 					$min=$usenum; // required for last stop as it is excluded from the code below
+! 
+! 			}
+! 			// if the main bus has LESS seats available, we use that number:
+! 			if ($availNum<$usenum)
+! 				$usenum=$availNum;
+! 		}
+! 		else
+! 			$usenum=$availNum;
+! 
+! 		$global_availseats[$coachserial][$v]=$usenum; // NEW: Used for new pricing model, 2006
+  	
+! 		if($startat <= $v && $v < $endat && $min > $usenum)
+  		{
+! 			$min = $usenum;
+  		}
+  	}
+  	ora_close($ascur); /* added by kw 15/2/2001 */
+  
+  	if ($extendedmode) {

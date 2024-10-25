@@ -1,0 +1,95 @@
+Function convert_money( $from_curr, $to_curr, $amount)
+{
+	global $conn,$debug, $REMOTE_USER, $no_convert_round, $convert_cursor;
+
+
+	if ($REMOTE_USER=="Keeith"):
+		echo "CM: $from_curr, $to_curr, $amount<br>";
+	endif;
+
+	if ($amount==0):
+		return 0;
+	endif;
+
+	if (isset($convert_cursor))
+		$cmc=$convert_cursor;
+	else
+		$cmc = Ora_Open($conn);
+	$qry = "select UZAR from currency_info where name='$from_curr'";
+/*	echo "query=($qry)<br>\n";
+*/
+
+	ora_parse($cmc,$qry);
+	ora_exec($cmc);
+	if (!ora_fetch($cmc)):
+		echo "<h2>Conversion Error 1: invalid currency $from_curr. </h2>\n";
+		echo "<h2>This page will not be correct/complete - please report this error immediately!</h2>\n";
+            echo "<pre>CM: $from_curr, $to_curr, $amount</pre><br>";
+		$host=getenv("REMOTE_ADDR");
+		$msg="Currency conversion error username $REMOTE_USER ($host) query $qry converting from $from_curr to $to_curr amount $amount  page $PHP_SELF\n";
+		reset($_GET);
+		while(list($key,$val)=each($_GET))
+			$msg.="$key=$val\n";
+		reset($_POST);
+                while(list($key,$val)=each($_POST))
+                        $msg.="$key=$val\n";
+
+      mail("keitha@intercape.co.za","Currency error",$msg."\n".getenv("REQUEST_URI").":".$_PHP_SELF."\nArgs: ".implode("&",$_POST)); 
+		echo "<hr>A Currency Conversion Error has occurred - transaction stopped<bR>";
+		ora_rollback($conn);
+		exit;
+
+		return false;
+	endif;
+	$UZAR_from = chop(ora_getcolumn($cmc,0));
+	if (!isset($convert_cursor))
+	{
+		ora_close($cmc);
+		$cmc = Ora_Open($conn);
+	}
+	$qry = "select UZAR, roundup from currency_info where name='$to_curr'";
+	ora_parse($cmc,$qry);
+	ora_exec($cmc);
+	if (!ora_fetch($cmc)):
+		echo "<h2>Conversion Error 2: invalid currency $to_curr. </h2>\n";
+            echo "CM: $from_curr, $to_curr, $amount<br>";
+		$host=getenv("REMOTE_ADDR");
+                $msg="Currency conversion error username $REMOTE_USER ($host) query $qry converting from $from_curr to $to_curr amount $amount  page $PHP_SELF\n";
+		 reset($_GET);
+                while(list($key,$val)=each($_GET))
+                        $msg.="$key=$val\n";
+                reset($_POST);
+                while(list($key,$val)=each($_POST))
+                        $msg.="$key=$val\n";
+
+                mail("keitha@intercape.co.za","Currency error",$msg); 
+		           echo "<h2>This page will not be correct/complete - please report this error immediately!</h2>\n";
+		/*exit;
+*/
+		return false;
+	endif;
+	$UZAR_to = chop(ora_getColumn($cmc,0));
+	$roundup = chop(ora_getColumn($cmc,1));
+	if (!isset($convert_cursor))
+		ora_Close($cmc);
+
+	echodb($debug,"converting from $from_curr to $to_curr");
+	echodb($debug,"$amount, $UZAR_from, $UZAR_to");
+
+	$newprice = ($amount / $UZAR_from) * $UZAR_to;
+	if (!$no_convert_round)
+		$newprice = IntVal($newprice);
+	
+	if ($roundup>0 && !$no_convert_round) 
+  	  while (($newprice%$roundup)!=0):
+		$newprice++;
+	  endwhile;
+
+	if ($debug)
+		echo "DEBUG: Returning $newprice = ".chopcents($newprice)."<br>";
+	if (!$no_convert_round)
+		return chopcents($newprice);
+	else
+		return sprintf("%.2f",round($newprice*100)/100);
+};
+

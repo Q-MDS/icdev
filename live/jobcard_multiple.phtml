@@ -1,0 +1,63 @@
+<html>
+	<head><link type="text/css" rel="stylesheet" href="style.css"><title>PUT YOUR TITLE HERE</title><head>
+	
+	<body>
+	<? require_once ( "menu.inc" ); ?>
+	<?
+    require_once("serial.inc");
+    require_once("error.inc");
+    require_once("stock.inc"); // this might not be needed
+    require_once("../php3/oracle.inc");
+    require_once("../php3/sec.inc");
+    require_once("../php3/misc.inc"); 
+
+    if( !open_oracle() )
+    	exit;
+
+	if( !AllowedAccess( "" ) )
+		exit;
+
+// if (is_numeric($vreport) && is_numeric($fromdate) && is_numeric($todate)) {
+
+	echo "<form method=post action=jobcard_daily_auth.phtml>";
+	echo "Select Vehicle: <select name=vreport><option value=''>Select a vehicle<option value=0>All Vehicles (Services only)";
+	if ($showold=="Y")
+		ora_parse($cursor,"select serial,code,to_char(vehicle_end_date,'YYYY/MM/DD'),is_current from vehicles order by code");	
+	else
+		ora_parse($cursor,"select serial,code,'',is_current from vehicles where is_current='Y' order by code");
+	ora_exec($cursor);
+	while (ora_fetch($cursor)) {
+		echo "<option value=".getdata($cursor,0);
+		if (isset($vreport) && is_numeric($vreport) && $vreport==getdata($cursor,0)) {
+			echo " SELECTED";
+		}	
+		echo ">".getdata($cursor,1)." ";
+		$dt=getdata($cursor,2);
+		if ($dt!="")
+			echo "(Removed $dt)";	
+		elseif ($showold=="Y") {
+			if (getdata($cursor,3)=="Y")
+				echo "(current)";
+			else
+				echo "(deleted)";
+		}
+
+	}
+	echo "</select>";
+	if ($showold!="Y")
+		echo " <A href=jobcard_multiple.phtml?showold=Y>Include deleted buses</a>";
+	echo "<bR>";
+	echo "From Date: <input name=fromdate size=8 maxlength=8> (YYYYMMDD)<bR>";
+	echo "From Date: <input name=todate size=8 maxlength=8> (YYYYMMDD)<bR>";
+	echo "Services Only: <input name=serviceonly type=checkbox value=Y><bR>";
+	echo "Dont show breakdown information: <input type=checkbox name=suppress_things value=Y CHECKED><Br>";
+	echo "<input type=submit value=Go> Please click once, and then wait... it will take a while";
+	echo "<input type=hidden name=stage value=4>";
+	echo "<input type=hidden name=subjob_more value=true>";
+//stage=4&subjob_more=true
+	echo "</form>";
+	close_oracle();
+?>
+</body>
+</html>
+

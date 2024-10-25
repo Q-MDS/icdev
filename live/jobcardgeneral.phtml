@@ -1,0 +1,500 @@
+<html>
+	<head><link type="text/css" rel="stylesheet" href="style.css"><title>View Job Card</title></head>
+	
+	<body>
+	<? require_once ( "menu.inc" ); ?>
+	<?
+//	print_r($_POST);
+	require_once("../php3/oracle.inc");
+    require_once("../php3/sec.inc");
+    require_once( "stock.inc" );
+
+    if( !open_oracle() )
+    	exit;
+    	
+    if( !AllowedAccess( "COACH_SERVICES" ) )
+    	exit;
+    	
+	print "<a href='jobcardgeneral.phtml?stage=0'>View Jobcard Lists</a>&nbsp;&nbsp;&nbsp;&nbsp;";
+	print "<a href='jobcardgeneral.phtml?stage=1'>Add New List</a>&nbsp;&nbsp;&nbsp;&nbsp;";
+	print "<a href='manageservicetype.phtml?stage=0'>View Service Types</a>&nbsp;&nbsp;&nbsp;&nbsp;";
+	print "<br>";
+	
+	array( $results );
+
+	if ($stage==4) {
+                $description = strtoupper( trim( str_replace( "\'", "''", $description ) ) );
+                if( !is_numeric( $esttime ) ) $esttime = 0;
+                if( !is_numeric( $orderby ) ) $orderby = 99999;
+
+                if( is_numeric( $jserial ) ) {
+
+			// new : Checkboxes
+/*                 echo "<tr class=cell><td><input name=cbdo$x size=2 value='$data[3]'></td>";
+                                echo "<Tr class=cell><td><input name=cbtx$x size=80 maxlength=200 value='$data[2]'></td>";
+                                echo "<tr class=cell><Td><input type=checkbox name=cbdl$x value=Y></td>"; // delete checkbox
+                        print "<tr><td><input name=ncbdo size=2 value='$lastnumber'></td><td><input name=ncbtx size=80 maxlength=200></td><td>NEW</td></tr>";
+*/
+			reset($_POST);
+			while (list($key,$val)=each($_POST)) {
+				if (substr($key,0,4)=="cbtx" && trim($val)!="") {
+					$srl=substr($key,4,9999);
+					//echo "found srl $srl<Br>";
+					if (is_numeric($srl)) {
+					   if ($_POST["cbdl$srl"]=="Y") {
+							$qry="update move_jobgeneral_items set in_use='N' where  serial=$srl";
+                                                        ora_parse($cursor,$qry);
+                                                        ora_exec($cursor);
+
+					   } else {
+						$order=trim($_POST["cbdo$srl"]);
+						if (!is_numeric($order))
+							$order=1;
+						$val=str_replace("'","",$val);
+						if ($val!="") {
+							$qry="update move_jobgeneral_items set instructions='$val',display_order=$order where serial=$srl";
+							ora_parse($cursor,$qry);
+							ora_exec($cursor);
+						}
+				           } // update
+					}
+
+				} // if
+//				else echo "Skip $key<bR>";
+			} // while
+
+			$ncbtx=trim($ncbtx);
+			$ncbtx=str_replace("'","",$ncbtx);
+
+			if ($ncbtx!="") {// add new
+				$ncbtx=str_replace("'","",$ncbtx);
+				if (!is_numeric($ncbdo))
+					$ncbdo=1;
+				$qry="insert into move_jobgeneral_items values (jobcardcheckboxserial.nextval, $jserial, '$ncbtx',$ncbdo,'Y')";
+				echo "$qry<bR>";
+				ora_parse($cursor,$qry);
+                                ora_exec($cursor);
+			} // add new
+			else echo "$ncbtx is blank<Br>";
+
+			// end - checkboxes
+                        $qry  = "UPDATE MOVE_JOBGENERAL SET faultclass=$faultclass, description='$description', esttime=$esttime, orderby=$orderby WHERE serial=$jserial";
+                } else {
+                        $jserial = time();
+
+                        $qry  = "INSERT INTO MOVE_JOBGENERAL ( serial, faultclass, description, esttime, orderby, active, jobcard ) ";
+                        $qry .= "VALUES ( $jserial, $faultclass, '$description', $esttime, $orderby, 'Y', $serial )";
+                }
+
+                ora_parse( $cursor, $qry );
+                ora_exec( $cursor );
+
+
+		$stage=3; // back to edit screen
+
+	}
+	
+	if( $stage==0 ) {
+		$tcur = ora_open( $conn );
+		print "<br>";
+		
+		if (is_numeric($onlyshow)) 
+		{
+			ora_parse($cursor,"select serial, name, service_bustype from move_servicedef where active='Y' and jobcard=$onlyshow");
+			ora_Exec($cursor);
+			$sfound=0;
+			echo "Services that use this jobcard list:<bR>";
+			while (ora_fetch_into($cursor,$data)) {
+				echo "<a href=manageservicetype.phtml?stage=1&serial=$data[0]&servicetype=$data[2]>$data[1]</a><Br>";
+				$sfound++;	
+				unset($data);
+			}
+			if ($sfound==0)
+				echo "NONE<bR>";
+			ora_parse( $cursor, "SELECT serial, name, active, company FROM MOVE_JOBCARDS where serial=$onlyshow ORDER BY name" );
+		}
+		
+		else
+			ora_parse( $cursor, "SELECT serial, name, active, company FROM MOVE_JOBCARDS ORDER BY active desc, name" );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			$serial = ora_getColumn( $cursor, 0 );
+			$name = ora_getColumn( $cursor, 1 );
+			$active = ora_getColumn( $cursor, 2 );
+			$company = getCompany( ora_getColumn( $cursor, 3 ) );
+			if ($active=="N")
+				$s="<s>";
+			else
+				$s="";	
+			print "<table width=100%><tr class=head>";
+			print "<td colspan=4>$s$company: <u>$name</u></td>";
+			print "<form method=post><input type=hidden name=stage value=1><input type=hidden name=serial value=$serial><td width=60><input type=submit value='Edit List'></td></form>";
+			print "<form method=post><input type=hidden name=stage value=3><input type=hidden name=serial value=$serial><td width=60><input type=submit value='Add Items'></td></form>";
+			
+			$count = 0;
+			$flag = true;
+			ora_parse( $tcur, "SELECT A.serial, B.description, A.description, A.esttime FROM MOVE_JOBGENERAL A, MOVE_JOBCARDS C, MOVE_FAULTCLASS B WHERE A.jobcard=$serial AND A.jobcard=C.serial AND A.faultclass=B.serial AND A.active='Y' ORDER BY A.orderby, A.description" );
+			ora_exec( $tcur );
+			while( ora_fetch( $tcur ) ) {
+				$count++;
+				$tserial = ora_getColumn( $tcur, 0 );
+				$fdesc = ora_getColumn( $tcur, 1 );
+				$desc = ora_getColumn( $tcur, 2 );
+				$esttime = ora_getColumn( $tcur, 3 );
+				
+				( $flag ) ? print "<tr class=cell>" : print "<tr class=altcell>";
+				print "<td>$fdesc</td>";
+				print "<td colspan=2>$desc</td>";
+				print "<td>$esttime minute(s)</td>";
+				print "<form method=post><input type=hidden name=stage value=3><input type=hidden name=serial value='$serial'><input type=hidden name=jserial value='$tserial'><td width=40><input type=submit value='Edit'></td></form>";
+				print "<form method=post><input type=hidden name=stage value=5><input type=hidden name=serial value='$tserial'><td width=60><input type=submit value='Remove'></td></form>";
+				print "</tr>";
+				
+				$flag = !$flag;
+			}
+			
+			if( $count==0 ) print "<tr class=cell><td colspan=4><b>NO ITEMS</b></td><td colspan=2>&nbsp;</td></tr>";
+			
+			print "</tr>";
+			print "</table><br>";
+		}
+		ora_close( $tcur );
+	}
+	elseif( $stage==1 ) {
+
+		if (is_numeric($replicate)) {
+		                        // replicate jobcard
+                                $newserial=time();
+					
+				$newname=substr($newname,0,30);
+				if ($newname=="")
+					$newname="COPY";
+				echo "New serial is $newserial and name is $newname<br>";
+                                ora_parse($cursor,"insert into move_jobcards (name, serial, active, company) values ('$newname',$newserial,'Y',0)");
+                                if (!ora_Exec($cursor)) {
+					exit;
+				}
+                                $kcur=ora_open($conn);
+                                $tcur=ora_open($conn);
+                                ora_parse($cursor,"select * from move_jobgeneral where jobcard=$replicate");
+                                ora_Exec($cursor);
+                                unset($general);
+                                while (ora_fetch_into($cursor,$general)) {
+                                        ora_parse($kcur,"select job_misc_sequence.nextval from dual");
+                                        ora_exec($kcur);
+                                        ora_fetch($kcur);
+                                        $newgeneral=getdata($kcur,0);
+                                        for ($a=1;$a<6;$a++)
+                                                if ($general[$a]=="")
+                                                        $general[$a]="null";
+                                        ora_parse($kcur,"insert into move_jobgeneral (serial, faultclass, description, esttime, orderby, active, jobcard) values ($newgeneral, $general[1], '$general[2]', $general[3], $general[4], '$general[5]', $newserial)");
+                                        ora_exec($kcur);
+                                        ora_parse($kcur,"select * from move_jobgeneral_items where general_serial=$general[0]");
+                                        ora_Exec($kcur);
+                                        unset($item);
+                                        while (ora_fetch_into($kcur,$item)) {
+                                                if (!is_numeric($item[3]))
+                                                        $item[3]="null";
+                                                ora_parse($tcur,"insert into move_jobgeneral_items (serial, general_serial, instructions, display_order, in_use) values (jobcardcheckboxserial.nextval, $newgeneral, '$item[2]', $item[3], '$item[4]')");
+                                                ora_exec($tcur);
+
+                                                unset($item);
+                                        }
+                                        unset($general);
+                                }
+				$serial=$newserial;
+
+		}
+		print "<br><div class=info>Note that if you are creating a jobcard list that will always be added to a vehicle when a jobcard is opened, then ";
+		print "it <u>must be called <b>STANDARD C</b></u>, <u><b>STANDARD P</b></u> or <u><b>STANDARD T</b></u> otherwise the system won't pick it up. There should be one <b>STANDARD (C/P/T)</b> jobcard";
+		print " only for each company</div>";
+		
+		print "<form method=post action='jobcardgeneral.phtml'><input type=hidden name=stage value=2>";
+		
+		if( isset( $serial ) ) {
+			if ($delete=="Y") {
+				ora_parse($cursor," update move_jobcards set active='N' where serial='$serial'");
+				ora_exec($cursor);
+			} elseif ($undelete=="Y") {
+				ora_parse($cursor," update move_jobcards set active='Y' where serial='$serial'");
+                                ora_exec($cursor);
+
+			}
+			$submit = "Update";
+			ora_parse( $cursor, "SELECT name, company, active FROM MOVE_JOBCARDS WHERE serial=$serial" );
+			ora_exec( $cursor );
+			$name = ora_getColumn( $cursor, 0 );
+			$tcompany = ora_getColumn( $cursor, 1 );
+			$active = ora_getcolumn( $cursor, 2);
+			print "<input type=hidden name=serial value='$serial'>";
+			$newname=urlencode("Copy of $name");
+			echo "<a href=jobcardgeneral.phtml?stage=1&replicate=$serial&newname=$newname>Click here to make a copy</a> ";
+			if ($active=="Y")
+				echo " | <a href=jobcardgeneral.phtml?stage=1&serial=$serial&delete=Y>Click here to delete</a> ";
+			else
+				echo " | <font color=red>NOTE: THIS IS DELETED <a href=jobcardgeneral.phtml?stage=1&serial=$serial&undelete=Y>Click here to UNdelete</a> ";
+	
+		} else {
+			$submit = "Add";
+		}
+		
+		
+		print "<table width=80%>";
+		print "<tr class=title><td colspan=2>$submit jobcard</td></tr>";
+		print "<tr class=cell><td>Company</td><td><select name=company>";
+		
+		ora_parse( $cursor, "SELECT serial, name FROM MOVE_COMPANY WHERE active='Y'" );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			$tserial = ora_getColumn( $cursor, 0 );
+			$tname = ora_getColumn( $cursor, 1 );
+			
+			if( $tserial==$tcompany )
+				print "<option selected value='$tserial'>$tname";
+			else print "<option value='$tserial'>$tname";
+		}
+		
+		print "</select></td></tr>";
+		print "<tr class=cell><td>Name</td><td><input type=text name=name size=50 maxlength=30 value='$name'></td></tr>";
+		print "</table>";
+		print "<br><input type=submit value='$submit Jobcard List'>";
+		print "</form>";
+	}
+	elseif( $stage==2 ) {
+		$name = trim( strtoupper( $name ) );
+		
+		if( isset( $serial ) ) {
+			ora_parse( $cursor, "UPDATE MOVE_JOBCARDS SET name='$name', company=$company WHERE serial=$serial" );
+			ora_exec( $cursor );
+		} else {
+			$serial = time();
+			
+			ora_parse( $cursor, "INSERT INTO MOVE_JOBCARDS ( serial, name, active, company ) VALUES ( $serial, '$name', 'Y', $company )" );
+			ora_exec( $cursor );
+		}
+		
+		?> <form name="temp" method="post"><input type=hidden name=stage value=0></form><script language="JavaScript"> temp.submit() </script> <?
+	}
+	elseif( $stage==3 ) {
+		print "<form method=post action='jobcardgeneral.phtml'><input type=hidden name=stage value=4><input type=hidden name=serial value='$serial'>";
+		
+		if( isset( $jserial ) ) {
+			print "<a style=' background: lavender; ' href='jobcardgeneral.phtml?stage=3&serial=$serial'>Create a new item</a><br><br>";
+			print "<input type=hidden name=jserial value='$jserial'>";
+			
+			$results = array();
+			ora_parse( $cursor, "SELECT faultclass, description, esttime, orderby FROM MOVE_JOBGENERAL WHERE serial=$jserial" );
+			ora_exec( $cursor );
+			ora_fetch_into( $cursor, $results );
+			
+			$submit = "Update";
+		} else {
+			ora_parse( $cursor, "SELECT MAX( orderby ) FROM MOVE_JOBGENERAL WHERE serial=$serial" );
+			ora_exec( $cursor );
+			if( ora_fetch( $cursor ) ) $results[3] = ora_getColumn( $cursor, 0 ) + 1;
+			else $results[3] = 1;
+			
+			$submit = "Add";
+		}
+		
+		ora_parse( $cursor, "SELECT name, company FROM MOVE_JOBCARDS WHERE serial=$serial" );
+		ora_exec( $cursor );
+		$name = ora_getColumn( $cursor, 0 );
+		$company = ora_getColumn( $cursor, 1 );
+		
+		print "<table width=80%>";
+		print "<tr class=title><td colspan=2>$submit Items to jobcard: " . getCompany( $company ) . " <u>$name</u></td></tr>";
+		
+		print "<tr class=cell><td width=120>Fault Class</td><td><select name='faultclass'>";
+		
+		ora_parse( $cursor, "SELECT A.serial, A.description, B.name FROM MOVE_FAULTCLASS A, MOVE_COMPANY B, PURCHASE_BUDGET_NAMES C WHERE A.active='Y' AND A.budgetname=C.serial AND B.serial=C.company AND C.company=$company ORDER BY A.description" );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			$tserial = ora_getColumn( $cursor, 0 );
+			$desc = ora_getColumn( $cursor, 1 );
+			$name = ora_getColumn( $cursor, 2 );
+			
+			if( $tserial==$results[0] )
+				print "<option selected value='$tserial'>$desc";
+			else print "<option value='$tserial'>$desc";
+		}
+		
+		print "</select></td></tr>";
+		
+		print "<tr class=cell><td>Description</td><td><textarea wrap=off rows=5 cols=60 name=description>$results[1]</textarea></td></tr>";
+		print "<tr class=cell><td>Estimated Time</td><td><input type=text name=esttime size=12 maxlength=8 value='$results[2]'> estimated time in minutes</td></tr>";
+		print "<tr class=cell><td>Order This By</td><td><input type=text name=orderby size=5 maxlength=2 value='$results[3]'> ordered in ascending sequence</td></tr>";
+		print "</table>";
+		print "<table class=noborder>";
+		print "<tr bgcolor=white>";
+		print "<td><input type=button value='Line Break' onClick=\" description.value += '<BR>'; \"></td>";
+		print "<td><input type=button value='Bold' onClick=\" description.value += '<B></B>'; \"></td>";
+		print "<td><input type=button value='Italic' onClick=\" description.value += '<I></I>'; \"></td>";
+		print "<td><input type=button value='Font Size' onClick=\" description.value += '<FONT SIZE=-1></FONT>'; \"></td>";
+		print "<td><input type=button value='List' onClick=\" description.value += '<OL><LI></OL>'; \"></td>";
+		print "</tr>";
+		print "</table>";
+		if( isset( $serial )  && is_numeric($jserial) ) { 
+			print "Check-Boxes: <br><table border=1 cellspacing=0>";
+			print "<tr class=head><td>Order</td><td>Instruction</td><td>Delete</td></tr>";
+			ora_parse( $cursor, "select * from move_jobgeneral_items where general_serial=$jserial and in_use='Y' order by display_order,serial");
+			ora_exec($cursor);
+			unset($data);
+			while (ora_fetch_into($cursor,$data)) {
+				$x=$data[0];
+				echo "<tr class=cell><td><input name=cbdo$x size=2 value='$data[3]'></td>";
+				echo "<td><input name=cbtx$x size=80 maxlength=200 value='$data[2]'></td>";
+				echo "<Td><input type=checkbox name=cbdl$x value=Y></td></tr>"; // delete checkbox
+				
+				$lastnumber=$data[3];
+				unset($data);
+			} // while
+			$lastnumber++;
+			print "<tr><td><input name=ncbdo size=2 value='$lastnumber'></td><td><input name=ncbtx size=80 maxlength=200></td><td>NEW</td></tr>";
+			print "</table>";
+		} // check boxes
+		print "<br><input type=submit value='$submit'>";
+		print "</form>";
+		
+		if( isset( $jserial ) )
+			print "<hr><b>PREVIEW</b><br>$results[1]";
+			
+		print "<hr>Some Help with Layout<br><br><ol>";
+		print "<li>To make a linebreak (to start on a new line), you must use the tag <b>&lt;br&gt;</b>";
+		print "<li>To get <b>bold text</b>, enclose the text like so &lt;b&gt;<b>bold text</b>&lt;/b&gt;";
+		print "<li>To get <i>italic text</i>, enclose the text like so &lt;i&gt;<i>italic text</i>&lt;/i&gt;";
+		print "<li>To make a list like this one, use the following formula: &lt;ol&gt;&lt;li&gt;Item One&lt;li&gt;Item Two&lt;/ol&gt;";
+		print "<li>To make fonts smaller, enclose the text list so &lt;font size=-1&gt;<font size=-1>smaller font</font>&lt;/font&gt;";
+		print "<li>You can use multiple tags at the same time: &lt;font size=-1&gt;<font size=-1><b>&lt;</b>b<b>&gt;smaller </b><i>&lt;i&gt;<b>font</b>&lt;/i&gt;</i>&lt;/b&gt;</b></font>&lt;/font&gt;";
+		print "</ol>";
+	}
+	elseif( $stage==5 ) {
+		if (!is_numeric($serial))
+		{
+			echo "Bad Data";
+			exit;
+		}
+		ora_parse($cursor,"select * from move_jobgeneral where serial=$serial");
+		ora_Exec($cursor);
+		if (ora_fetch_into($cursor,$data)) {
+			mail("kobus@intercape.co.za,stephan@intercape.co.za,keith@intercape.co.za","Item removed from jobcard list by ".getenv("REMOTE_USER"),implode(" | ",$data));
+			ora_parse( $cursor, "UPDATE MOVE_JOBGENERAL SET active='N' WHERE serial=$serial" );
+			ora_exec( $cursor );
+	
+		} else  {
+			echo "Not Found";
+			exit;
+		}
+		
+		?> <form name="temp" method="post"><input type=hidden name=stage value=0></form><script language="JavaScript"> temp.submit() </script> <?
+	}
+	
+	exit;
+	
+	if( $stage==0 ) {
+		print "<br><table width=100%>";
+		print "<tr class=title><td colspan=5>Current Jobcard List Format</td></tr>";
+		print "<tr class=head><td>Fault Class</td><td>Description</td><td>Estimated Time</td><td colspan=2>&nbsp;</td></tr>";
+		
+		$flag = true;
+		ora_parse( $cursor, "SELECT A.serial, B.description, A.description, A.esttime FROM MOVE_JOBGENERAL A, MOVE_FAULTCLASS B WHERE A.faultclass=B.serial AND A.active='Y' ORDER BY A.orderby, A.description" );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			$serial = ora_getColumn( $cursor, 0 );
+			$fdesc = ora_getColumn( $cursor, 1 );
+			$desc = ora_getColumn( $cursor, 2 );
+			$esttime = ora_getColumn( $cursor, 3 );
+			
+			( $flag ) ? print "<tr class=cell>" : print "<tr class=altcell>";
+			print "<td>$fdesc</td>";
+			print "<td>$desc</td>";
+			print "<td>";
+			
+			print (int) ($esttime/60) . "H";
+			print str_pad( $esttime%60, 2, "0", STR_PAD_LEFT );
+			print " [$esttime minutes]</td>";
+			print "<form method=post><input type=hidden name=stage value=10><input type=hidden name=serial value=$serial><td width=60><input type=submit value='Edit'></td></form>";
+			print "<form method=post><input type=hidden name=stage value=20><input type=hidden name=serial value=$serial><td width=60><input type=submit value='Delete'></td></form>";
+			print "</tr>";
+			
+			$flag = !$flag;
+		}
+		
+		print "</table>";
+	}
+	elseif( $stage==10 ) {
+		print "<form method=post action='jobcardgeneral.phtml'><input type=hidden name=stage value=11>";
+		
+		if( isset( $serial ) ) {
+			print "<input type=hidden name=serial value='$serial'>";
+			
+			$results = array();
+			ora_parse( $cursor, "SELECT faultclass, description, esttime, orderby FROM MOVE_JOBGENERAL WHERE serial=$serial" );
+			ora_exec( $cursor );
+			ora_fetch_into( $cursor, $results );
+			
+			$submit = "Update";
+		} else {
+			ora_parse( $cursor, "SELECT MAX( orderby ) FROM MOVE_JOBGENERAL" );
+			ora_exec( $cursor );
+			if( ora_fetch( $cursor ) ) $results[3] = ora_getColumn( $cursor, 0 ) + 1;
+			else $results[3] = 1;
+			
+			$submit = "Add";
+		}
+		
+		print "<table width=80%>";
+		print "<tr class=title><td colspan=2>Add a standard jobcard item</td></tr>";
+		
+		print "<tr class=cell><td width=120>Fault Class</td><td><select name='faultclass'>";
+		
+		ora_parse( $cursor, "SELECT serial, description FROM MOVE_FAULTCLASS WHERE active='Y' ORDER BY description" );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			$tserial = ora_getColumn( $cursor, 0 );
+			$desc = ora_getColumn( $cursor, 1 );
+			
+			if( $tserial==$results[0] )
+				print "<option selected value='$tserial'>$desc";
+			else print "<option value='$tserial'>$desc";
+		}
+		
+		print "</select></td></tr>";
+		
+		print "<tr class=cell><td>Description</td><td><input type=text name=description size=80 maxlength=100 value='$results[1]'></td></tr>";
+		print "<tr class=cell><td>Estimated Time</td><td><input type=text name=esttime size=12 maxlength=8 value='$results[2]'> estimated time in minutes</td></tr>";
+		print "<tr class=cell><td>Order This By</td><td><input type=text name=orderby size=5 maxlength=2 value='$results[3]'> ordered in ascending sequence</td></tr>";
+		print "</table>";
+		print "<br><input type=submit value='$submit'>";
+		print "</form>";
+	}
+	elseif( $stage==11 ) {
+		$description = strtoupper( trim( str_replace( "\'", "''", $description ) ) );
+		if( !is_numeric( $esttime ) ) $esttime = 0;
+		if( !is_numeric( $orderby ) ) $orderby = 99999;
+		
+		if( isset( $serial ) ) {
+			$qry  = "UPDATE MOVE_JOBGENERAL SET faultclass=$faultclass, description='$description', esttime=$esttime, orderby=$orderby WHERE serial=$serial";
+		} else {
+			$serial = time();
+			
+			$qry  = "INSERT INTO MOVE_JOBGENERAL ( serial, faultclass, description, esttime, orderby, active ) ";
+			$qry .= "VALUES ( $serial, $faultclass, '$description', $esttime, $orderby, 'Y' )";
+		}	
+		
+		ora_parse( $cursor, $qry );
+		ora_exec( $cursor );
+		
+		?> <form name="temp" method="post"><input type=hidden name=stage value=0></form><script language="JavaScript"> temp.submit() </script> <?
+	}
+	elseif( $stage==20 ) {
+		ora_parse( $cursor, "UPDATE MOVE_JOBGENERAL SET active='N' WHERE serial=$serial" );
+		ora_exec( $cursor );
+		?> <form name="temp" method="post"><input type=hidden name=stage value=0></form><script language="JavaScript"> temp.submit() </script> <?
+	}
+	
+	elseif( $stage==30 ) {
+	}
+	?>
+	</body>
+</html>

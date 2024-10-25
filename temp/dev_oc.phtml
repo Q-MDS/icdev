@@ -1,0 +1,574 @@
+<html>
+	<head><link type="text/css" rel="stylesheet" href="style.css"><title>OC Vehicles <?=$cookiedepot?></title><head>
+	
+<?
+
+for ($a=1;$a<24;$a++)
+	if ($a<12)
+		$times[$a]="$a"."am";
+	elseif ($a==12)
+		$times[12]="noon";
+	else { $b=$a-12; $times[$a]=$b."pm"; }
+
+
+require_once("../php3/opstimes.inc");
+function go_back()
+{
+        echo "<form>";
+        echo "<input type=button value='Go Back' ";
+        echo "onclick='javascript:history.back()'>";
+        echo "</form>";
+}
+
+    require_once("error.inc");
+    require_once("../php3/oracle.inc");
+    //require_once("../php3/logs.inc");
+    require_once("../php3/misc.inc");
+    require_once("../php3/sec.inc");
+
+	require_once ("menu.inc");
+
+   if( !open_oracle() )
+    	exit;
+
+
+    	
+    if (!AllowedFlag("MOVE_COACH"))
+	    if( !AllowedFlag("FOREMAN" ) )
+		    if( !AllowedAccess("FLAG_OC" ) )
+	
+			exit;
+	
+
+
+
+		?>
+		<div class="choices">
+	    <table class="choices">
+	    	<tr bgcolor=white>
+	    		<td width=200><a href="dev_oc.phtml?stage=0">Currently OC Vehicles</a></td>
+	    		<td width=200><a href="dev_oc.phtml?stage=1">Flag vehicle as OC</a></td>
+				<td width=140><a href="dev_oc.phtml?stage=20">History</a></td>
+				<td width=200><a href="dev_oc.phtml?stage=30">Manage OC Reasons</a></td>
+	    	</tr>
+	    </table>
+	    </div>
+	    <br>
+		<?
+	if( $stage==0 || $stage==20 ) { // list OC coaches
+
+
+		function username ($us) {
+			global $usernames,$kcur;
+
+			if ($us=="")
+				return "";
+			if (isset($usernames[$us]))
+				return($usernames[$us]);
+
+			ora_parse($kcur,"select username from user_details where user_serial=$us");
+			ora_exec($kcur);
+			ora_fetch($kcur);
+			$usernames[$us]=getdata($kcur,0);
+			return $usernames[$us];
+		
+
+		}
+
+		$kcur=ora_open($conn);
+
+		if ($stage==0) {
+			$today = date( "Ymd");
+
+			ora_parse( $cursor, "SELECT B.code, A.start_date, A.end_date, A.notes, A.entry_serial, A.time_ready, to_char(A.flagged_date,'DD Mon YYYY HH24:MI:SS'), flagged_by, cleared_by, null, A.depot  FROM vehicle_oc A, vehicles B WHERE A.vehicle = B.serial AND end_date >= $today AND replaced_by IS NULL and cleared_date is null ORDER BY code");
+		} else {
+			if (!is_numeric($yearmonth))	
+				$yearmonth=date("Ym");
+			ora_parse( $cursor, "SELECT B.code, A.start_date, A.end_date, A.notes, A.entry_serial, A.time_ready, to_char(A.flagged_date,'DD Mon YYYY HH24:MI:SS'), flagged_by, cleared_by, to_char(A.cleared_date,'DD Mon YYYY HH24:MI:SS'), A.depot  FROM vehicle_oc A, vehicles B WHERE A.vehicle = B.serial AND end_date >=$yearmonth"."01 and start_date<=$yearmonth"."32 AND replaced_by IS NULL ORDER BY code");
+
+			
+		}
+		ora_exec( $cursor);
+		echo "<table>";
+		if ($stage==0) {
+			echo "<tr class=title><td colspan=10><b><center>Vehicles currently out of commission</td></tr>";
+			echo "<tr class=title><td>Vehicle</td><td>Depot</td><td>From</td><td>Until</td><td colspan=2>Click to change</td><td>Notes</td><td>Flagged</td></tr>";
+		} else {
+			echo "<tr class=cell><form method=get action=oc.phtml><input type=hidden name=stage value=20><td colspan=6>Year/Month (YYYYMMDD) <input name=yearmonth value='$yearmonth' size=6 maxlength=6><input type=submit value=Go></td></form></tr>";
+			echo "<tr class=title><td colspan=10><b><center>Vehicles out of commission for $yearmonth</td></tr>";
+       	         	echo "<tr class=title><td>Vehicle</td><td>Depot</td><td>From</td><td>Until</td><td>Notes</td><td>Flagged</td><td>Cleared</td></tr>";
+		}
+		$line=0;
+		unset( $data);
+		while( ora_fetch_into( $cursor, $data)) {
+			$line++;
+			if ( $line % 2 == 0)
+				echo "<tr class=cell>";
+			else
+				echo "<tr class=altcell>";
+			$data[1] = afrikdate( $data[1]);
+			$data[2] = afrikdate( $data[2]);
+			echo "<td nowrap><b>$data[0]</td><td>$data[10]</td><td nowrap>$data[1]</td><td nowrap>$data[2] @".$times[$data[5]]."</td>";
+			if ($stage==0) echo "<td nowrap><a href=oc.phtml?stage=3&srl=$data[4]>Back in action</a></td><td nowrap><a href=oc.phtml?stage=4&srl=$data[4]>change date</a></td>";
+			echo "<Td nowrap><font size=2>$data[3]</td><td><i>$data[6]</i> - ".username($data[7])."</td>";
+			if ($stage==20)
+				echo "<td><i>$data[9]</i> - ".username($data[8]);	
+			echo "</tr>";
+			
+			unset( $data);
+		} // while
+		echo "</table>";
+		if ($line==0 && $stage==0)
+			echo "No vehicles are currently marked OC";
+
+	} // stage 0
+	elseif ( $stage == 1) {
+		$today = date( "Ymd");
+		echo "<form method=post action=dev_oc.phtml><input type=hidden name=stage value=2>";
+		ora_parse( $cursor, "SELECT A.serial, A.code FROM vehicles A WHERE is_current='Y' AND serial NOT IN ( SELECT vehicle FROM vehicle_oc WHERE replaced_by IS NULL AND end_date >= $today and cleared_date is null  ) ORDER BY code");
+		ora_exec( $cursor);
+		echo "Vehicle: <select name=vehicle>";
+		unset( $data);
+		while( ora_fetch_into( $cursor, $data)) {
+			echo "<option value='$data[0]'>$data[1]</option>";
+			unset( $data);
+		} // while
+		echo "</select>";
+                echo " Depot: <select name=depot>";
+                ora_parse($cursor,"select depot_code from depots where is_stores='Y' and warranty_store='N' and consignment='N' order by 1");
+                ora_ExeC($cursor);
+                if (!isset($depot))
+                        $depot=$cookiedepot;
+                elseif ($depot=="")
+                        $depot=$cookiedepot;
+                $depots=array();
+                while (ora_fetch($cursor)) {
+                        $depots[getdata($cursor,0)]=getdata($cursor,0);
+                }
+                echo makeselect($depots,$depot);
+                echo "</select>";
+
+
+		$today = nextdate( $today, 3);
+		echo "<div style='padding: 5px 0px; width: 100%'>Flag as OC from <input name=startd size=8 value='$today' maxlength=8> until <input name=last size=8 value='$today' maxlength=8> at <select name=time>".makeselect2($times,12)."</select></div>";		
+		echo "Reason/Notes: <input name=notes size=80 naxlength=100><Br>";
+		
+		/*
+		* Date: 03-09-2024
+		* Desc: Flag vehicle as OC: Select reasons
+		* Code block description: Present reasons as checkboxes and save selection to vehicle_oc_reasons table. Link on entry_serial
+		* 
+		* START
+		*/
+		echo '<table border="0" cellpadding="0" cellspacing="0">';
+		echo '<tr>';
+		echo '<td colspan="4" style="padding-top: 10px">Select reason(s)</td>';
+		echo '</tr>';
+
+		// Fetch records
+		$rcur = ora_open($conn);
+
+		$sql = "SELECT id, reason_desc FROM oc_reasons WHERE is_active = 'Y' ORDER BY id ASC";
+
+		ora_parse($cursor, $sql);
+		ora_exec($cursor);
+
+		$column_count = 0; 
+
+		while (ora_fetch($cursor)) 
+		{
+			$id = ora_getcolumn($cursor, 0);
+			$reason = ora_getcolumn($cursor, 1);
+
+			if ($column_count % 4 == 0) 
+			{
+				echo "<tr>";
+			}
+
+			echo '<td width=200>';
+			echo '<input name="cb_' . $id . '" id="cb_' . $id . '" type="checkbox" value="' . $reason . '"><label for="cb_' . $id . '">' . $reason . '</label>';
+			echo '</td>';
+
+			if ($column_count % 4 == 3) 
+			{
+				echo "</tr>";
+			}
+			
+			$numrecs++;
+			$column_count++;
+		}
+
+		if ($column_count % 4 != 0) 
+		{
+			echo '<td></td></tr>'; // Add an empty cell if the last row has only one column
+		}
+
+		echo '</table><br>';
+		/*
+		* END
+		*/
+
+		echo "<input type=submit value='Flag as Out Of Commission'>";
+	} // stage 1 - mark a vehicle (part 1)
+	elseif ( $stage==2 ) {
+		$startd=trim($startd);
+		$last=trim($last);
+		if (strlen($startd)!=8 || strlen($last)!=8 || !is_numeric($startd) || !is_numeric($last)) {
+			echo "<font color=red><h2>Sorry, you did not put in a valid date</h2></font>";	
+			exit;
+		}
+		
+		$us = getuserserial();
+		ora_parse( $cursor, "SELECT oc_serial.nextval FROM DUAL");
+		ora_exec( $cursor);
+		ora_fetch( $cursor);
+		$ser = ora_getColumn( $cursor, 0);
+		$today = date( "Ymd");
+		$startdate = date( "Ymd His");
+		// first check to make sure it doesnt overlap an existing entry...
+
+		/*QQQ */ ora_parse( $cursor, " SELECT start_date, end_date from vehicle_oc where vehicle=$vehicle and start_date<=$today and end_date>=$today and replaced_by is null and cleared_date is null");
+		ora_exec( $cursor);
+		unset( $data);
+		if (ora_fetch_into( $cursor, $data)) {
+			
+			$data[0]=afrikdate($data[0]);
+			$data[1]=afrikdate($data[1]);
+			echo "Sorry, that vehicle/trailer is already flagged as OC from $data[0] to $data[1]!<Br>";	
+			exit;
+		}
+		$qry = "INSERT INTO vehicle_oc ( entry_serial, vehicle, flagged_by, start_date, end_date, notes, flagged_date, time_ready, depot) VALUES ( $ser, $vehicle, $us, $startd, $last, '$notes', CURRENT_TIMESTAMP, $time, '$depot')";
+		
+		/*QQQ */ ora_parse( $cursor, $qry);
+		if ( !ora_exec( $cursor))		
+			echo "ERROR: $qry<br>";
+		else
+		{
+			echo "Done! <b>Please inform the OPS ROOM</b><hr>";
+					
+			ora_parse($cursor,"select code from vehicles where serial=$vehicle");
+			ora_Exec($cursor);
+			ora_fetch($cursor);
+			$vcode=getdata($cursor,0);
+
+			$msg="  Vehicle $vcode has been flagged as O/C from $startd to $last ($notes)\n";
+			ora_parse($cursor,"select rundate, info from ops_info where serial_no='$vehicle' and entry_type in ('c','t','s','k') and rundate>=$startd and rundate<=$last");
+			ora_exec($cursor);
+			while (ora_fetch($cursor)) {
+				$line="  Currently rostered for ".getdata($cursor,1)." on ".getdata($cursor,0)."\n";
+				echo "<font color=red><b>$line</b></font><bR>";
+				$msg.=$line;
+			}
+			mail("johanvr@intercape.co.za,philipn@intercape.co.za,asnijman@intercape.co.za,ernestl@intercape.co.za,ptafleetcontrol@intercape.co.za,steven@intercape.co.za,glennf@intercape.co.za","Bus flagged as O/C",$msg);
+		}
+
+		/*
+		* Date: 03-09-2024
+		* Desc: New screen: Save selected reasons to vehicle_oc_reasons table
+		* Code block description: Get all selected reasons and save them to vehicle_oc_reasons table
+		* 
+		* START
+		*/
+		$entry_serial = intval($ser);
+
+		foreach ($_POST as $key => $value) 
+		{
+			if (strpos($key, 'cb_') === 0) 
+			{
+				$reason_id = substr($key, 3) * 1;
+				$reason_id = intval($reason_id);
+
+				$sql = "INSERT INTO vehicle_oc_reasons VALUES ($entry_serial, $reason_id)";
+
+				ora_parse($cursor, $sql);
+				ora_exec( $cursor);
+			}
+		}
+		/*
+		* END
+		*/
+	} // stage=2 - part 2 of mark a vehicle 
+
+	elseif ( $stage ==3 ) { // put vehicle back into action
+		$today = date( "Ymd");
+		$us = getuserserial();
+		$finishdate = date( "Ymd His");
+		ora_parse( $cursor, "update vehicle_oc SET end_date=$today, cleared_by=$us, cleared_date=CURRENT_TIMESTAMP WHERE entry_serial=$srl AND replaced_by is null");
+		ora_exec( $cursor);
+		if ( ora_numrows( $cursor) == 1)
+			echo "Done!";
+		else
+			echo "Sorry, there was a problem!";
+
+	} // stage 3 - back in action
+	elseif ( $stage == 4) { // change end date part 1
+		echo "<form method=post action=oc.phtml><input type=hidden name=stage value=5>";
+		ora_parse( $cursor, " SELECT * FROM vehicle_oc WHERE entry_serial = $srl");
+		ora_exec( $cursor);
+		unset( $data);
+		if ( !ora_fetch_into( $cursor, $data)) {
+			echo "Sorry, that entry was not found!!!<br>";
+			exit;
+		}
+		ora_parse( $cursor, "SELECT code FROM vehicles WHERE serial=$data[1]");
+		ora_exec( $cursor);
+		if (ora_fetch( $cursor)) {
+			echo "Vehicle: ".getdata($cursor,0)."<br>";
+		}
+		if (is_numeric($data[3]) || is_numeric($data[7])) {
+			echo "Sorry, that entry cannot be changed!!!<br>";
+                        exit;
+		}
+		echo "Start Date: <input name=startd size=8 maxlength=8 value='$data[4]'> End Date: <input name=end size=8 maxlength=8 value='$data[5]'> at <select name=time>";
+		echo makeselect2($times,$data[10]);
+		echo "</select> <br>";
+
+		echo "Notes/Reason: <input name=notes value='$data[6]' size=80 maxlength=100><br>";
+		echo "<input type=hidden name=srl value=$srl>";
+		echo "<input type=submit value='Change Date/Time'>";
+	} // stage 4 - change end date part 1
+	elseif ( $stage == 5) {
+		$startd=trim($startd);
+                $end=trim($end);
+                if (strlen($startd)!=8 || strlen($end)!=8 || !is_numeric($startd) || !is_numeric($end)) {
+                        echo "<font color=red><h2>Sorry, you did not put in a valid date</h2></font>";
+                        exit;
+                }
+
+                ora_parse( $cursor, " SELECT * FROM vehicle_oc WHERE entry_serial = $srl");
+                ora_exec( $cursor);
+                unset( $data);
+                if ( !ora_fetch_into( $cursor, $data)) {
+                        echo "Sorry, that entry was not found!!!<br>";
+                        exit;
+                }
+                ora_parse( $cursor, "SELECT code FROM vehicles WHERE serial=$data[1]");
+                ora_exec( $cursor);
+                if (ora_fetch( $cursor)) {
+                        echo "Vehicle: ".getdata($cursor,0)."<br>";
+                }
+                if (is_numeric($data[3]) || is_numeric($data[7])) {
+                        echo "Sorry, that entry cannot be changed!!!<br>";
+                        exit;
+                }
+		$allcorrect = true;
+		unset($newser);
+		ora_parse( $cursor, "SELECT oc_serial.nextval FROM DUAL");
+		ora_exec( $cursor);
+		ora_fetch( $cursor);
+		$newser = ora_getColumn( $cursor, 0);
+		if ( !is_numeric( $newser))
+			$allcorrect = false;	
+
+		$qry = "UPDATE vehicle_oc SET replaced_by=$newser WHERE entry_serial=$srl";
+		ora_parse( $cursor, $qry);
+		if ( !ora_exec( $cursor)) {
+			echo "Error: $qry<Br>";
+			$allcorrect = false;
+		}
+		unset ($us);
+		$us = getuserserial();
+		if ( !is_numeric($us))
+			$allcorrect = false;
+
+		$today = date( "Ymd");
+		$startdate = date( "Ymd His"); 
+
+               $qry = "INSERT INTO vehicle_oc ( entry_serial, vehicle, flagged_by, start_date, end_date, notes, flagged_date, time_ready, depot) VALUES ( $newser, $data[1], $us, $startd, $end, '$notes', CURRENT_TIMESTAMP, $time, '$data[11]')";
+
+                ora_parse( $cursor, $qry);
+                if ( !ora_exec( $cursor))
+                        echo "ERROR: $qry<br>";
+                else
+                        echo "Done! <b>Please inform the OPS ROOM</b>";
+
+	} // change end date - part 2
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/*
+	* Date: 03-09-2024
+	* Desc: New screen: Manage Reasons (CRUD) for flag vehicle as OC
+	* Code block description: Code to handle add, edit, delete and reason list
+	* 
+	* START
+	*/
+	elseif ($stage == 30) 
+	{
+		// Add form
+		if (!isset($_GET['id']))
+		{
+			echo '<form action="dev_oc.phtml?stage=31" method="post">';
+				echo '<table>';
+					echo '<tr>';
+						echo '<td colspan="4"><b>Manage OC Reasons</b></td>';
+					echo '</tr>';
+					echo '<tr>';
+						echo '<td style="padding-top: 10px;">Add new reason</td>';
+						echo '<td style="padding-top: 10px;">';
+							echo '<input name="reason_desc" type="text" value="" style="width: 400px; height: 28px" placeholder="Enter reason description">';
+						echo '</td>';
+						echo '<td style="padding-top: 10px;"><input type="submit" value="Add Reason" style="height: 28px"></td>';
+						echo '<td>&nbsp;</td>';
+					echo '</tr>';
+				echo '</table>';
+			echo '</form>';
+		} 
+	}
+	else if ($stage == 31)
+	{
+		// Add code: add new record to table
+		$reason_desc = TRIM($_POST['reason_desc']);
+		$reason_desc = htmlspecialchars($reason_desc, ENT_QUOTES, 'UTF-8');
+		$reason_desc_escaped = "q'[" . $reason_desc . "]'";
+
+		if ($reason_desc != '')
+		{
+			$rcur = ora_open($conn);
+
+			$sql = "INSERT INTO oc_reasons (id, reason_desc) VALUES (OC_REASON_ID_SEQ.NEXTVAL, $reason_desc_escaped)";
+			
+			ora_parse($rcur, $sql);
+			ora_exec($rcur);
+			ora_close($rcur);
+			
+			echo "<script> window.location='dev_oc.phtml?stage=30'; </script>";
+			exit;
+		}
+	}
+	elseif ($stage == 32)
+	{
+		//Edit form
+		$id = $_GET['id'];
+		$reason = urldecode($_GET['r']);
+
+		echo '<form action="dev_oc.phtml?stage=33" method="post">';
+			echo '<table>';
+				echo '<tr>';
+					echo '<td colspan="3"><b>Manage OC Reasons</b></td>';
+				echo '</tr>';
+				echo '<tr>';
+					echo '<td style="padding-top: 10px;">Edit reason</td>';
+					echo '<td style="padding-top: 10px; padding-bottom: 5px">';
+						echo '<input name="reason_id" type="hidden" value="' . $id . '">';
+						echo '<input name="reason_desc" type="text" value="' . $reason . '" style="width: 400px; height: 28px">';
+					echo '</td>';
+					echo '<td style="padding-top: 10px; padding-bottom: 5px"><input type="submit" value="Update" style="height: 28px"></td>';
+					echo '<td>&nbsp;</td>';
+				echo '</tr>';
+			echo '</table>';
+		echo '</form>';
+	}
+	elseif ($stage == 33)
+	{
+		// Edit code: update record
+		$id = $_POST['reason_id'];
+		$id = intval($id);
+
+		$reason_desc = TRIM($_POST['reason_desc']);
+		$reason_desc = htmlspecialchars($reason_desc, ENT_QUOTES, 'UTF-8');
+		$reason_desc_escaped = "q'[" . $reason_desc . "]'";
+
+		if ($reason_desc != '')
+		{
+			$rcur = ora_open($conn);
+
+			$sql = "UPDATE oc_reasons SET reason_desc = $reason_desc_escaped WHERE id = $id";
+	
+			ora_parse($rcur, $sql);
+			ora_exec($rcur);
+			ora_close($rcur);
+		}
+
+		echo '<script>window.location.href = "dev_oc.phtml?stage=30";</script>';
+	}
+	elseif ($stage == 34)
+	{
+		// Delete record form
+		$id = $_GET['id'];
+		$reason = urldecode($_GET['r']);
+
+		echo '<table>';
+			echo '<tr>';
+				echo '<td colspan="3"><b>Manage OC Reasons</b></td>';
+			echo '</tr>';
+			echo '<tr>';
+				echo '<td style="padding-top: 10px;">Are you sure you want to delete this reason?</td>';
+				echo '<td style="padding-top: 10px; padding-bottom: 5px">';
+					echo '<input name="reason_id" type="hidden" value="' . $id . '">';
+					echo '<b>' . $reason . '</b>';
+				echo '</td>';
+				echo '<td>&nbsp;</td>';
+			echo '<td>';
+				echo '<a href="dev_oc.phtml?stage=35&id=' . $id . '" style="color: black; text-decoration: none"><div style="background: #efefef; border: 1px solid #767676; padding: 2px 10px;">Yes</div></a>';
+			echo '</td>';
+			echo '<td>';
+					echo '<a href="dev_oc.phtml?stage=30" style="color: black; text-decoration: none"><div style="background: #efefef; border: 1px solid #767676; padding: 2px 10px;">No</div></a>';
+			echo '</td>';
+			echo '</tr>';
+		echo '</table>';
+		
+	}
+	elseif ($stage == 35)
+	{
+		// Delete record code
+		$id = $_GET['id'];
+		$id = intval($id);
+
+		if ($id != '' && $id != 0)
+		{
+			$rcur = ora_open($conn);
+
+			$sql = "UPDATE oc_reasons SET is_active = 'N' WHERE id = " . $id;
+
+			ora_parse($rcur, $sql);
+			ora_exec($rcur);
+			ora_close($rcur);
+		}
+
+		echo '<script>window.location.href = "dev_oc.phtml?stage=30";</script>';
+	}
+
+	if ($stage >= 30)
+	{
+	?>
+	<table cellpadding='3' cellspacing='1' width='100%' bgcolor='black' border="0">
+		<tr bgcolor="#E6E6FA">
+			<td width=100%>Reason</td>
+			<td>Edit</td>
+			<td>Delete</td>
+		</tr>
+		<?php
+		global $kcur;
+
+		$sql = "SELECT id, reason_desc FROM oc_reasons WHERE is_active = 'Y' ORDER BY id ASC";
+
+		ora_parse($cursor, $sql);
+		ora_exec($cursor);
+
+		$row_count = 0;
+
+		while (ora_fetch($cursor)) 
+		{
+			$id = ora_getcolumn($cursor, 0);
+			$reason = ora_getcolumn($cursor, 1);
+
+			$bg_color = ($row_count % 2 == 0) ? '#f5f5f5' : '#dcdcdc';
+
+			echo "<tr bgcolor='" . $bg_color . "'>";
+				echo "<td>" . $reason . "</td>";
+				echo "<td><a href='dev_oc.phtml?stage=32&id=" . $id . "&r=" . urlencode($reason) . "' style='color: black; text-decoration: none'><div style='background: #efefef; border: 1px solid #767676; padding: 2px 10px;'>Edit</div></a></td>";
+				echo "<td><a href='dev_oc.phtml?stage=34&id=" . $id . "&r=" . urlencode($reason) . "' style='color: black; text-decoration: none'><div style='background: #efefef; border: 1px solid #767676; padding: 2px 10px;'>Delete</div></td>";
+			echo "</tr>";
+
+			$row_count++;
+		}
+		?>
+	</table>
+	<?php
+	}
+	/* 
+	* END 
+	*/
+	?>
+	</form>
+	</body>
+</html>

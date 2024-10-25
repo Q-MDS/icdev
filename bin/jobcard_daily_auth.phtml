@@ -1,0 +1,2147 @@
+<?php /* For daily jobcards authorized yesterday: jobcard_daily_auth.phtml?stage=3&type=yesterday, for jobcards last week ?stage=3&type=lastweek */ 
+
+if (isset($jobserial) && $jobserial!="" && !is_numeric($jobserial)) {
+	echo "Invalid Jobcard: $jobserial";
+	exit;
+}
+
+
+
+$nowtime=time();
+ set_time_limit(0);
+$pr_outstanding=false;
+$docsv=true;
+VV("suppress_things");
+$jtypes = array();
+$jtypes["S"] = "Service";
+$jtypes["L"] = "Normal Repairs";
+$jtypes["J"] = "Major Repairs";
+$jtypes["N"] = "Non-critical Repairs";
+$jtypes["C"] = "Campaign";
+$jtypes["R"] = "Refurbishment";
+$jtypes["B"] = "Breakdown";
+$jtypes["A"] = "Accident";
+$jtypes["I"] = "Due to misuse";
+$jtypes["U"] = "Unclassified";
+
+require_once("faultclass.inc");
+
+$pctotal=0;
+
+	function show_line ($data) {
+		global $lines_shown;
+
+		if (isset($lines_shown[$data["ITEMSERIAL"]]))
+			return "";
+		$lines_shown[$data["ITEMSERIAL"]] = true; 
+		
+		$output = "<tr bgcolor='#FFDDDD'><td>&nbsp;</td><td>&nbsp;</td><td>MOVE".$data["JOBCARDSERIAL"].": ".$data["FAULTDESC"]."</td><td>";
+		switch ($data["STATUSENGINEER"]) {
+			case "I": $output.="Incomplete (Delayed to next JC)"; break;
+			case "C": $output.="Complete"; break;
+			case "N": $output.="No Fault Fount"; break;
+
+			default:  $output.="#".$data["STATUSENGINEER"]."#";
+			
+
+		} // switch
+		$output.=" ".$data["MECHANICNOTES"];
+		$output.="</td><td>".$data["NAME"]." ".$data["LASTNAME"]."</td><td>&nbsp;</td></tr>";
+
+
+		return $output;
+
+	} // show_line
+
+	function follow_line ($itemserial, $deferred_to) {
+		global $cur4, $conn;
+
+		$output = "";
+
+		if ($deferred_to>0) {
+			ora_parse($cur4,"select  B.name,B.lastname,A.* from move_jobcarditems A left join user_details B on A.completedwho=B.user_serial where itemserial=$deferred_to");
+			ora_Exec($cur4);
+			if (ora_fetch_into($cur4, $data, ORA_FETCHINTO_ASSOC)) {
+				if ($data["STATUSENGINEER"] =="I") {
+					$output .=  follow_line($data["ITEMSERIAL"], $data["DEFERRED_TO"]);
+					
+					$ora5 = ora_open($conn);
+					ora_parse($ora5,"select  B.name,B.lastname,A.* from move_jobcarditems A left join user_details B on A.completedwho=B.user_serial  where fromitem=$deferred_to");
+					ora_exec($ora5);
+					while (ora_fetch_into($ora5, $data, ORA_FETCHINTO_ASSOC)) {
+						 if ($data["STATUSENGINEER"] =="I") {
+							$output .= follow_line($data["ITEMSERIAL"], $data["DEFERRED_TO"]);
+						 } else {
+							$output .= show_line($data);
+						 }
+					}
+
+					unset($ora5);
+					
+
+				}  else {
+                                       $output .= show_line($data);
+				}
+
+			}
+		}
+		$ora5 = ora_open($conn);
+                ora_parse($ora5,"select  B.name,B.lastname,A.* from move_jobcarditems A left join user_details B on A.completedwho=B.user_serial where fromitem=$itemserial");
+                ora_exec($ora5);
+                while (ora_fetch_into($ora5, $data, ORA_FETCHINTO_ASSOC)) {
+			 if ($data["STATUSENGINEER"] =="I") {
+		                  $output .=  follow_line($data["ITEMSERIAL"], $data["DEFERRED_TO"]);
+			 } else {
+				$output .= show_line($data);
+			 }
+                }
+
+                unset($ora5);
+
+		return $output;
+	} // follow_line
+
+
+        function checkit($id, $trail = "") {
+
+                global $cursor, $options, $checked;
+
+//              echo "Looking for $id\n";
+                $queue = array();
+                ora_parse($cursor,"select  oic_id,oic_name from ops_incident_category where oic_ref_category=$id and oic_is_deleted=0");
+                ora_Exec($cursor);
+                while (ora_fetch($cursor)) {
+                        if ($trail != "")
+                                $options[getdata($cursor,0)] = $trail." ".getdata($cursor,1);
+                        $queue[getdata($cursor,0)] = getdata($cursor,1);
+//                      echo "Fetched ".getdata($cursor,0);
+                }
+
+                foreach ($queue as $key => $val) {
+//                      echo "Processing $key = $trail - $val\n";
+                        if ($trail!="")
+                                checkit ($key, $trail." - ".$val); // recurse
+                        else
+                                checkit ($key, $val);
+                }
+        } // checkit
+
+				 
+				 function part_price ($depot,$cur2,$partno,$iserial) {
+				  global $debug, $jobserial, $jobnine, $jobflat;
+				  
+				  if ($debug || getenv("REMOTE_USER")=="Keeith")
+						echo "Part Price: depot:$depot, M$partno, Serial: $iserial<bR>";				 				 
+								if ($iserial>0) {
+									ora_parse($cur2,"select value from stk_serialtrack where serial=$iserial");
+									ora_exec($cur2);
+									if (ora_fetch($cur2)) {
+										 $value=getdata($cur2,0);
+										 if ($value>0) {
+										 			if ($debug)
+													 	echo "E Got $value<bR>";
+										 		return $value;
+										 	}
+									}
+ 								} // serialized 
+			               		                                        
+								ora_parse($cur2,"select ave_price from stk where depot='$depot' and i_partno=$partno and ave_price>0");
+								ora_exec($cur2);
+								if (ora_Fetch($cur2)) {
+									if ($debug)
+											echo "D Got ".getdata($cur2,0)."<br>";
+									 return getdata($cur2,0);
+								}  
+								
+									ora_parse($cur2,"select avg(ave_price) from stk where i_partno=$partno and ave_price>0");
+									ora_exec($cur2);
+									if (ora_fetch($cur2)) {
+										if (is_numeric(getdata($cur2,0))) {
+													if ($debug)
+															echo "C Got ".getdata($cur2,0)."<br>";
+										 return getdata($cur2,0);
+										}
+									}  
+									
+									
+											ora_parse($cur2,"select A.price_each*A.vat from purchase_details A, purchase_requests B where A.request_no=B.request_no and order_no>0 and superceded_by=-1 and part_serial=$partno order by A.request_no desc");
+											ora_exec($cur2);
+											if (ora_fetch($cur2)) {
+														if ($debug)
+																echo "A Got ".getdata($cur2,0)."<br>";
+												 return getdata($cur2,0);
+											}  
+											
+											
+										ora_parse($cur2,"select price from stk_nopurchase_prices where ipart=$partno");
+										ora_exec($cur2);
+										if (ora_fetch($cur2)) {
+													if ($debug)
+															echo "B Got ".getdata($cur2,0)."<br>";
+											 return getdata($cur2,0);	
+										}  
+										
+																						
+											echo "<font color=red>Note: No price for M$partno</font><bR>";
+											mail("keith@intercape.co.za","No price for M$partno","on jobcard $jobserial");
+										  return 0;
+								
+		} 					  // part_price
+
+?>
+
+
+<html>
+
+	<head>
+		<meta http-equiv="content-type" content="text/html;charset=iso-8859-1">
+		<title>Jobcard Authorizations</title>
+		<LINK href="move_style.css" type=text/css rel=stylesheet></link>
+	
+                <script language="javascript" type="text/javascript">
+	                // Only allow numbers to be entered
+	                function maskKeyPress(objEvent){
+	                        var iKeyCode;  	
+	                        iKeyCode = objEvent.keyCode;			
+	                        if((iKeyCode>=48 && iKeyCode<=57) || iKeyCode<32) return true;
+	                        return false;
+	                }
+                </script>
+	
+	</head>
+<body>
+
+<?php
+
+if (getenv("REMOTE_USER")=="Keeith")
+	$debug=true;
+
+if ($stage==3) {
+	$url="https://secure.intercape.co.za/move/";
+	$totlab=0;
+	$totprice=0;
+}
+else $url=""; 
+
+if ($included!="Y"):
+
+include ('functions.inc'); 
+require( "menu.inc" );
+require_once("../php3/oracle.inc");
+require_once("../php3/sec.inc");
+require_once("../php3/misc.inc");
+
+if (!open_oracle()) { Exit; };
+
+
+endif;
+
+$fcur = ora_open($conn);
+$cur4 = ora_open($conn);
+
+$tech_manager=AllowedFlag("TECH_MANAGER")||AllowedFlag("REGIONAL_TECH");
+
+unset($locked);
+
+if ($apm_mail=="Y")
+{
+	ob_start();
+	echo "<b>Please note that it is possible for costing to change if purchases or issues against this jobcard are not yet finalized</b><br>";
+}
+
+if ($stage != 3){
+	if( !AllowedFlag("FOREMAN")){
+			if ($stage==4)
+				$viewonly=true;
+			else {
+			echo "Sorry, you dont have FOREMAN rights<Br>";
+			exit;
+			}
+			//access( __FILE__ );
+	}
+	// get list of locked depots
+	ora_parse($cursor,"select depot from stk_depotlock");
+	ora_exec($cursor);
+	while (ora_fetch($cursor))		
+		$locked[trim(ora_getcolumn($cursor,0))]=true;
+	if ($debug)
+		echo "** GOT LOCKED ** ".sizeof($locked)."<br>";
+}
+
+
+$important=AllowedFlag("STK_DELETE")||AllowedFlag("DEVELOPERS");
+
+
+// *** SET THE LABOUR COST ***
+   $labour_cost = "150.00";  // later on in the page, this is changed to 250 for 3rd party jobcards
+
+// Calculate the date before today
+   $yesterday = date("dmY",(time() - 86400));
+   $lastweek = date("dmY",(time() - 604800));
+
+   
+// Get jobs closed from the previous day.
+                // GET THE NUMBER OF JOBCARDS OPENED FOR THE VEHICLE ETC.
+
+
+// GET THE LIST OF VEHICLES
+
+   $km_value = array();
+
+   $qry = "SELECT /* kwdb35 */ serial,code FROM vehicles";
+
+   ora_parse($cursor, $qry);
+	
+   ora_exec( $cursor);
+   
+   $vehicles = array();
+
+   while( ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)) {
+
+          $vehicles[$data['SERIAL']] = $data['CODE'];
+                
+   }
+
+
+
+
+/*   not used any more
+// FIND OUT WHAT THE TERITORY MASTER IS FOR THIS USER
+
+   $qry = "SELECT territory FROM purchase_auth_daily WHERE territory_master='Y' AND username='".getenv("REMOTE_USER")."'";
+
+   ora_parse($cursor, $qry);
+	
+   ora_exec( $cursor);
+   
+   ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC);
+   
+   $teritory_master = $data['TERRITORY'];
+   
+   if (getenv("REMOTE_USER") == "EstherD"){$teritory_master = "S";}
+   
+   */
+
+
+
+// CREATE LIST OF JOBCARDS READY FOR AUTHORIZATION
+
+if ($stage == 0 || $stage == 1 || $stage == 3 ){
+
+   		global $cur3; global $cur2;
+
+		$cur3 = ora_open($conn);
+		$cur2 = ora_open($conn);
+   					
+		// Calculate 2 months early
+//		$months_earlier = date('dmY',mktime(0, 0, 0, date("m")-2, date("d"),   date("Y")));
+		$months_earlier = "01022018";
+
+	// cache vehicle names
+		ora_parse($cursor,"Select serial,code from vehicles");
+		ora_exec($cursor);
+		while (ora_fetch($cursor))
+			$vname[getdata($cursor,0)]=getdata($cursor,1);
+
+
+
+//		if ($REMOTE_USER=="Keeith")
+//			$keithx=" and ( a.jobcardserial=11553640 )  ";
+// HERE IS MY LATEST ATTEMPT:
+
+//		$qry = " SELECT /* kwdb35 */ to_char(A.auth_date,'HH24:MI:SS Mon DD YYYY') auth_date, A.type, A.jobcardserial, A.unitserial, A.jobopendate, A.jobopenwho, A.jobclosedate, A.breakdown, A.km, A.completed, A.depot, A.labour, sum( ( select nvl(sum(nvl(quantity,0)),0) from purchase_details where request_no=Z.request_no ) + ( select nvl(sum(nvl(quantity,0)),0) from purchase_noparts where request_no=Z.request_no ) - ( select nvl(sum(nvl(received,0)),0) from purchase_received P, purchase_deliveries D where P.delnote=D.delnote and request_no=Z.request_no)) grnresult FROM move_jobs A left join purchase_requests Z on (Z.jobcard>=A.jobcardserial and Z.jobcard<=A.jobcardserial+9) and Z.order_no>0 and Z.superceded_by=-1 WHERE  master='Y' $keithx ";
+		  $qry = " SELECT /* kwdb35 */ to_char(A.auth_date,'HH24:MI:SS Mon DD YYYY') auth_date, A.type, A.jobcardserial, A.unitserial, A.jobopendate, A.jobopenwho, A.jobclosedate, A.breakdown, A.km, A.completed, A.depot, A.labour, C.username auth_by2 FROM move_jobs A left join user_details C on A.auth_by=C.user_serial WHERE  master='Y' $keithx ";
+
+
+		if ($stage==3) {
+			$qry.=" AND A.auth='Y' ";
+                	if ($type == 'lastweek') {
+					$lwstart=date("Ymd",time()-604800)."000000";
+                                        $lwend=date("Ymd",time()-86400)."235959";
+
+					$display_type = "Last Week";
+					$qry.=" AND A.auth_date>=to_date('$lwstart','YYYYMMDDHH24MISS') and A.auth_date<=to_date('$lwend','YYYYMMDDHH24MISS') ";
+			} else {
+					$ydstart=date("Ymd",time()-86400)."000000";
+					$ydend=date("Ymd",time()-86400)."235959";
+					$display_type = "Yesterday";
+					$type="yesterday";
+			  	        $qry.=" AND A.auth_date>=to_date('$ydstart','YYYYMMDDHH24MISS') and A.auth_date<=to_date('$ydend','YYYYMMDDHH24MISS') ";
+
+				}
+
+			
+		}
+		else {
+			 $qry.= " AND (A.auth = 'N' OR A.auth IS NULL )  AND jobopendate >= to_date('".$months_earlier." 00:00:00','DDMMYYYY HH24:MI:SS') ";
+			$display_type="Un-authorized job cards";
+		}
+		
+		$qry.=" GROUP BY A.depot, A.jobopendate, A.jobcardserial, A.jobopenwho,A.jobclosedate, A.breakdown, A.km, A.completed, A.labour,A.unitserial, A.type, A.auth_date, C.username order by A.depot, A.jobopendate, A.jobcardserial";
+
+		$cur2=ora_open($conn);
+
+		if ($REMOTE_USER=="Keeith") {
+			echo str_replace("<","&lt;",$qry)."<p>";
+			//$teritory_master="S";
+		}
+                
+                ora_parse($cursor, $qry);
+	
+                ora_exec( $cursor);
+
+		if ($included=="Y")
+			$bigboss="(Tech manager) - For Informational purposes only";
+
+		//if ($teritory_master!="S")
+		//	$teritory_master="N";
+		if ($showall!="Y") {
+		if ($stage==3)
+			$table = "<b>Jobcards Authorized $display_type: $bigboss</b><p>";
+		else
+			$table = "<b>List of Jobcards waiting for authorization in $cookiedepot Depot</b><p>";
+		}
+                
+		if (!$viewonly)
+                $table .= "<form action='jobcard_daily_auth.phtml?stage=2' method='post'>";
+                
+                $table .= "<table cellpadding='3' cellspacing='1' border='0' bgcolor='black' width='100%'><tr><td colspan='13' bgcolor='#B0C4DE'><b>$display_type</b></td></tr><tr bgcolor='#D3D3D3'><td><b>Jobcard</b></td>";
+		if ($stage!=3 ) 
+			$table.="<td></td>"; //			$table.= "<td><b>Undel</b></td>";
+		$table.= "<td><b>Vehicle</b><td><b>Open Date</b></td><td align='left'><b>Opened By</b></td><td align='left'><b>KM</b></td><td><b>Depot</b></td><td><b>Labour</b></td><td><b>Parts Cost</b></td>";
+		if ($stage!=3)
+			$table.= "<td><b>Closed</b></td><td colspan='3'><b>Un-Close</b></td></tr>";
+		else
+			$table.= "</tr>";
+
+		$count = 0; $is_row = true;$minutes = 0;;
+		
+		// MAIN LISTING....
+	        while(ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)){
+
+			//echo $data['JOBCARDSERIAL']."<BR>";
+			
+			$is_row = true;
+
+                        if ($cookiedepot == trim($data['DEPOT'])){$insert_colour = "<font color='red'>";}else{$insert_colour = "";}
+                        
+			// USED TO BE NORTH/SOUTH, NOW IT IS PER DEPOT:
+
+			if ($stage==3 || $showall=="Y")
+				$region=trim($data['DEPOT']); // report shows all
+			else
+				$region = $cookiedepot;
+
+			if ($region == trim($data['DEPOT']) || trim($data['DEPOT'])=="OPS"){                       
+
+
+// START OF LABOUR FIX
+                        $data['LABOUR']=-1; // have to calculate this over all 10 jobcards
+
+                        $thissjc=chop($data['JOBCARDSERIAL']);
+                        $thissjctop=substr($thissjc,0,-1)."9";
+			$thissjcflat=substr($thissjc,0,-1)."0";
+     //                 echo "select labour from move_jobs where jobcardserial>=$thissjcflat and jobcardserial<=$thissjctop<br>";
+
+/*  Removed MAY 2009
+                        ora_parse($cur2,"select / * kwdb35 * / labour from move_jobs where jobcardserial>=$thissjc and jobcardserial<=$thissjctop");
+                        ora_exec($cur2);
+                        while (ora_fetch($cur2)) {
+                                $thisslab=ora_getcolumn( $cur2, 0);
+                                if ($thisslab>0) {
+					if ($data['LABOUR']==-1)
+						$data['LABOUR']=$thisslab;
+					else
+          	                              $data['LABOUR']+=$thisslab;
+    //                                  echo "Added $thisslab<Br>";
+                                }
+
+                        }
+                        if ($data['LABOUR'] == -1 ) { // work out the hard way
+
+                                $qry = "select / * kwdb35 * / sum(minutes) minutes  from move_jobcarditems where master_jobcardserial=$thissjc union select sum(minutes) minutes from move_itemextra where itemserial in (select itemserial from move_jobcarditems where master_jobcardserial=$thissjc) ";
+                                ora_parse( $cur2, $qry);
+                                ora_exec( $cur2);
+                                if  (ora_fetch( $cur2))
+                    	            $data['LABOUR']=ora_getcolumn( $cur2, 0);
+				if (ora_fetch($cur2)) {
+					$addon=ora_getcolumn( $cur2, 0);
+					if ($addon>0)
+						$data['LABOUR']+=$addon;
+				}
+                               //echo "Fetched using $qry<br>";
+                        }
+*/ 
+                      //echo "Labour now ".$data['LABOUR']."<br>";
+// END OF LABOUR FIX
+
+
+                       	
+	               //         if (substr($data['JOBCARDSERIAL'],0,-1) != substr($previous_jobcard,0,-1) && $count != 0){ // *** REMOVE DUPLICATES
+	                        
+	                        	if ($bcolor=="white"){$bcolor="#F5F5F5";}else{$bcolor="white";} 
+
+	                        	//if ($data['LABOUR'] == 0){$insert_mins = "0";} else {$insert_mins = abs($data['LABOUR']);}
+
+					// CALCULATE THE LABOUR FOR THIS JOBCARD
+
+					// -------------------------------------------------------------------------------
+
+/*
+	REMOVED MAY 2009
+					$totlab+=$data['LABOUR'];
+	                        	$labour_mins=$data['LABOUR'];
+                        		$labour_hrs = abs(sprintf( "%.1f", ($labour_mins / 60))). " hrs";
+					$labour_mins=0;
+*/
+					$labour_hrs="See J.C.";
+
+                        		
+	        			// GET ANY ORDERS FOR THIS JOBCARD
+					// -------------------------------------------------------------------------------
+					
+/* Removed MAy 2005
+   					$qry = "SELECT  / * kwbd32 * /  / *+ INDEX (B pr_jc) * /   quantity, price_each, A.vat FROM purchase_noparts A, purchase_requests B WHERE a.request_no = b.request_no AND b.order_no > 0 AND b.superceded_by = -1 AND b.jobcard>=".$data['JOBCARDSERIAL']." and b.jobcard<= ".$data['JOBCARDSERIAL']."+9";
+
+					if ($debug)
+					echo "$qry<BR>";
+   					ora_parse($cur2, $qry);
+	
+   					ora_exec( $cur2);
+   
+   					$subtotal = 0; 
+
+   					while(ora_fetch_into($cur2, $data2, ORA_FETCHINTO_ASSOC)){
+                           
+                        			$subtotal = $subtotal + (($data2['PRICE_EACH'] * $data2['QUANTITY'] * $data2['VAT']));                        
+
+      						unset ($data2);
+	   				}	                       
+*/
+	   				
+	   				// GET PARTS 	
+	   					                        	
+			
+					$doors="";
+			
+					$jcno=$data['JOBCARDSERIAL'];
+					for ($a=1;$a<=9;$a++) {
+						$jcno++;
+						$doors.=" or E.location='$jcno' ";
+					}
+	                       	                        	
+			/* REMOVED MAY 2009
+			
+					$qry="select value, quantity, ipartno, iserial from stk_movement E where (E.location='".$data['JOBCARDSERIAL']."' $doors) and E.lcode='4'";
+	                  //      	$qry = " select  sum(nvl(E.value,F.ave_price) * E.quantity) price from stk_movement E left join stkes F on E.ipartno = F.ipart where (E.location='".$data['JOBCARDSERIAL']."' $doors) and E.lcode='4' ";
+					
+					if ($debug)
+	                        	echo "$qry<BR>";
+	                        	ora_parse( $cur2, $qry);
+	                        	ora_exec( $cur2);
+					$parttotal=0;
+
+					unset($part_info);
+					while (ora_fetch_into($cur2,$pdata)) {
+						$part_info[]=$pdata;
+						unset($pdata);
+					} // while
+					if (is_array($part_info)) {
+	
+						while (list($pkey,$pdata)=each($part_info)) {
+							 if ($pdata[0]>0) {
+	                      $parttotal+=$pdata[0]*$pdata[1];
+				
+       		       					} else {
+								 
+
+										$parttotal+=$pdata[1]*part_price($data['DEPOT'],$cur2,$pdata[2],$pdata[3]);
+								//				 function part_price ($depot,$cur2,$partno,$iserial)  
+   
+
+								  }
+                       		                       
+	
+						} // while
+
+					} // if
+	                        	
+	                        	$price_calculated = $parttotal + $subtotal;
+	                        	
+
+					*/
+	                        	// -------------------------------------------------------------------------------
+
+	                        	
+					// it's impossible to get an accurate number in RFPRESULT without doign a subquery, so we're happy just to say YES if there are undelivered goods.  Click on the jobcard to get a full breakdown of what is outstanding....
+					$grnresult=$data['RFPRESULT'];
+					if ($data['RFPRESULT']>0)
+						$data['RFPRESULT']="<font color=red>YES";
+					else
+						$data['RFPRESULT']="&nbsp;";
+					if ($data['TYPE']==1)
+						$whatfor="<a href=managecoachinfo.phtml?stage=51&ser=".$data['UNITSERIAL'].">".$vehicles[$data['UNITSERIAL']]."</a>";
+					elseif ($data['TYPE']==4) {
+				                ora_parse( $cur2, "SELECT /* kwdb35 */ name, account FROM MOVE_DEBTORS WHERE serial=".$data['UNITSERIAL'] );
+				                ora_exec( $cur2 );
+				                $whatfor = "<font size=2>".ora_getColumn( $cur2, 0 ) . "(" . ora_getColumn( $cur2, 1 ) . ")";
+				        } elseif ($data['TYPE']==6) {
+				                ora_parse($cur2,"select /* kwdb35 */ track from stk_Serialass where serial=".$data['UNITSERIAL']);
+				                ora_exec($cur2);
+				                if (ora_fetch($cur2))
+						{
+				                $whatfor= "ICG ".ora_getcolumn($cur2,0);
+						$trackno=ora_getcolumn($cur2,0);
+
+						}
+						else { $whatfor="#".$data['UNITSERIAL'];
+							$trackno="";
+						}
+				                ora_parse($cur2,"select /* kwdb35 */ ipartno from stk_serialtrack where serial=".$data['UNITSERIAL']);
+				                ora_exec($cur2);
+				                if (ora_Fetch($cur2)) {
+				                $ipartno=ora_getcolumn($cur2,0);
+				                $whatfor.= "<font size=2> (M".ora_getcolumn($cur2,0);
+				                ora_parse($cur2,"select /* kwdb35 */ description from stk_parts where serial=$ipartno");
+				                ora_exec($cur2);
+				                if (ora_Fetch($cur2)):
+					                $whatfor.= ")<font size=1> - ".ora_getcolumn($cur2,0);
+						endif;
+						if ($trackno!="")
+							$whatfor="<a href=captureparts2.phtml?stage=115&barcode=$trackno>$whatfor</a>";
+						}
+					} else
+						$whatfor="Type ".$data['TYPE'];
+
+	                        	$table .= "<tr bgcolor='$bcolor'><td><a target=authit href='$url"."jobcard_daily_auth.phtml?stage=4&rnd=$nowtime&subjob_more=true&jobserial=".$data['JOBCARDSERIAL']."'>".$data['JOBCARDSERIAL']."</a><div name=".$data['JOBCARDSERIAL']." id=jc".$data['JOBCARDSERIAL']."></td>";
+					if ($stage!=3)
+						$table.= "<td align=center>".$data['RFPRESULT']."</td>";
+					if ($price_calculated > 0){$table .= "<font color='red'>";}
+
+					$totprice+=$price_calculated;
+// REMOTEd MAY 2005					$table.=sprintf('%.2f',$price_calculated)."</td>";
+					if ($data["TYPE"]==1)
+						$table.="<td>".$vname[$data['UNITSERIAL']]."</td>";
+					else
+						$table.="<td>See J.C.</td>";
+
+					if ($stage!=3) {
+
+					$table.="<td>".$data['JOBOPENDATE']."</td>";
+					$table.="<Td>".$data['JOBOPENWHO']."</td>";
+					$table.="<td>".$data['KM']."</td>";
+					$table.="<td>".$data['DEPOT']."</td>";
+					$table.="<td>".$data['LABOUR']."</td>";
+					$table.="<td>See JC</td>";
+
+					$table .= "<td align='center' bgcolor='";
+	                        	
+	                        	if ($data['COMPLETED'] == 'Y'){$table .= "#D3FFCB";}else{$table .= "#FFD0D0";}
+	                        	
+	                        	$table .= "'>".$data['COMPLETED']."</td>";
+	                        	
+						$table.="<td align='center'>";
+						if ($locked[trim($data['DEPOT'])])
+							$dlock="<font color=red>LOCKED</font>"; // stock take in progress
+						else
+							$dlock="&nbsp;";
+						
+
+//	                        		if ($data['COMPLETED'] == 'Y' && $grnresult == 0 && !$locked[trim($data['DEPOT'])]){ $table .= "<input type='checkbox' name='chk_$count' value='".$data['JOBCARDSERIAL']."'><td><input type='submit' value='Auth'></td>";}else{$table .= "<td>$dlock</td>";}
+	                        	
+	                        		$table .= "</td>";
+	                        	
+	                        		if ($data['COMPLETED'] == 'Y'){ $table .= "<td align='center'><input type='hidden' name='max_count' value='$count'> <input type='button' value='UC' onClick=\"javascript:var answer = confirm('Are you sure you want to Un-Close this jobcard?'); if (answer == false){return false;}else{location='jobcard_daily_auth.phtml?stage=5&jobcard=".$data['JOBCARDSERIAL']."';}\"></td>";}else{$table .= "<td></td>";}
+					}
+	                        	
+	                        	$table .= "</tr>"; //sprintf( "%.1f", $total_fuel)
+
+
+/*
+					$table.="<tr><td colspan=10>";
+					ob_start();
+					print_r($data);
+				$table.=ob_get_contents();
+					ob_end_clean();
+*/
+	
+	                        	
+	                        	$minutes = 0;
+                	
+                			$previous_jobcard = $data['JOBCARDSERIAL'];                		
+                		//}
+                			$count++;
+                		
+               		}
+                	unset ($data);                			
+		}
+		if ($stage==3) {
+			$totlab=sprintf("%.1f",$totlab/60);
+			$totprice=sprintf("%.2f",$totprice);
+			$table.="<tr bgcolor='#FFDBD4'><td colspan=6 align=right><b>Total</td><td align=right><b><font color=red>$totlab hrs</td><td align=right><font color=red><b>$totprice</td></tr>";
+		}	
+		$table .= "</table>";
+		
+
+	 ora_close($cur2);
+	@ora_close($cur3);
+
+	echo $table;
+
+	//if ($is_row == true){sendEmail("russell@intercape.co.za",$table);}
+
+}
+
+
+if ($stage == 999 && $authorise=="Y") {
+
+	if (!AllowedFlag("FOREMAN"))
+	{
+		echo "ERR A";
+		exit;
+	}
+	if (!is_numeric($jobserial))
+	{
+		echo "MOVE$jobserial not a number!!<bR>";
+		exit;
+	}
+	if (substr($jobserial,-1,1)!="0"){ 
+		echo "MOVE$jobserial is not the main jobcard!<bR>";
+		exit;
+	}
+
+				$us=getuserserial();
+                                $qry = "UPDATE move_jobs SET auth='Y', auth_by=$us,  auth_date=CURRENT_TIMESTAMP WHERE jobcardserial >= '".$jobserial."' AND jobcardserial < '".($jobserial + 10)."' and auth_date is null and (auth='N' or auth is null)";
+				if ($debug)
+                                echo $qry;
+                                ora_parse($cursor, $qry);
+
+                                if (!ora_exec( $cursor)) {
+					echo "ERROR: $qry<bR>";
+					ora_rollback($conn);
+					exit;
+				}
+				if (ora_numrows($cursor)!=1) {
+					echo "Jobcard authorised!! ";
+					ora_parse($cursor,"select to_char(auth_date,'DD Mon YYYY HH24:MI:SS'),sysdate-auth_date from move_jobs where jobcardserial >= '".$jobserial."' AND jobcardserial < '".($jobserial + 10)."' and auth_date is not null");
+					ora_exec($cursor);
+					ora_fetch($cursor);
+					echo getdata($cursor,0);
+					if (getdata($cursor,1)>0.1)
+							echo "<font color=red><b>(ALREADY AUTHORISED!)</b></font><bR>";
+					exit;
+				}
+				echo "<font color=green><b>AUTHORISED!!</b></font><hr>";
+				$stage=4;
+				unset($authorise);
+
+
+}
+
+
+// *** SHOW JOBCARDS THAT HAVE BEEN AUTHORIZED ***
+
+if ($stage == 2){
+	
+	
+	
+	echo "<b>The following Jobcards have been authorized:</b>";
+	
+	// Set the authorizations sent by the Authorizes :)
+	
+	//$count = $_POST['max_count'];
+
+	$oracle_string = "";
+	
+	if ($j > 1){$oracle_string = "(".substr($oracle_string, 0,strlen($oracle_string)-3).") AND ";}
+	
+		$table = "<p>";
+                
+                $table .= "<table cellpadding='3' cellspacing='1' border='0' bgcolor='black' width='100%'>";
+                
+                $table .= "<tr bgcolor='#D3D3D3'><td><b>Jobcard Number</b></td></tr>";
+
+		for ($j = 0; $j <= $_POST['max_count']; $j++){
+
+			if ($_POST["chk_".$j] != ""){
+				
+                        	$qry = "UPDATE move_jobs SET auth='Y', auth_date=CURRENT_TIMESTAMP WHERE jobcardserial >= '".$_POST["chk_".$j]."' AND jobcardserial < '".($_POST["chk_".$j] + 10)."'";
+				//echo $qry;
+                        	ora_parse($cursor, $qry);
+                        
+                        	ora_exec( $cursor);
+
+				if ($bgcolor=="white"){$bgcolor="#E5E5E5";}else{$bgcolor="white";}				
+				
+				$table .= "<tr bgcolor='$bgcolor'><td>".$_POST["chk_".$j]."</td></tr>";
+			
+		}
+
+		}
+		
+		$table .= "</table><p><input type='button' value='Return' onClick=\"location='jobcard_daily_auth.phtml'\"";
+		
+		echo $table;
+
+}	
+
+
+// *** SHOW JOBCARD DETAILS ***
+if (is_numeric($vreport) && is_numeric($fromdate) && is_numeric($todate)) {
+	if ($vreport==0)
+		$serviceonly="Y";
+
+	if ($serviceonly=="Y")
+	{
+		if ($vreport==0)
+			ora_parse($cursor,"select jobcard from move_servicelog where when>=to_date('$fromdate"."000000','YYYYMMDDHH24MISS') and when<=to_date('$todate"."235959','YYYYMMDDHH24MISS')");
+		else
+		{
+			ora_parse($cursor,"select jobcard from move_servicelog where when>=to_date('$fromdate"."000000','YYYYMMDDHH24MISS') and when<=to_date('$todate"."235959','YYYYMMDDHH24MISS') and coach=$vreport");
+		}
+	}
+	else
+		ora_parse($cursor,"select jobcardserial from move_jobs where jobopendate>=to_date('$fromdate"."000000','YYYYMMDDHH24MISS') and jobopendate<=to_date('$todate"."235959','YYYYMMDDHH24MISS') and unitserial=$vreport order by jobopendate");
+	$jobserials=array();
+	ora_Exec($cursor);
+	while (ora_fetch($cursor))
+		$jobserials[]=getdata($cursor,0);
+
+}
+ else
+	$jobserials[0]=$jobserial;
+
+reset($jobserials);
+while (list($jobserialcnt,$jobserial)=each($jobserials)) {
+  if (!is_numeric($jobserial)) {
+	if ($jobserial!="")
+		echo "Skipping $jobserialcnt: $jobserail<bR>";
+	continue;
+  }
+  if (isset($subjob_more)){
+  	
+  	
+
+  	// Get list of mechanics
+  	$mechanic = array();
+		
+/* NOT USED ANY MORE::
+	$qry = "SELECT / * kwdb35 * / serial,name,surname FROM staff";
+		
+        ora_parse($cursor, $qry);
+	
+        ora_exec( $cursor);
+	
+        while(ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)){
+			
+		if ($data['SERIAL'] != "" && $data['SERIAL'] != NULL){
+			$mechanic[$data['SERIAL']] = $data['NAME']." ".$data['SURNAME'];
+		}
+		unset($data);
+	}  	
+*/
+			$counters=array();
+			if ($docsv) {
+				ora_parse($cursor,"delete from jobcard_costing_labour where jobcardserial=$jobserial");
+				ora_exec($cursor);
+			 	ora_parse($cursor,"delete from jobcard_costing_parts where jobcardserial=$jobserial");
+                                ora_exec($cursor);
+				if (!isset($cursor2))
+					$cursor2=ora_open($conn);
+			} // docsv
+  	  			
+			$qry = "select /* kwdb35 */ B.name||' '||B.lastname name ,A.minutes,C.faultdesc,A.mechanicnotes,c.jobcardserial,C.reportcomments,C.jobcardgeneral,B.user_serial,C.itemserial,F.description classdesc, C.statusengineer, to_char(C.reporteddate,'DD Mon YY HH24:MI') repdate, to_char(C.completedate,'DD Mon YY HH24:MI') completedate, C.faultpicture, fault_category, C.deferred_to from move_itemextra A, user_details B,move_jobcarditems C, move_faultclass  F  where F.serial=C.faultclass and A.itemserial=C.itemserial and (C.jobcardserial>='".$jobserial."' AND C.jobcardserial < '".($jobserial+10)."') and mechanic=useR_serial union select B.name||' '||B.lastname name,A.minutes,Faultdesc,A.mechanicnotes,A.jobcardserial,reportcomments,A.jobcardgeneral,B.user_serial,A.itemserial,F.description classdesc,A.statusengineer,  to_char(A.reporteddate,'DD Mon YY HH24:MI') repdate,  to_char(A.completedate,'DD Mon YY HH24:MI') completedate, A.faultpicture , fault_category, A.deferred_to  from  move_faultclass F, move_jobcarditems A left join user_details B on completedwho=user_serial   where F.serial=A.faultclass and jobcardserial>=$jobserial AND jobcardserial < ".($jobserial+10)."  order by faultdesc";
+		
+//			echo "$qry<br>";
+			
+                        ora_parse($cursor, $qry);
+                        
+                        ora_exec( $cursor);
+
+                        $broke = ""; $count = 0;$totalMinutes = 0;
+                        
+                        $insert = "<table cellpadding='3' cellspacing='1' border='0' bgcolor='black' width='100%'>";
+
+                        $insert .= "<tr><td colspan='10' bgcolor='#B0C4DE'><b>Costing - Labour</b></td></tr>";
+                        
+                        $insert .= "<tr bgcolor='#D3D3D3'><td><b>No.</b></td><td><b>Labour</b></td><td><b>Fault Description</b></td><td><b>Mechanic Notes</b></td><td><B>Mechanic</b></td><td><B>Comments</b></td></tr>"; //<td><b>Comments</b></td><td><b>Report Comments</b></td></td>
+
+	                while( ora_fetch_into($cursor, $row, ORA_FETCHINTO_ASSOC)){
+
+				$itemserial=$row['ITEMSERIAL'];
+
+                                if ($bgcolor=="white"){$bgcolor="#E5E5E5";}else{$bgcolor="white";}
+                                $count++; 
+                                $insert .= "<tr bgcolor='$bgcolor'><td align='left' valign='top' nowrap>".$count.".</td>";
+				$mins=trim($row['MINUTES']);
+				if (!is_numeric($mins))
+					$mins = 0;
+					$hours=floor($mins/60);
+					$mins=$mins%60;
+					$mins=sprintf("%02d",$mins);
+					$mins="$hours:$mins";
+
+				if ($docsv) {
+					if (!isset($counter[$row["ITEMSERIAL"]])) {
+						$counter[$row["ITEMSERIAL"]]=0;
+					} else
+						$counter[$row["ITEMSERIAL"]]++;
+					$csv_serial=$row["ITEMSERIAL"].".".$counter[$row["ITEMSERIAL"]];
+					$csv_desc=substr($row["FAULTDESC"],0,200);
+					$csv_mechnote=substr($row["MECHANICNOTES"],0,1000);
+					$csv_mech=substr($row["NAME"],0,100);
+					$csv_notes=substr($row["REPORTCOMMENTS"],0,400);
+					$csv_mins=$row["MINUTES"];
+					$csv_desc=str_replace("'","",$csv_desc);
+					$csv_mechnote=str_replace("'","",$csv_mechnote);
+					$csv_mech=str_replace("'","",$csv_mech);
+					$csv_notes=str_replace("'","",$csv_notes);
+					if (!is_numeric($csv_mins))
+						$csv_mins = 0;
+					$qry="insert into jobcard_costing_labour values ($jobserial, $csv_serial, $csv_mins, '$csv_desc', '$csv_mechnote', '$csv_mech', '$csv_notes')";
+					//echo "$qry<BR>";
+					if (ora_parse($cursor2,$qry)) {
+						if (!ora_exec($cursor2,$qry)) 
+							mail("keith@intercape.co.za","CSV export error $jobserial",$qry);
+					} else {
+						mail("keith@intercape.co.za","CSV export error $jobserial",$qry);
+					}
+				}
+				
+                                $insert .= "<td align='right' valign='top' nowrap>$mins</td>";
+                                $insert .= "<td align='left'>";
+				if ($row['FAULTDESC']!="")
+					$insert.= " <font size=2> ";
+				else
+					$row['FAULTDESC']= " <font size=1>(No Text Description)</font> ";
+				$insert.= str_replace($row['FAULTDESC'],"",faultclassname( $row['FAULT_CATEGORY'], $fcur));
+				$insert.= "</font> ".ucfirst(strtolower($row['FAULTDESC']));
+			
+
+				if ($row['REPORTCOMMENTS'][0]=="C" && is_numeric(substr($row['REPORTCOMMENTS'],1,99)))
+					$insert.="<b><i><br>Note: Customer Complaint ".$row['REPORTCOMMENTS'];
+
+				if ($row['JOBCARDGENERAL']>0 && is_numeric($row["USER_SERIAL"]) ) {
+					
+	                                if (!isset($cur2))
+       		                                 $cur2=ora_open($conn);
+					$genlsrl=$row['JOBCARDGENERAL'];
+					$itemserial=$row['ITEMSERIAL'];
+					$mechserial=$row['USER_SERIAL'];
+		                        $qryz="select A.instructions,B.done,B.notes from move_jobgeneral_items A left join move_jobgeneral_done B on A.serial=B.serial and B.jobcarditem='$itemserial' and B.mechanic=$mechserial where A.general_serial=$genlsrl and (A.in_use='Y' or B.done is not null ) order by A.display_order,A.serial,B.done desc";
+//					$insert.= "<br>$qryz<Br>";
+					ora_parse($cur2,$qryz);
+               			         ora_exec($cur2);
+					$genlfound=0;
+					while (ora_fetch($cur2)) {
+						if ($genlfound==0)
+							$insert.= "\n<br><Table border=1 cellspacing=0 cellpadding=0>";
+						$genlfound++;
+						$insert.= "<tr><Td>".getdata($cur2,0)."</td><td>&nbsp;".getdata($cur2,1)."</td><td>&nbsp;".getdata($cur2,2)."</td></tr>\n";
+					}
+					if ($genlfound>0)
+						$insert.="</table>\n";
+
+
+
+				}
+//				else $insert.="(JCG:".$row['JOBCARDGENERAL']." and mech $mechserial)";
+				
+				if ($row["FAULTPICTURE"]=="Y") {
+					$insert.= " <a href='#' onClick=\"window.open( 'faultpicture.phtml?picture=".$row["ITEMSERIAL"]."', '', 'scrollbars=1, resizable=1, height=800, width=1000' );\">(picture)</a><br>"; 
+				}
+				$insert .="<br>Reported ".$row['REPDATE']."</td>";
+                                
+                                $insert .= "<td align='left'>";
+				if ($row['STATUSENGINEER']=="N")
+					$insert.="<font color=magenta>(No fault found)</font> ";
+				elseif ($row['STATUSENGINEER']=="I")
+                                        $insert.="<font color=red>(Incomplete, Delayed to next jobcard - details will show  below once done on next jobcard)</font> ";
+				elseif ($row['STATUSENGINEER']=="C")
+                                        $insert.="<font color=green>(Done)</font> ";
+		
+				$insert.="<br>".ucfirst(strtolower($row['MECHANICNOTES']))."<br>@".$row['COMPLETEDATE']."</td>";
+                                
+                                if (($row['MINUTES']) == 0 && $row['MECHANICNOTES'] == NULL){
+                                	$insert .= "<td><font color=red>(No time?)</font> ".$row['NAME']."</td>";	
+                                }else{ $insert .= "<td align='left' nowrap>".$row['NAME']."</td>";}
+                                $insert .= "<td align='left'>".ucfirst(strtolower($comments))."</td></tr>";
+//                              $insert .= "<td align='left'>".ucfirst(strtolower($row['REPORTCOMMENTS']))."</td></tr>";
+				$totalMinutes += $row['MINUTES'];
+
+/*
+			                                        $insert.="<tr class=cell><td colspan=10>";
+
+                                        ob_start();
+                                        print_r($row);
+                                $insert.=ob_get_contents();
+                                        ob_end_clean();
+
+*/
+				// NEW: Follow incomplete items recursively...
+				
+				if ($row['STATUSENGINEER']=="I") {
+					$deferred_to = $row["DEFERRED_TO"];
+					$lines_shown = array();
+					$insert .= follow_line($itemserial, $deferred_to);
+				}
+
+				
+				unset ($row);
+
+                        }
+                        
+				if (!isset($cur2))	
+					$cur2=ora_open($conn);
+                                $insert .= "<tr bgcolor='#FFE1E1'><td align='right'><b>Total</b></td><td align='right' nowrap><b>".sprintf( "%.1f", ($totalMinutes / 60))." hrs</b></td><td colspan=4 bgcolor='#D3D3D3'></td></tr>";
+                                $insert .= "</table>";
+
+                                $show = "<table cellpadding='3' cellspacing='1' border='0' bgcolor='black' width='100%'><tr><td colspan='12' bgcolor='#B0C4DE'><b>Jobcard Details</b></td></tr>";
+
+				$jobflat=substr($jobserial,0,-1)."0";
+				$jobnine=substr($jobserial,0,-1)."9";
+
+
+				ora_parse($cursor,"select /* kwdb35 */ A.*,to_char(A.auth_date,'HH24:MI:SS Mon DD YYYY') auth_date2, C.username auth_by2  from move_jobs A left join user_details C on A.auth_by=C.user_serial  where jobcardserial=$jobserial");
+				ora_exec($cursor);
+				if (!ora_fetch_into($cursor, $jobd, ORA_FETCHINTO_ASSOC)) {
+					echo "No such job card!<br>";	
+					exit;
+
+				}
+				$broke=$jobd['BREAKDOWN'];
+				$vehicle_serial=$jobd['UNITSERIAL'];
+				$jobtype=$jobd['TYPE'];
+				$opened=$jobd['JOBOPENDATE'];
+				$whom=$jobd['JOBOPENWHO'];
+				$closed=$jobd['JOBCLOSEDATE'];
+				$authdate=$jobd['AUTH_DATE2'];
+				$authby=$jobd['AUTH_BY2'];
+				$km=$jobd['KM'];
+				$depo=$jobd['DEPOT'];
+				$completed=$jobd['COMPLETED'];
+				$comments=$jobd['COMMENTS'];
+				$accident=$jobd['ACCIDENT'];
+				if ($accident=="N")
+					$accident="";
+				elseif($accident=="M")
+					$accident=" <font color=red>MAJOR Accident</font>";
+				elseif ($accident=="m")
+					$accident=" <font color=magenta>minor accident</font>";
+				if ($tech_manager)
+				{
+					$accident.= "<A onclick=\"document.getElementById('reclassify').style.display='block'; return false\">*</a><div style='display: none' id=reclassify><font size=1>";
+					if ($accident!="N")
+						$accident.= "<a href=jobcard_daily_auth.phtml?stage=4&subjob_more=$subjob_more&goback=$goback&jobserial=$jobserial&newclass=N>Change to No Accident</a><br>";
+					if ($accident!="M")
+                                                $accident.= "<a href=jobcard_daily_auth.phtml?stage=4&subjob_more=$subjob_more&goback=$goback&jobserial=$jobserial&newclass=M>Change to MAJOR Accident</a><br>";
+					if ($accident!="m")
+                                                $accident.= "<a href=jobcard_daily_auth.phtml?stage=4&subjob_more=$subjob_more&goback=$goback&jobserial=$jobserial&newclass=m>Change to minor Accident</a><br>";
+
+
+
+
+
+					$accident.= "</div>";
+				}
+				
+				$finauthdate=$jobd['FINAL_CLOSE_DATE'];
+				$finauthwho=$jobd['FINAL_CLOSE_BY'];
+
+                                        if ($jobtype==1)
+                                                $whatfor="<a href=managecoachinfo.phtml?stage=51&ser=$vehicle_serial>".$vehicles[$vehicle_serial]."</a>";
+                                        elseif ($jobtype==4) {
+                                                ora_parse( $cur2, "SELECT /* kwdb35 */ name, account FROM MOVE_DEBTORS WHERE serial=".$vehicle_serial );
+                                                ora_exec( $cur2 );
+                                                $whatfor = "<font size=2>".ora_getColumn( $cur2, 0 ) . "(" . ora_getColumn( $cur2, 1 ) . ")";
+                                        } elseif ($jobtype==6) {
+						
+                                                ora_parse($cur2,"select /* kwdb35 */ track from stk_Serialass where serial=".$vehicle_serial);
+                                                ora_exec($cur2);
+                                                if (ora_Fetch($cur2)) {
+                     	                           $whatfor= "ICG ".ora_getcolumn($cur2,0);
+						   $trackno=ora_getcolumn($cur2,0);
+						}
+						else { $trackno="";  $whatfor="#".$vehicle_serial; }
+                                                ora_parse($cur2,"select /* kwdb35 */ ipartno from stk_serialtrack where serial=".$vehicle_serial);
+                                                ora_exec($cur2);
+                                                ora_Fetch($cur2);
+                                                $ipartno=ora_getcolumn($cur2,0);
+                                                $whatfor.= "<font size=2> (M".ora_getcolumn($cur2,0);
+                                                ora_parse($cur2,"select /* kwdb35 */ description from stk_parts where serial=$ipartno");
+                                                ora_exec($cur2);
+                                                ora_Fetch($cur2);
+                                                $whatfor.= ")<font size=1> - ".ora_getcolumn($cur2,0);
+						if ($trackno!="")
+                                                        $whatfor="<a href=captureparts2.phtml?stage=115&barcode=$trackno>$whatfor</a>";
+
+                                        } else
+                                                $whatfor="Type ".$jobtype;
+
+
+				
+
+				if ($suppress_things != "Y")
+				{
+                          	      if ($broke == "Y"){$broke_down = "<font color='red'><B>Y</B></font>";}else{$broke_down = "N";}
+				      $broke_down="<script> var brokedown='$broke';</script><span id=brokedown onclick=\" console.log('was '+brokedown); document.getElementById('bdcatframe').src='bdswitch.phtml?ser=$jobserial&current='+brokedown;\">$broke_down</span>\n<script> \nfunction update_brokedown(newvalue) { document.getElementById('brokedown').innerHTML=newvalue; brokedown=newvalue; console.log('now '+newvalue); } </script>\n";
+				}
+				else $broke_down = "";
+                                $show .= "<tr bgcolor='#D3D3D3'><td><b>Jobcard Serial</b></td><td><b>Vehicle / Unit / 3rd Party</b></td><td><b>Opened</b></td><td><b>Issued by</b></td><td><b>Closed Date</b></td><td><b>Foreman Auth Date</b></td><td><b>Finance Auth Date</b></td><td><b>";
+				if ($suppress_things != "Y")
+					$show .= "Break Down";
+				$show.="</b></td><td><b>Last Trip</b></td><td><b>Closed</b></td><td><b>KM Reading</b></td><td><b>Depot</b></td></tr>";
+                                $show .= "<tr bgcolor='#F5F5F5'><td><B>".$jobserial.$accident."</B>";
+				if ($jobd["MAJOR_REPAIR"]=="Y")
+					$show.=" <b>(MAJOR REPAIR)</b>";
+				if ($jobd["NON_CRITICAL"]=="Y")
+					$show.=" (Non Critical)";
+				$show.="</td><td>".$whatfor."</td>";
+				if (trim($authby)=="dummy")
+				{
+					$authby="System Batch";
+				}
+                                $show .= "<td>".$opened."</td><td>".$whom."</td><td>".$closed."</td><td>$authdate $authby</td><td>$finauthdate $finauthwho</td><td align='center'>".$broke_down."</td>";
+				if ($jobd["LAST_TRIP_DATE"]=="")
+					$show.="<td>&nbsp;</td>";
+				else
+					$show.="<td>".$jobd["LAST_TRIP_DESC"]." on ".$jobd["LAST_TRIP_DATE"]."</td>";
+
+				$show .= "<td align='center'>".$completed." </td><td align='left'>".$km."</td>";
+                                
+                                
+                                if ($job_deferred <= 0){$job_deferred = "No";}else{$job_deferred = "jobserial = ".$job_deferred;}
+                                
+                                $show .= "<td>$depo</td></tr>";
+				$show .= "<tr class=cell><td class=altcel><b>Comments:</b></td><td colspan=15>".$jobd["COMMENTS"]." <iframe id=bdcatframe height='20px' width='250px'></iframe></td></tr>";
+				
+				$show .= "<tr class=cell><td class=altcel><b>Jobcard Type:</b></td><td colspan=15>".$jtypes[$jobd["JOBCARD_TYPE"]];
+				if ($suppress_things != "Y") {
+					$show .= " <Select name=jccat  onchange=\"update_jccat(this.options[this.selectedIndex].value);\" id=jccat>".makeselect2($jtypes,$jobd["JOBCARD_TYPE"])."</select> (Only RTM may change this) <iframe id=jccatframe height='20px' width='250px'></iframe>";
+
+				}
+				
+				$show .= "</td></tr>";;
+				if ($suppress_things != "Y") {
+				    ?>
+					<script>
+						var oin = -1;
+						function bdalert(str,oinvalue) {
+							document.getElementById('bdalert').innerHTML = str;
+							document.getElementById('oin').value = oinvalue;
+							oin = oinvalue;
+							document.getElementById('bdoin').style.display='block';
+						}
+
+						function oincat(newcat) {
+							console.log(newcat);
+							console.log('#'+oin);
+							document.getElementById('bdcatframe').src='bdoin.phtml?oin='+oin+'&newcat='+newcat;
+						}
+
+						function bdupdate() {
+							let x = document.getElementById('newoincat');
+							document.getElementById('bdalert').innerHTML = ' <font color=magenta>RECONCILED TO ' + x.options[x.selectedIndex].text;
+						}
+
+		
+					</script>
+				    <?
+					if ($jobd["BREAKDOWN_CATEGORY"]!="") {
+						$jobd["BREAKDOWN_CATEGORY"] = "(Old JC b/down category: ".$jobd["BREAKDOWN_CATEGORY"].")";
+					}
+                            	    $show .= "<tr class=cell><td class=altcel><b>Breakdown Category:</b></td><td colspan=15><input type=hidden name=oin id=oin value='-1'><span id=bdalert></span> <div id=bdoin style='display:none'><select onchange=\"oincat(this.options[this.selectedIndex].value);\" name=newoincat id=newoincat><option value=''>Please select the RTM final determined classification</option>\n";
+
+					// insert oin here
+       $options = array();
+        $checked = array();
+
+
+        checkit(21);
+	checkit(22);
+        asort($options);
+        foreach ($options as $key => $val) {
+                $show .= "<option value='$key'>$val</option>\n";
+        }
+
+		
+
+					$show .= "</select></div>".$jobd["BREAKDOWN_CATEGORY"]."</td></tr>\n";
+/*					$show .= "<tr class=cell><td class=altcel><b>Breakdown Reporting Category<br>(Set by RTM)</b></td><td colspan=15><select name=bdcat onchange=\"update_bdcat(this.options[this.selectedIndex].value);\">\n";
+				ora_parse($cursor,"select * from breakdown_categories order by 1");
+				ora_Exec($cursor);
+				while (ora_Fetch($cursor)) {
+					$bdcat_serial = getdata($cursor,0);
+					$bdcat_name = getdata($cursor,1);
+					$show.= "<option value='$bdcat_serial'";
+					if ($bdcat_serial == $jobd["BREAKDOWN_REPORTING_CATEGORY"]) 
+						$show.= " SELECTED";
+					$show.= ">$bdcat_name</option>";
+
+				}
+				$show.= "</select> (Only RTM may change this) <iframe id=bdcatframe height='20px' width='250px'></iframe></td></tr>\n";
+
+*/
+
+				}
+
+				
+                                $show .= "</table>";
+
+?>
+<script>
+		function update_bdcat(ser) {
+			console.log('updating with '+ ser);
+			document.getElementById('bdcatframe').src='update_breakdown.phtml?jc=<?=$jobserial?>&cat='+ser;
+
+		}
+
+		function update_jccat(ser) {
+                        console.log('updating with '+ ser);
+                        document.getElementById('jccatframe').src='update_jctype.phtml?jc=<?=$jobserial?>&cat='+ser;
+
+                }
+
+</script>
+<?
+                        
+                        echo $show."<p>";
+                        echo $insert;
+		// SHOW SEALS:
+		$seals=0;
+		ora_parse($cursor,"select seal_no, date_added from move_seals where  jobcard>=$jobflat and jobcard<=$jobnine");
+		ora_exec($cursor);
+		while (ora_fetch($cursor)) {
+			if ($seals==0)
+				echo "<B><u>SEALS ON THIS JOBCARD:</u></b><br>";
+			$seals++;
+			echo getdata($cursor,0)." added on ".getdata($cursor,1)."<br>";
+
+		}
+		if ($seals>0)
+			echo "<p>";
+	
+
+
+
+		// ** SHOW UNFINALISED ORDERS ********
+
+		$qry="select request_no from purchase_requests where jobcard>=$jobflat and jobcard<=$jobnine and order_no=-1";
+		ora_parse($cursor,$qry);
+		$qnumbers=0;
+		ora_exec($cursor);
+		while (ora_fetch_into($cursor,$q)) {
+			if ($qnumbers==0)
+				echo "<b><u>THE FOLLOWING REQUISITIONS ARE STILL UNFINALISED FOR THIS JOBCARD:</b></u><br>";
+			$qnumbers++;
+			echo "<a href=requestorder.phtml?stage=4&ser=$q[0]>Q$q[0]</a> ";
+
+		}
+		if ($qnumbers>0)
+			echo "<bR>";
+
+	  
+	
+                        
+                       
+	       // ****  SHOW UNDELIVERED ORDERS ******** 
+
+		$orshown=false;
+			$ungrn=0;
+		$show_ungrn=false;
+
+		ob_start();
+		echo "<b><u>";
+
+		echo "<br>There are Undelivered item(s) from purchase orders against this jobcard<BR>";
+		if (true) {
+			echo "</u></b>";
+			 $qry=" select /* kwdb35 */ /*+ INDEX(A pr_jc) */ A.request_no,A.order_no,B.part_serial,C.description,B.quantity,sum(E.received),C.unit, A.autogrn
+from purchase_requests A left join purchase_details B on A.request_no=B.request_no left join stk_parts C
+on B.part_serial=C.serial left join 
+( 
+ select received,part_serial,request_no  from purchase_deliveries X 
+left join purchase_received Y on  X.delnote=Y.delnote 
+) E
+on E.request_no=A.request_no and B.part_serial=E.part_serial
+where A.jobcard>=$jobflat and A.jobcard<=$jobnine and A.order_no>0 and A.superceded_by=-1  group by A.request_no,A.order_no,B.part_serial,C.description,B.quantity,C.unit,A.autogrn";
+			if ($debug)
+			echo "$qry<bR>";
+			ora_parse( $cursor, $qry);
+
+			
+			ora_exec($cursor);
+			echo "<table border=1 cellspacing=0>";
+			echo "<tr class=title><td>Req</td><Td>Order</td><td colspan=2>What</td><td>Ordered</td><td>Received</td></tr>";
+			while (ora_fetch_into($cursor, $ddata)) {
+				if (!is_numeric($ddata[5]))
+					$ddata[5]=0;
+				if ($ddata[4]!=$ddata[5] && $ddata[7]!="Y") 
+				{
+				//	if ($data[6]=="S") - Removed, as this was allowing jobcard to be authorized
+						$ungrn++;
+					$show_ungrn=true;
+
+					echo "<tr class=altcell><td><A href='requestorder.phtml?stage=4&ser=".$ddata[0]."'>Q$ddata[0]</a></td><td>B$ddata[1]</td><td>M$ddata[2]</td><td><font size=2>$ddata[3]</td><td align=right>$ddata[4]</td><td align=right>$ddata[5]</td></tr>";
+				}
+				unset($ddata);
+			}
+			$qry="
+select /* kwdb35 */  /*+INDEX(A  pr_jc)*/ A.request_no,A.order_no,null,B.description,B.quantity,sum(E.received),A.autogrn
+from purchase_requests A left join purchase_noparts B on A.request_no=B.request_no   left join 
+(
+ select received,abs(no_part_serial) no_part_serial,request_no  from purchase_deliveries X 
+left join purchase_received Y on  X.delnote=Y.delnote 
+)
+ E on  E.no_part_serial=B.serial  and E.request_no=A.request_no
+where A.request_no=B.request_no and A.jobcard>=$jobflat and A.jobcard<=$jobnine and A.superceded_by=-1 and A.order_no>0 group by  A.request_no,A.order_no,B.serial,B.description,B.quantity,A.autogrn";
+			if ($debug)
+			echo "$qry<bR>";
+			ora_parse($cursor,$qry);
+                        ora_exec($cursor);
+                        while (ora_fetch_into($cursor, $ddata)) {
+				if (!is_numeric($ddata[5]))
+					$ddata[5]=0;
+                                if ($ddata[4]!=$ddata[5] && $ddata[6]!="Y")
+				{
+					$ungrn++; // uncommented as it was allowing people to authorize
+					$show_ungrn=true;
+                                        echo "<tr class=altcell><td><A href='requestorder.phtml?stage=4&ser=".$ddata[0]."'>Q$ddata[0]</a></td><td>B$ddata[1]</td><td colspan=2><font size=2>$ddata[3]</td><td align=right>$ddata[4]</td><td align=right>$ddata[5]</td></tr>";
+				}
+                                unset($ddata);
+                        }
+	
+	
+			echo "</table>";
+		}
+		if ($ungrn==0 && !$show_ungrn) 
+			ob_end_clean();
+		else
+			ob_end_flush();
+		
+                        
+
+                // *** GET PARTS FOR THE JOBCARD ABOVE ***
+
+                $parts_added = array();
+		$jsfind=substr($jobserial,0,strlen($jobserial)-1);
+
+		$unit=$jobd['UNITSERIAL'];
+        
+		if ($debug) {
+		print_r($jobd);
+		$qry="update stk_movement set lcode=1, location='$unit',  jobserial='$jsfind"."0' where  location like '".$jsfind."_' AND lcode=4 and quantity<0 and iserial>0  and  when>(select jobclosedate from move_jobs where jobcardserial='$jsfind"."0') ";
+		if ($qry!="") {
+			if ($debug)
+				echo str_replace("<","&lt;",$qry)."<br>";
+			ora_parse($cursor,$qry);
+			ora_exec($cursor);
+			echo ora_numrows($cursor)." item(s) were later removed after jobcard.<bR>";
+		}
+
+		}
+
+
+
+// new - petty cash
+		  // GET PETTY CASH EXPENSES FOR THIS JOBCARD
+					$pctable=0;
+					$pctotal=0;
+                                        $qry = "SELECT amount, description, entry_id from petty_Cash where deleted='N' and jobcard=$jobserial";
+                                        if ($debug)
+                                        echo "$qry<BR>";
+                                        ora_parse($cur2, $qry);
+
+                                        ora_exec( $cur2);
+                                        while (ora_fetch_into($cur2, $data2, ORA_FETCHINTO_ASSOC)){
+
+                                                $data2['AMOUNT']=sprintf("%.2f",$data2['AMOUNT']);
+						$pclines++;
+						if ($pclines%2==0)
+							$pctable.="<tr class=cell>";
+						else
+							$pctable.="<tr class=altcell>";
+
+                                                $pctable.="<td>P".$data2['ENTRY_ID']."</td><td>".$data2['DESCRIPTION']."</td><td>R".$data2['AMOUNT']."</td></tr>";
+                                                $pctotal+=$data2['AMOUNT'];
+
+					       if ($docsv) {
+       		                                 $csv_counter++;
+               		                         $csv_price=$data2['AMOUNT'];
+                       		                 $qry="insert into jobcard_costing_parts values ($jobserial, $csv_counter, null , null, 1, $csv_price, 'PC:".$data2['DESCRIPTION']."')";
+//                             		         echo "$qry<br>";
+                                       		 if (ora_parse($cursor2,$qry)) {
+                                               		 if (!ora_exec($cursor2,$qry))
+                                                       		 mail("keith@intercape.co.za","CSV export error $jobserial",$qry);
+		                                        } else {
+               			                                 mail("keith@intercape.co.za","CSV export error $jobserial",$qry);
+                               			         }
+
+
+		                                } // csv
+
+
+                                        }
+
+					if ($pctable!="") {
+						echo "<table border=1 cellspacing=0><tr class=head><td colspan=4>Petty Cash Expenses</td></tr>";
+						echo $pctable;
+						echo "</table>";
+					}
+
+
+                  $qry = "SELECT /* kwdb35 */ A.ipartno, A.who, to_char(A.when,'HH24:MI:SS Mon DD YYYY') when, A.quantity, A.who, B.description, A.value, lcode, A.value, D.track, A.iserial, A.jobserial, A.location FROM stk_parts B, stk_movement A left join stk_serialass D ON A.iserial=D.serial WHERE A.location like '".$jsfind."_' AND lcode=4 AND B.serial = A.ipartno and (A.quantity>0 or A.iserial=-1  or (A.quantity<0 and A.iserial>0 and A.when<=(select nvl(auth_date,CURRENT_TIMESTAMP+1) from move_jobs where jobcardserial='$jsfind"."0'))) order by A.when "; // AND lcode!='11'"; // AND A.lcode='4'
+// NB: 26 Feb 2016 changed jobclosedate to auth_date for cut-off of removing serialized items from jobcard
+
+
+		
+		if ($debug)
+		echo $qry;
+		
+                ora_parse($cursor, $qry);
+	
+                ora_exec( $cursor);
+
+                $parts = "<p><table cellpadding='3' cellspacing='1' border='0' bgcolor='black' width='100%'><tr><td colspan='10' bgcolor='#B0C4DE'><b>Costing - Parts used</b></td></tr>";
+
+       		$is_rows = false;
+       		
+                $parts .= "<tr bgcolor='#D3D3D3'><td><b><font color='red'>M </font>Part</b></td><td><b>Moved</b></td><td><b>Quantity</b></td><td><b>Description</b></td><td><b>Issued by</b></td><td><b>Unit Cost</b></td><td><b>SubTotal</b></td></tr>";
+       		
+       		$subTotal = 0; $total = 0;
+		$diesel = 0;
+       
+	        while( ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)) {
+                        
+			if ($data['TRACK']!="")
+				$data['TRACK']=" (<b>ICG".$data['TRACK'].")";
+                        //if ($data['QUANTITY'] > 0){
+                        
+	                        $is_rows = true;
+	
+	                        if ($bcolor=="white"){$bcolor="#F5F5F5";}else{$bcolor="white";}
+
+				
+				// used stored value, if any, instead of current value - change by Keeith June 2005
+				if ( $data['VALUE']>0)
+					$data['PRICE']=$data['VALUE'];
+			  else {
+				//echo "Checking ";
+				$temp_price=part_price($jobd['DEPOT'],$cur2,$data['IPARTNO'],$data['ISERIAL']);
+				ora_parse($cur2,"update stk_movement set value=$temp_price where (value=0 or value is null) and location='".$data["LOCATION"]."' and iserial=".$data["ISERIAL"]." and ipartno=".$data["IPARTNO"]);
+				ora_exec($cur2);
+				if (ora_numrows($cur2)>0) {
+//					echo "Fixed<br>";
+				}
+				//else 
+				//	echo "Could not fix: update stk_movement set value=$temp_price where (value=0 or value is null) and location='".$data["LOCATION"]."' and iserial=".$data["ISERIAL"]." and ipartno=".$data["IPARTNO"]."<br>";
+
+			  	$data['PRICE']=$temp_price;
+				}
+
+		//				 function part_price ($depot,$cur2,$partno,$iserial)  
+				if ($jobtype==4 && $data['IPARTNO']!=1501)	
+					$data['PRICE']*=1.05; // 5% markup
+
+	                           
+	                        $subtotal = ($data['PRICE'] * $data['QUANTITY']);                        
+
+				if (sprintf("%.1f",$data['PRICE'])==$data['PRICE'])
+					$data['PRICE']=sprintf("%.2f",$data['PRICE']);
+
+			      if (sprintf("%.1f",$subtotal)==$subtotal)
+       		                         $subtotal=sprintf("%.2f",$subtotal);
+/*create table jobcard_costing_parts (
+jobcardserial number,
+entry_serial number,
+part_no number,
+order_no number,
+quantity number,
+price_each number,
+description varchar2(200)
+);*/
+
+				if ($docsv) {
+					$csv_counter++;
+					$csv_price=sprintf("%.4f",$data['PRICE']);
+					$qry="insert into jobcard_costing_parts values ($jobserial, $csv_counter, ".$data['IPARTNO'].", null, ".$data['QUANTITY'].", $csv_price, '".$data['DESCRIPTION'].$data['TRACK']."')";
+//					echo "$qry<br>";
+					if (ora_parse($cursor2,$qry)) {
+                                                if (!ora_exec($cursor2,$qry))
+                                                        mail("keith@intercape.co.za","CSV export error $jobserial",$qry);
+                                        } else {
+                                                mail("keith@intercape.co.za","CSV export error $jobserial",$qry);
+                                        }
+
+
+				}
+			
+	                        $parts .= "<tr bgcolor='$bcolor'><td><font color='red'>M</font> ".$data['IPARTNO']."</td><td>".$data['WHEN']."</td><td align='center'>".$data['QUANTITY']."</font></td><td align='left'><font size=2>".$data['DESCRIPTION'].$data['TRACK']."</font></td><td>".$data['WHO']."</td><td align='right'>".sprintf("%.2f",$data['PRICE'])."</td><td align='right'>".sprintf( "%.2f", $subtotal)."</td></tr>"; 
+	
+		                //$parts_added[count($parts_added)] = $data['IPARTNO']."[BREAK]".$data['WHO']."[BREAK]".$data['WHEN']."[BREAK]".$data['QUANTITY']."[BREAK]".$data['DESCRIPTION']."[BREAK]".$data['PRICE'];
+		        
+		                $subTotal += $subtotal;
+				if ($data['IPARTNO']==1501)
+					$diesel+=$subtotal;
+		        //}
+	                
+	                unset ($data);
+	        }
+	        
+	        
+	        // GET ANY ORDERS FOR THIS JOBCARD (PARTS ADDED TO THE JOBCARD AS NON-PARTS
+   		
+   		$qry = "SELECT /* kwdb35*/  /*+INDEX(B pr_jc) */  to_char(auth_date,'HH24:MI:SS Mon DD YYYY') auth_date, requested_by, quantity, price_each, a.description, behalf_of, A.vat, reason_required, order_no, B.request_no, A.serial, null FROM purchase_noparts A, purchase_requests B WHERE a.request_no = b.request_no AND b.order_no > 0 AND b.superceded_by = -1 AND b.jobcard>=$jobflat and B.jobcard<=$jobnine UNION SELECT /* kwdb35*/ /*+INDEX(B pr_jc) */ to_char(auth_date,'HH24:MI:SS Mon DD YYYY') auth_date, requested_by, quantity, price_each, C.description, behalf_of, A.vat, reason_required, order_no, B.request_no, A.part_serial,C.unit FROM purchase_details A, purchase_requests B, stk_parts C WHERE C.serial=A.part_serial and
+a.request_no = b.request_no AND b.order_no > 0 AND b.superceded_by = -1 AND b.jobcard>=$jobflat and B.jobcard<=$jobnine and C.unit='S'";
+		if ($debug)
+			echo "***$qry<bR>";
+
+   		ora_parse($cursor, $qry);
+	
+   		ora_exec( $cursor);
+   
+   		$order_requests = array();
+
+//		echo "JOB TYPE $jobtype<br>";
+   
+   		while(ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)){
+   	
+                        $is_rows = true;
+
+                        if ($bcolor=="white"){$bcolor="#F5F5F5";}else{$bcolor="white";}
+		          if ($jobtype==4)
+                                        $data['PRICE_EACH']*=1.05; // 5% markup
+                           
+
+                        $subtotal = ($data['PRICE_EACH'] * $data['QUANTITY'] * $data['VAT']);                        
+			    if (sprintf("%.1f",$data['PRICE_EACH'])==$data['PRICE_EACH'])
+                                        $data['PRICE_EACH']=sprintf("%.2f",$data['PRICE_EACH']);
+			if (sprintf("%.1f",$subtotal)==$subtotal)
+				$subtotal=sprintf("%.2f",$subtotal);	
+
+			if ($docsv) {
+				$csv_counter++;
+				$csv_price=$data['PRICE_EACH']*$data['VAT'];
+				$csv_price=sprintf("%.4f",$csv_price);
+				$qry="insert into jobcard_costing_parts values ($jobserial, $csv_counter, null, ".$data['ORDER_NO'].",".$data['QUANTITY'].", $csv_price, '".$data['DESCRIPTION'].$data['TRACK']."')";
+//				echo "$qry<br>";
+
+
+
+					if (ora_parse($cursor2,$qry)) {
+                                                if (!ora_exec($cursor2,$qry))
+                                                        mail("keith@intercape.co.za","CSV export error $jobserial",$qry);
+                                        } else {
+                                                mail("keith@intercape.co.za","CSV export error $jobserial",$qry);
+                                        }
+
+			}
+
+                        $parts .= "<tr bgcolor='$bcolor'><td><font color='red'></font> B<A href='requestorder.phtml?stage=4&ser=".$data['REQUEST_NO']."'>".$data['ORDER_NO']."</A></td><td>".$data['AUTH_DATE']."</td><td align='center'>".$data['QUANTITY'];
+			if ($important && $data["UNIT"]!="S") 
+				$parts.="<br><a href=removeit.phtml?jc=$jobserial&nopart=".$data['SERIAL']."&ser=".$data['REQUEST_NO'].">Remove</a>";
+			$parts .= "</font></td><td align='left'>".$data['DESCRIPTION']."</td><td>".$data['BEHALF_OF']."</td><td align='right'>".sprintf( "%.2f", $data['PRICE_EACH'] )."</td><td align='right'>". $subtotal."</td></tr>"; 
+        
+	                $subTotal += $subtotal;
+
+      			unset ($data);
+   		}
+
+		if ( $subTotal>0 && $jobtype==4 ) { // sundries
+                                $sundries=sprintf("%.2f",  ($subTotal-$diesel) *0.05);
+                                $parts.="<tr bgcolor='#FFE1E1'><td colspan='6' align='right'><b>Sundries</b></td><td align='right'><b>".sprintf( "%.2f", $sundries)."</b></td></tr>";
+                                 $subTotal+=$sundries;
+
+                }
+   		
+	        $parts .= "<tr bgcolor='#FFE1E1'><td colspan='6' align='right'><b>Total</b></td><td align='right'><b>".sprintf( "%.2f", $subTotal)."</b></td></tr>";
+
+		$subTotal += $pctotal;
+	        
+	        $parts .= "</table>";
+	        
+	        if ($is_rows){echo $parts;}
+
+
+		// *** SHOW THE FINAL COSTING OF THE JOBCARD
+
+                        $cost = "<p><table cellpadding='3' cellspacing='1' border='0' bgcolor='black' width='100%'>";
+
+                        $cost .= "<tr><td colspan='10' bgcolor='#B0C4DE'><b>Totals</b> (Note: It is possible for costing to change if purchases or issues against this jobcard are not yet finalized) </td></tr>";
+		
+  	                if ($jobtype==4)
+                        {
+                                $lrate=250;
+                                $labourcost = sprintf( "%.2f", ceil($totalMinutes/60)*$lrate );
+
+                        }
+                        else
+                        {
+                                $lrate=$labour_cost;
+                                $labourcost = sprintf( "%.2f", $totalMinutes/60*$lrate );
+                        }
+
+//			echo "Rate is $lrate, type is ".$jobtype." cost is $labourcost, mins are  $totalMinutes<bR>";
+			
+                        
+                        $cost .= "<tr bgcolor='#D3D3D3'><td><b>Labour $totalMinutes mins (R <font color='red'>$lrate </font>p/h )</b></td><td><b>Parts Cost</b></td><td><b>Total Jobcard Cost</b></td></tr>"; 
+
+			//<td><b>Comments</b></td><td><b>Report Comments</b></td></td>";
+                        
+                        $cost .= "<tr bgcolor='#D9FFE4' ><td align='right'><b>".$labourcost."</b></td><td align='right'><b>".sprintf( "%.2f", $subTotal)."</b></td><td align='right'><b>R <font color='red'>".sprintf( "%.2f", $subTotal + $labourcost) ."</font></b></td></tr>";
+                        
+                        $cost .= "</table>";
+                        
+
+		// UPDATE THE TOTAL_COST VALUE IN THE DB
+		
+		if ($dohistory=="") {
+
+		ora_parse($cur2,"select auth_date,parts,labour,total_cost,auth from move_jobs where jobcardserial='$jobserial'");
+		ora_exec($cur2);
+		ora_fetch($cur2);
+		$dbparts=getdata($cur2,1);
+                $dblabour=getdata($cur2,2);
+                $dbtotal=getdata($cur2,3);
+
+		if (getdata($cur2,0)!="" || getdata($cur2,4)=="Y") { // already authorized
+			
+			$compareto=$subTotal + (($labour_cost / 60) * $totalMinutes);
+
+			if ($dbtotal<($compareto-0.01)) {
+				moveDebug("Jobcard MOVE$jobserial costing has changed from $dbtotal to $compareto which is $subTotal + (($labour_cost / 60) * $totalMinutes)) and needs re-authorization");
+				ora_parse($cur2,"update move_jobs set auth_date=null,auth='N',auth_by=null where  jobcardserial='$jobserial'");
+				ora_exec($cur2);
+
+			}
+		}
+
+		if ($dbparts!=$subTotal || $dblabour!=$totalMinutes || $dbtotal!=($subTotal + (($labour_cost / 60) * $totalMinutes)) ) {
+		$qry = "UPDATE move_jobs SET parts=$subTotal,labour=$totalMinutes,total_cost='" . ($subTotal + (($labour_cost / 60) * $totalMinutes)) . "' WHERE jobcardserial='$jobserial' ";
+		if ($debug)
+			echo "<b>$qry</b><bR>";
+		ora_parse( $cur2, $qry);
+		ora_exec($cur2);
+		}
+
+		if (is_numeric($subTotal))
+		{
+		ora_parse($cur2,"update move_jobs set latest_eval=$subTotal where jobcardserial='$jobserial' and (latest_eval!=$subTotal or latest_eval is null)");
+		ora_exec($cur2);
+
+		}
+		} else {
+		
+		$qry = "insert into move_job_compare  values ($jobserial,$subTotal)";
+                if ($debug)
+                        echo "<b>$qry</b><bR>";
+                ora_parse( $cur2, $qry);
+                ora_exec($cur2);
+		}
+
+			
+		echo $cost;
+		
+
+	if ($suppress_things != "Y") {
+	ora_parse($cursor,"select * from move_jobs_part_requests where jobcardserial=$jobserial and deleted='N' order by pr_serial");
+	ora_exec($cursor);
+	$prfound=false;
+
+	while (ora_fetch_into($cursor,$rq,ORA_FETCHINTO_ASSOC)) {
+		if (!$prfound) {
+			echo "<b>PARTS REQUESTS FOUND</b><br>";
+			$prfound=true;
+			echo "<table border=1><Tr class=head><td>Request</td><td>Approved</td><td>Finished</td></tr>";
+		}
+		if ($rq["APPROVED"]=="R" || $rq["APPROVED"]=="N")
+			$rq["RECEIVED_DATE"]="N/A (Rejected)";
+		elseif ($rq["RECEIVED_DATE"]=="" )
+		{
+			$rq["RECEIVED_DATE"]="<font color=red><b>Not finalized yet";
+			$pr_outstanding=true;
+		 }
+
+		
+			
+		echo "<tr class=cell><td><a href=partsrequest.phtml?jobcardserial=$jobserial&req=".$rq["PR_SERIAL"].">PR".$rq["PR_SERIAL"]."</a></td><td><Center>".$rq["APPROVED"]."</td><td>".$rq["RECEIVED_DATE"]."<td></tr>";
+
+	}
+	if ($prfound)
+		echo "</table>";
+
+	}// suppress
+		
+               
+  }
+
+
+if ($stage == 33){  // this is not used any more
+		echo "Removed as part of system audit March 2009";
+		exit;
+	// Check which Jobcards were authorised the day before and email them
+
+		if ($type == 'yesterday'){$display_type = "Yesterday";}
+		elseif ($type == 'lastweek'){$display_type = "Last Week";}
+		else {$display_type = "Yesterday";}
+
+   		
+   		global $cur3; global $cur2;
+
+		$cur3 = ora_open($conn); // Open connection for labour AND price calculation
+		$cur2 = ora_open($conn);
+   		
+		
+		if ($type == 'yesterday'){
+        		$qry = "SELECT A.jobcardserial, A.unitserial, A.jobopendate, A.jobopenwho,A.jobclosedate, A.breakdown, A.km, A.completed, A.depot, A.labour, sum(E.value * E.quantity) price, 0 min, B.mechanicnotes, C.faultdesc, 0 mins FROM move_jobs A left join stk_movement E on E.location=to_char(A.jobcardserial) and E.lcode='4'  WHERE A.auth = 'Y' AND A.auth_date >= to_date('".$yesterday." 00:00:00','DDMMYYYY HH24:MI:SS') AND A.auth_date <= to_date('".$yesterday." 23:59:59','DDMMYYYY HH24:MI:SS') GROUP BY A.depot, A.jobopendate, A.jobcardserial, A.jobopenwho,A.jobclosedate, A.breakdown, A.km, A.completed,  A.labour,A.unitserial, B.minutes, B.mechanicnotes, C.faultdesc, C.minutes";
+			//echo $qry;
+		}
+		
+		elseif ($type == 'lastweek'){
+        		$qry = "SELECT A.jobcardserial, A.unitserial, A.jobopendate, A.jobopenwho,A.jobclosedate, A.breakdown, A.km, A.completed, A.depot, A.labour, sum(E.value * E.quantity) price, B.minutes min, B.mechanicnotes, C.faultdesc, C.minutes mins FROM move_jobs A left join move_jobcarditems C on A.jobcardserial = C.jobcardserial LEFT join move_itemextra B on C.itemserial = B.itemserial LEFT JOIN stk_movement E on E.location=to_char(A.jobcardserial) and E.lcode='4'   WHERE A.auth = 'Y' AND A.auth_date >= to_date('".$lastweek." 00:00:00','DDMMYYYY HH24:MI:SS') AND A.auth_date <= to_date('".$lastweek." 23:59:59','DDMMYYYY HH24:MI:SS') GROUP BY A.depot, A.jobopendate, A.jobcardserial, A.jobopenwho,A.jobclosedate, A.breakdown, A.km, A.completed,  A.labour,A.unitserial, B.minutes, B.mechanicnotes, C.faultdesc, C.minutes";
+			//echo $qry;
+		}
+		else{
+        		$qry = "SELECT A.type, A.jobcardserial, A.unitserial, A.jobopendate, A.jobopenwho,A.jobclosedate, A.breakdown, A.km, A.completed, A.depot, A.labour, sum(E.value * E.quantity) price, B.minutes min, B.mechanicnotes, C.faultdesc, C.minutes mins FROM move_jobs A left join move_jobcarditems C on A.jobcardserial = C.jobcardserial LEFT join move_itemextra B on C.itemserial = B.itemserial LEFT JOIN stk_movement E on E.location=to_char(A.jobcardserial) and E.lcode='4'  WHERE A.auth = 'Y' AND A.auth_date >= to_date('".$yesterday." 00:00:00','DDMMYYYY HH24:MI:SS') AND A.auth_date <= to_date('".$yesterday." 23:59:59','DDMMYYYY HH24:MI:SS') GROUP BY A.depot, A.jobopendate, A.jobcardserial, A.jobopenwho,A.jobclosedate, A.breakdown, A.km, A.completed,  A.labour,A.unitserial, B.minutes, B.mechanicnotes, C.faultdesc, C.minutes, A.type";
+			//$qry = "SELECT A.jobcardserial, A.unitserial, A.jobopendate, A.jobopenwho,A.jobclosedate, A.breakdown, A.km, A.completed, A.depot, A.labour, sum(E.value * E.quantity) price, B.minutes min, B.mechanicnotes, C.faultdesc, C.minutes mins FROM move_jobs A left join move_jobcarditems C on A.jobcardserial = C.jobcardserial LEFT join move_itemextra B on C.itemserial = B.itemserial LEFT JOIN stk_movement E on E.location=A.jobcardserial and E.lcode='4'   WHERE (A.auth = 'N' OR A.auth IS NULL) AND jobopendate >= to_date('04072004 00:00:00','DDMMYYYY HH24:MI:SS') GROUP BY A.depot, A.jobopendate, A.jobcardserial, A.jobopenwho,A.jobclosedate, A.breakdown, A.km, A.completed,  A.labour,A.unitserial, B.minutes, B.mechanicnotes, C.faultdesc, C.minutes";
+			//echo $qry;
+		}
+		
+		
+		//echo $qry."<p>";
+                
+                ora_parse($cursor, $qry);
+	
+                ora_exec($cursor);
+
+		$table = "<b>List of Jobcards Authorized ";
+		
+		$table .= $display_type;
+		
+		$table .= "</b><p>";
+                
+		if (!$viewonly)
+
+                $table .= "<form action='jobcard_daily_auth.phtml?stage=2' method='post'>";
+                
+                $table .= "<table cellpadding='3' cellspacing='1' border='0' bgcolor='black' width='100%'><tr><td colspan='9' bgcolor='#B0C4DE'><b>Jobcards Authorized $display_type : </b></td></tr>";
+                
+                $table .= "<tr bgcolor='#D3D3D3'><td><b>No.</b></td><td><b>Jobcard</b></td><td><b>Vehicle</b><td><b>Open Date</b></td><td align='left'><b>Opened By</b></td><td align='left'><b>KM</b></td><td><b>Depot</b></td><td><b>Labour</b></td><td><b>Parts Cost</b></td></tr>"; //<td align='left'><b>Labour</b></td>
+
+		$count = 1; $is_row = false;
+		
+		$subtotal = 0;
+		
+		$total = 0;
+	                        	
+	        $labour_total = 0;
+	        
+	        while(ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)){
+
+			$is_row = true;
+
+		
+			$data['LABOUR']=-1; // have to calculate this over all 10 jobcards
+			$region = getTerritory(trim($data['DEPOT'])); 
+
+			$thissjc=chop($data['JOBCARDSERIAL']);
+			$thissjctop=substr($thissjc,0,-1)."9";
+			$thissjcflat=substr($thissjc,0,-1)."0";
+		//	echo "select labour from move_jobs where jobcardserial>=$thissjc and jobcardserial<=$thissjctop<br>";
+
+			ora_parse($cur2,"select /* kwdb35 */ labour from move_jobs where jobcardserial>=$thissjcflat and jobcardserial<=$thissjctop");
+			ora_exec($cur2);
+			while (ora_fetch($cur2)) {
+				$thisslab=ora_getcolumn( $cur2, 0);
+				if ($thisslab>0) {
+                                        if ($data['LABOUR']==-1)
+                                                $data['LABOUR']=$thisslab;
+                                        else
+                                              $data['LABOUR']+=$thisslab;
+
+		//			echo "Added $thisslab<Br>";
+				}
+
+			}	
+			if ($data['LABOUR'] == -1 ) { // work out the hard way
+
+                                $qry = "select /* kwdb35 */ sum(minutes) minutes  from move_jobcarditems where master_jobcardserial=$thissjc union select sum(minutes) minutes from move_itemextra where itemserial in (select itemserial from move_jobcarditems where master_jobcardserial=$thissjc) ";
+                                ora_parse( $cur2, $qry);
+                                ora_exec( $cur2);
+                                if  (ora_fetch( $cur2))
+                                    $data['LABOUR']=ora_getcolumn( $cur2, 0);
+                                if (ora_fetch($cur2)) {
+                                        $addon=ora_getcolumn( $cur2, 0);
+                                        if ($addon>0)
+                                                $data['LABOUR']+=$addon;
+                                }
+
+		//		echo "Fetched using $qry<br>";
+			}
+	//		echo "Labour now ".$data['LABOUR']."<br>";
+
+
+			if (true){                       
+                        
+
+	                
+	                        	
+
+                        	
+					// CALCULATE THE LABOUR FOR THIS JOBCARD
+
+					// -------------------------------------------------------------------------------
+
+					$labour_mins=$data['LABOUR'];
+/*
+		  			$qry = "SELECT B.minutes mins, C.minutes min FROM move_jobs A left join move_jobcarditems C on A.jobcardserial = C.jobcardserial left join move_itemextra B on C.itemserial = B.itemserial WHERE A.jobcardserial>='".$data['JOBCARDSERIAL']."' AND A.jobcardserial < '".($data['JOBCARDSERIAL'] + 10)."'";
+	                        	
+   					ora_parse($cur3, $qry);
+	
+   					ora_exec( $cur3);
+   
+   					$labour_mins = 0; 
+
+   					while(ora_fetch_into($cur3, $data3, ORA_FETCHINTO_ASSOC)){
+                           
+                        			$labour_mins += (($data3['MINS'] + $data3['MIN']));                        
+
+      						unset ($data3);
+	   				}	                        	
+*/
+	                        	
+                        		$labour_hrs = abs(sprintf( "%.1f", ($labour_mins / 60))). " hrs";
+                        		
+                        		$total_labour += $labour_mins;
+	                        	
+	                        	// GET PARTS
+	                        	
+	                        	 
+	                        	/* $qry = " select   E.value, E.quantity, E.iseiral, E.ipartno  price from stk_movement E left join stk_prices F on E.ipartno = F.ipart where E.location='".$data['JOBCARDSERIAL']."' and E.lcode='4' "; */                    	 
+	                        	
+///////////////////
+					$doors=""; // todo - what is this??
+					$parttotal=0;
+					$qry="select value, quantity, ipartno, iserial from stk_movement E where (E.location='".$data['JOBCARDSERIAL']."' $doors) and E.lcode='4'";
+	                  //      	$qry = " select  /* kwdb35 */ sum(nvl(E.value,F.ave_price) * E.quantity) price from stk_movement E left join stkes F on E.ipartno = F.ipart where (E.location='".$data['JOBCARDSERIAL']."' $doors) and E.lcode='4' ";
+					
+					if ($debug)
+	                        	echo "$qry<BR>";
+	                        	ora_parse( $cur2, $qry);
+	                        	ora_exec( $cur2);
+					$parttotal=0;
+
+					unset($part_info);
+					while (ora_fetch_into($cur2,$pdata)) {
+						$part_info[]=$pdata;
+						unset($pdata);
+					} // while
+					if (is_array($part_info)) {
+	
+						while (list($pkey,$pdata)=each($part_info)) {
+							 if ($pdata[0]>0) {
+	                      $parttotal+=$pdata[0]*$pdata[1];
+       		       } else {
+								 
+										$parttotal+=$pdata[1]*part_price($data['DEPOT'],$cur2,$pdata[2],$pdata[3]);
+								//				 function part_price ($depot,$cur2,$partno,$iserial)  
+   
+
+								  }
+                       		                       
+	
+						} // while
+
+					}
+
+//////////////	                        	
+	                        	
+	                        	
+					// CALCULATE ITEMS ADDED TO THIS JOBCARD THROUGH THE ORDER SYSTEM
+					
+					// -------------------------------------------------------------------------------
+					
+   					$qry = "SELECT  /* kwdb35 */ /*+  INDEX (B pr_jc) */   quantity, price_each, A.vat FROM purchase_noparts A, purchase_requests B WHERE a.request_no = b.request_no AND b.order_no > 0 AND b.superceded_by = -1 AND b.jobcard=".$data['JOBCARDSERIAL'];
+
+   					ora_parse($cur2, $qry);
+	
+   					ora_exec( $cur2);
+   
+   					$subtotal = 0; 
+
+   					while(ora_fetch_into($cur2, $data2, ORA_FETCHINTO_ASSOC)){
+                           
+                        			$nonparts = (($data2['PRICE_EACH'] * $data2['QUANTITY'] * $data2['VAT']));                        
+
+      						unset ($data2);
+	   				}	                        	
+	                        	
+	                        	$price_calculated = $parttotal + $nonparts;
+	                        	
+	                        	echo "$price_calculated = $parttotal + $nonparts<BR>";
+	                        	
+	                        	// -------------------------------------------------------------------------------
+	                        	
+	                        	
+	                        	if ($bcolor=="white"){$bcolor="#F5F5F5";}else{$bcolor="white";} 
+
+	                        	// if (strval($data['LABOUR']) == 0){$insert_mins = "0";} else {$insert_mins = abs(sprintf( "%.1f", ($data['LABOUR'] / 60)));}
+	                        	
+                                        if ($data['TYPE']==1)
+                                                $whatfor=$vehicles[$data['UNITSERIAL']];
+                                        elseif ($data['TYPE']==4) {
+                                                ora_parse( $cur2, "SELECT /* kwdb35 */  name, account FROM MOVE_DEBTORS WHERE serial=".$data['UNITSERIAL'] );
+                                                ora_exec( $cur2 );
+                                                $whatfor = "<font size=2>".ora_getColumn( $cur2, 0 ) . "(" . ora_getColumn( $cur2, 1 ) . ")";
+                                        } elseif ($data['TYPE']==6) {
+                                                ora_parse($cur2,"select /* kwdb35 */  track from stk_Serialass where serial=".$data['UNITSERIAL']);
+                                                ora_exec($cur2);
+                                                ora_Fetch($cur2);
+                                                $whatfor= "ICG ".ora_getcolumn($cur2,0);
+                                                ora_parse($cur2,"select /* kwdb35 */ ipartno from stk_serialtrack where serial=".$data['UNITSERIAL']);
+                                                ora_exec($cur2);
+                                                ora_Fetch($cur2);
+                                                $ipartno=ora_getcolumn($cur2,0);
+                                                $whatfor.= "<font size=2> (M".ora_getcolumn($cur2,0);
+                                                ora_parse($cur2,"select /* kwdb35 */ description from stk_parts where serial=$ipartno");
+                                                ora_exec($cur2);
+                                                ora_Fetch($cur2);
+                                                $whatfor.= ")<font size=1> - ".ora_getcolumn($cur2,0);
+                                        } else
+                                                $whatfor="Type ".$data['TYPE'];
+
+
+	                        	$table .= "<tr bgcolor='$bcolor'><td>$count.</td><td><a href='jobcard_daily_auth.phtml?stage=4&rnd=$nowtime&subjob_more=true&jobserial=".$data['JOBCARDSERIAL']."'>".$data['JOBCARDSERIAL']."</a><div name=".$data['JOBCARDSERIAL']." id=jc".$data['JOBCARDSERIAL']."></td><td>".$whatfor."</td><td>".$data['JOBOPENDATE']."</td><td align='left'>".$data['JOBOPENWHO']."</font></td><td align='right'>".$data['KM']."</td><td align='right'>$insert_colour".$data['DEPOT']."</font></td><td align='right'>".$labour_hrs." </td><td align='right'>"; // <td align='right'> $insert_mins hrs</td>
+	                        	
+	                        	if ($data['PRICE'] > 0){$table .= "<font color='red'>";}
+	                        	
+	                        	$table .= sprintf( "%.2f", $price_calculated)."</font></td></tr>"; //sprintf( "%.2f", $total_fuel)
+                			
+                			$total += $data['PRICE'];
+                			
+                			$count++;
+                		
+                			$previous_jobcard = $data['JOBCARDSERIAL'];
+                		}  // labour
+                		
+                	
+                	
+                	unset ($data);  	        	
+	        
+	        
+	        } // fetch
+	        
+	        if ($count == 0){$table .= "<tr><td colspan='9'><font color='red'>No jobcards were authorized!</font></td><td></td></tr>";}
+	
+	if (!$is_row){
+	
+		$table .= "<tr bgcolor='white'><td colspan='9'>No items were authorized.</td></tr>";	
+	}
+	
+	$table .= "<tr bgcolor='#FFDBD4'><td colspan='7' align='right'><b>Total</b></td><td align='right'><font color='red'><b>".sprintf( "%.1f", ($total_labour / 60)). " hrs"."</b></font></td><td align='right'><font color='red'><b>".sprintf( "%.2f", $total)."</b></font></td></tr>";
+	
+	$table .= "</table>";
+	
+	ora_close($cur3);
+	ora_close($cur2);
+	
+	echo $table;	
+//	if (isset($emailyes)){ sendEmail ("carelv@intercape.co.za,russell@intercape.co.za,ivor@intercape.co.za,ptaworkshop@intercape.co.za,wynand@intercape.co.za,ptabuyer@intercape.co.za,esther@intercape.co.za,ronnie@intercape.co.za,stanford@intercape.co.za,sakkie@intercape.co.za,whkstores@intercape.co.za,naomi@intercape.co.za", $table); }	
+
+}
+
+
+if ($stage == 5){ // UN-Complete a jobcard if the jobcard is not accepted for authorization
+
+	
+	$allcorrect = true;
+	$myuname=getenv("REMOTE_USER");
+	$qry  = "UPDATE MOVE_JOBS SET jobclosedate=NULL, jobclosewho='$myuname',  completed='N' WHERE jobcardserial=$jobcard";
+	if( !ora_parse( $cursor, $qry ) ){ $allcorrect = false;}
+	if( !ora_exec( $cursor ) ) {$allcorrect = false;}
+	if ($allcorrect){echo "RE-Opened Jobcard $jobcard successfully!<p><form method='post' action='jobcard_daily_auth.phtml'><input type='submit' value='Return'></form> ";}
+	else{
+		echo "<font color='red'>Unable to complete your request for jobcard $jobcard!</font><p><form method='post' action='jobcard_daily_auth.phtml'><input type='submit' value='Return'> ";
+	}
+
+}
+
+
+
+if ($stage==4) {
+	if ($newclass!="" && $tech_manager && is_numeric($jobserial)) {
+		$newclass=substr($newclass,0,1);
+		ora_parse($cursor,"update move_jobs set accident='$newclass' where jobcardserial=$jobserial");
+		ora_Exec($cursor);
+		echo "<script> window.location='jobcard_daily_auth.phtml?stage=4&subjob_more=$subjob_more&goback=$goback&jobserial=$jobserial'; </script>";
+		exit;
+	}
+
+	if ($apm_mail=="Y") {
+		$harvest="";
+		
+		$qry = "SELECT distinct email_address FROM email_reports WHERE department_id='a' AND active='Y'"; $harvest="";
+
+		ora_parse($cursor,$qry);  ora_exec($cursor);
+
+		while (ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)){
+		       $harvest .= $data['EMAIL_ADDRESS'].",";
+	               unset($data);
+		}
+
+		$harvest=substr($harvest,0,-1);
+		echo "Send to $harvest<Br>";
+
+		$page=ob_get_contents();
+		send_apm_mail($harvest,$page);
+		
+		
+	}
+	// show AUTH button if allowed
+	if ($debug)
+	{
+		print_r($jobd);
+		echo "<bR>RFP: $ungrn<bR>";
+		print_r($locked);
+		if (is_array($locked))
+			echo "Got locked!<bR>";
+		echo "<hr>";
+		print_r($data);
+	}
+/*
+	if ($jobd['COMPLETED'] == 'Y')
+		echo "complete ";
+	else
+		echo "incomplete ";
+	echo "U:$ungrn Q:$qnumbers M:".$jobd['MASTER'];
+*/
+	if ($locked[trim($jobd['DEPOT'])])
+		echo "NB: The stock at the depot is locked<br>";
+//	else
+//		echo "unlocked ";
+/*
+	if (AllowedFlag("FOREMAN"))
+		echo "master ";
+	else
+		echo "subject ";
+	echo "<bR>";
+*/
+	
+	
+//echo "Test: ".$jobd['COMPLETED']."=Y,  $qnumbers=0, ".$jobd['MASTER']."=Y and $ungrn=0<bR>";
+	
+        if ($jobd['COMPLETED'] == 'Y' && !$pr_outstanding && $qnumbers==0  && $jobd['MASTER']=='Y' && $ungrn == 0 /* && !$locked[trim($jobd['DEPOT'])] */ && AllowedFlag("FOREMAN")){
+		if (!is_numeric($jobserial))
+			$jobserial=$jobcardserial;
+
+		$showbutton=true;
+
+		// New check 8 May 2020 - Any service items mean it cannot be automatically authed
+		ora_parse($cursor,"select 'x'  from purchase_requests A, purchase_details B, stk_parts C where A.request_no=B.request_no and A.jobcard='$jobserial' and A.order_no>0 and A.superceded_by=-1 and B.part_serial=C.serial and C.unit='S'");
+		ora_exec($cursor);
+		if (ora_fetch($cursor)) 
+		{
+			if (($subTotal + $labourcost) < 10000) 
+				echo "<font color=magenta>Jobcard has service items on - cannot be automatically authorized</font><bR>";
+			$nolow=true;
+		}
+		else
+			$nolow=false;
+		// End new check 8 May
+
+		if ( (($subTotal + $labourcost) < 10000) && !$nolow ) {
+			 $us=getuserserial();
+
+	                         $qry = "UPDATE move_jobs SET auth='Y', auth_by=$us,  auth_date=CURRENT_TIMESTAMP WHERE jobcardserial >= '".$jobserial."' AND jobcardserial < '".($jobserial + 10)."' and auth_date is null and (auth='N' or auth is null)";
+                         if ($debug)
+                                echo $qry."<bR>";
+                         ora_parse($cursor, $qry);
+			if (ora_exec($cursor))
+			{
+				echo "Jobcard Automatically Authorized (less than R10000)<bR>";
+				$showbutton=false;
+			}
+		}
+		if ( ($subTotal + $labourcost)>100000 ) {
+			if (!AllowedFlag("TECH_MANAGER")) {
+				$showbuton=false;
+				echo "<font color=red>Only the National Technical Manager may authorize this jobcard</font><BR>";
+			}
+		}
+		if ($showbutton)
+			echo "<form method=post action=jobcard_daily_auth.phtml><input type=hidden name=jobserial value=$jobserial><input type=hidden name=stage value=999>AUTHORISE: <input type=checkbox value=Y name=authorise> <input type=submit onclick=\" try {  opener.jc$jobserial.innerHTML='DONE';} catch (error) { } \"  value='Authorise'></font>";
+
+	} else {
+		echo "Auth not possible yet.  Reason(s): ";
+		if ($jobd['COMPLETED']!="Y")
+			echo "Not Closed Yet, ";
+		if ($pr_outstanding)
+			echo "PR outstanding, ";
+		if ($qnumbers>0)
+			echo "Outstanding Q Numbers, ";
+		if ($jobd['MASTER']!="Y")
+			echo "This is not the master jobcard, ";
+		if ($ungrn) 
+			echo "Not Delivered Yet: $ungrn, ";
+		if (!AllowedFlag("FOREMAN"))
+			echo "You are not a foreman, ";
+		echo "<br>";
+	}
+
+}
+
+	// SHOW BACK BUTTON
+	if ($stage != "" && $stage != 3 && $stage != 5 && $stage !=2){
+
+	
+		echo "<p><input type='button' name='return' value='Close Window' onClick='javascript:window.close();'>";
+		if ($goback=="Y")
+		{
+			$jobcard=$jobserial;
+			$included="Y";
+		        echo " &nbsp; <input type=button value='Go Back' ";
+		        echo "onclick='javascript:history.back()'>";
+			
+                        echo "<br>";
+                        require_once("viewops.phtml");
+
+		}
+	}
+
+
+        echo "</form>";
+} // while on jobcards
+
+
+
+
+function send_apm_mail($email_address, $page){
+
+
+global $jobserial;
+// EMAIL FUNCTION
+//exit;
+                global $subject, $noreply_email;
+                
+                include("class.html.mime.mail.inc");
+                
+                $mail = new html_mime_mail('X-Mailer: Html Mime Mail Class');                
+		
+                $subject = "Jobcard $jobserial Closed";		
+                
+                $mail->add_html($page, "");		
+                
+                $mail->build_message();                
+		
+		$from = $noreply_email;
+
+                $mail->smtp_send($from, $email_address);
+
+}
+?>
+
+
+
+
+</body>
+</html>

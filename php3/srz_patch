@@ -1,0 +1,115 @@
+*** /tmp/oracle.inc	2014-02-06 14:37:27.328894829 +0200
+--- ./oracle.inc	2014-02-06 14:25:40.144943186 +0200
+***************
+*** 42,51 ****
+--- 42,78 ----
+  
+  unset($_SHOPRITE); // dont allow poisoning
+  
+  $_check_ip=getenv("REMOTE_ADDR");
+  
++ 
++ //TEST!!
++ if (getenv("REMOTE_USER")=="")
++ {
++ 	$_SHOPRITE=true;
++ 	// TODO: Authenticate IP ADDRESS
++ 
++ 	// now get username
++ 	$hbits=explode(".",strtoupper($_SERVER[SERVER_NAME]));
++ 	$srusername="";
++ 	$strbits=$hbits[0];
++ 	for ($a=0;isset($strbits[$a]);$a++)
++ 	    if (is_numeric($strbits[$a]) || $strbits[$a]=="-" || ($strbits[$a]>="A" && $strbits[$a]<="Z"))
++ 		$srusername.=$strbits[$a];
++ //	echo "Username is $srusername<BR>";
++ 	$srusername=substr($srusername,-15);
++ 	$REMOTE_USER=$srusername;
++         putenv("REMOTE_USER=$srusername"); // set username to IP address
++ 
++ 
++ //	echo "Trimmed to $srusername<Br>";
++ 	unset($hbits);
++ 	unset($strbits);
++ 	unset($srusername);
++ 	
++ }
++ 
+  if (getenv("REMOTE_ADDR")=="127.0.0.1") {
+  
+  
+  	if (strstr(getenv("SCRIPT_NAME"),"/shoprite/")) {
+  
+***************
+*** 323,360 ****
+  	do_ora_refresh();
+  	exit;
+  endif;
+  
+  Ora_CommitOff($conn);
+  
+! if ($_SHOPRITE):
+! 
+  
+- 	$ip=$_shoprite_ip;
+- 	
+- 	if (trim($ip)=="" || $ip=="null" ) {
+- 
+- 	echo "Please <a href=InterCape.ocx>Download</a> the printer driver and register it using regsvr32 first!  Thanks</a><Br>";
+- 	exit;
+- 
+- 	}
+- 	
+- 
+- 	//ora_parse($cursor,"select user_name from shoprite_pcs where ip_address='$_shoprite_ip'");
+- 	ora_parse($cursor,"select user_name from shoprite_pcs where ip_address='$ip'");
+  
+  	ora_exec($cursor);
+  	if (!ora_fetch($cursor)):
+  		
+- //		echo "I Dont know who <b>$ip</b> is.<p>This is a test system - please <a href=set_ip.phtml>Set up your IP address to one that is recognised as a user of the system.</a> (Queries - keith@intercape.co.za) <br>";
+- 		echo "Sorry, I can see you are from Shoprite, but cannot find your PC (<b>$ip</b>) listed in the database.    Please raise an incident with Money market Support to install your Money Market.<br>";
+- 		mail("vsouthey@shoprite.co.za","Unknown IP Address on Intercape",$ip);
+- 
+- 		exit;
+  	endif;
+- 	$REMOTE_USER=ora_getColumn($cursor,0);
+- 	putenv("REMOTE_USER=$REMOTE_USER"); 
+  
+  endif; // shoprite
+  
+  return true;
+  }
+--- 348,379 ----
+  	do_ora_refresh();
+  	exit;
+  endif;
+  
+  Ora_CommitOff($conn);
++ //echo "Checking $REMOTE_USER<Br>";
+  
+! if ($_SHOPRITE && $REMOTE_USER!="" ):
+  
+  
++ 	ora_parse($cursor,"select 'x' from user_details where username='$REMOTE_USER'");
+  	ora_exec($cursor);
+  	if (!ora_fetch($cursor)):
++ //		echo "User not found... creating $REMOTE_USER<Br>";
++ 		$pw=time();
++ 		     ora_parse( $cursor, "SELECT staffserial.nextval FROM dual" );
++ 	             ora_exec( $cursor );
++        		     $newuserial = ora_getColumn( $cursor, 0 );
++ 	            // $qry  = "INSERT INTO USER_DETAILS ( staff_no, name, lastname, staff_member, phone_1, phone_2, phone_3, phone_4, phone_5, phone_6, phone_7, phone_8, phone_9,  username, password, branch, max_tickets, m_currency, user_serial, is_current, cavmailpw, use_webmail, default_page, email, stafftype, pw_reset, pw_change, card_id, commission, internet, telephone_pin, callback_no, master_user, nat_access, vpn_user ) ";
++ 
++ 		ora_parse($cursor,"insert into user_details (user_serial, username, staff_no, staff_member,password,name,lastname,m_currency,branch,max_tickets,is_current,use_webmail) values ($newuserial,'$REMOTE_USER','2007','N','$pw','Shoprite','$REMOTE_USER','Zambia Kwacha','Shoprite Zambia',20,'Y','N')");
++ 		ora_exec($cursor);
++ 		// todo - give rights	
++ 		ora_parse($cursor,"insert into user_pages (user_serial,page_name,authorized_by) values ($newuserial,'BOOKING',0)");
++ 		ora_exec($cursor);
+  		
+  	endif;
+  
+  endif; // shoprite
+  
+  return true;
+  }

@@ -1,0 +1,84 @@
+URL: http://192.168.10.239/move/bulletin/index.php
+
+
+POA
+
+1. Create tables
+2. In form of a banner
+3. Changes on Monday/new week cycle
+4. Show on every login only once for day 1,2,3
+4a. Clicking on optons 1 or 2 will make the banner disappears else it stays there
+4b. If click on read it then banner not there till next week cycle
+4c. If click on Not read it, update flag, banner goes away but must show again
+5. POssible scenario is that none of the 2 options is clicked
+6. Need to record the cycle activity
+7. If no option is clicked - show again at next login
+8. 1st show = Read this bulletin: 2 options: I have read..., Will read later - banner disappears
+9. 2nd show = Read this bulletin: 2 options: I have read..., Will read later - banner disappears
+10. 3rd show = Read this bulletin: 2 options: I have read..., Will read later - banner disappears if click " I have read it, else
+
+- user logs in
+- check move_tech_bulletins_read
+  - is there an active record ? What is the current Monday date? Get where Mon = Mon
+    - Y - recall
+	- N - create - pick a bulletin ??? and add. STATUS = 0
+
+V2
+- user logs in to page.
+  - look for current bulletin record from MTR
+    -- Found = display
+	-- NOT Found
+	   - Create MTR record
+	     -- √ mtr_id, 
+			? MTR_REF_MOVE_TECH_BULLETINS, - bulletin ID - FETCH MTB RECORD
+			  -- Fetch MTB record
+			     - SELECT * FROM MTB WHERE mtb_use_date = $monday
+				  - FOUND RECORD
+				    -- Return data;
+				  - NO RECORD FOUND
+				    -- SELECT MTB_ID FROM MTB ORDER BY id, priority LIMIT 1
+					   - Use MTN_ID to set the mtb_use_date = $monday
+					   - Return inserted MTB_ID + Data
+			? mtr_revision,  - FETCH MTB RECORD
+			√ mtr_ref_hc_people, - passed $user_id
+			√ mtr_status, 0 for Needs to read
+			√ mtr_date_start - will be $monday
+	-- Present MTR data in banner
+	   
+
+- Manage bulletins console - MTB's
+  -- List of MTB's - MTB_ID, MTB_NAME, MTB_URL, MTB_DATE, MTB_REVISION, MTB_STATUS, MTB_USE_DATE : Status = 0 - deleted, 1 - current, 2 - priority; perhaps add intranet bulletin table id as a table field - WHERE status != 0
+     -- E   |   D   |   Added   |   Name + Link   |   Revision   |   Priority
+  -- Add - need to retrieve list from Intranet bulletin table (id + name + url)
+         - Copy name from select to the name input - user can edit name
+         - revision - if already in list then increase by 1
+		 - priority Y/N
+  -- Edit - Can only really set the priority
+
+  - Will need to see if the MTB_ID is in the MTR table - if so then edit and delete are affected
+
+Questions 11-10-24
+1. Where is the intranet bulletins table
+2. Is one item at a time the priority or multiple
+
+
+
+Snippet
+<!-- <div style="margin-right: 10px">
+			Select a bulletin to add:
+		</div>
+		<div style="flex: 1">
+			<select id="bulletin_list" style="width: 100%; height: 30px">
+			<option value="0">Select a bulletin</option>
+				<?php
+				// while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
+				// {
+				// 	$id = $row['ID'];
+				// 	$bulletin_name = $row['BULLETIN_NAME'];
+				// 	$bulletin_rev = $row['REVISION'];
+
+				// 	echo '<option value="' . $id . '">' . $bulletin_name . ' - rev: ' . $bulletin_rev . '</option>';
+				// }
+				?>
+			</select>
+		</div> -->

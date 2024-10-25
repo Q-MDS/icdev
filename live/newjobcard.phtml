@@ -1,0 +1,2392 @@
+<html>
+	<head><link type="text/css" rel="stylesheet" href="style.css"><title>Job Card Items</title></head>
+	<body>
+	<script language="JavaScript">
+		function insertSerial() {
+			document.jobform.code.value = document.jobform.tempcode.value;
+		}
+		
+		function setDepot( depot ) {
+			var expires = new Date();
+			expires.setTime( expires.getTime() + 24*60*60*90*1000 );
+			var expireDate = expires.toGMTString();
+			
+			document.cookie = "cookiedepot=" + depot + ";expires=" + expireDate;
+		}
+	</script>
+	<? require_once ( "menu.inc" ); ?>
+	<?
+	require_once( "stock.inc" );
+	require_once("../php3/misc.inc");
+	require_once( "../php3/trans.inc");
+	require_once("checkhang.inc");
+	require_once("faultclass.inc");
+	
+	function showChoices( $jobcardserial ) {
+
+		
+		if( $jobcardserial==-1 ) {
+			?>
+			<div class="info">
+				Click on an option below to create a new job card
+			</div>
+			<br>
+			<div class="choices">
+				I need to make a new job card
+    			<table class="choices">
+    				<tr>
+    					<td width=200 valign='right'><li><a href="newjobcard.phtml?stage=2">because a vehicle has arrived</a> <i>(Our vehicle/property)</td>
+    					<?
+    					/*
+    					<td width=150><li><a href="newjobcard.phtml?stage=3">for a vehicle unit</a></td>
+    					<td width=150><li><a href="newjobcard.phtml?stage=4">for building work</a></td>
+    					*/
+    					?>
+    					<td width=150 valign='right'><li><a href="newjobcard.phtml?stage=5">for 3rd party work</a> <i>(Not our vehicle/property)</td>
+    					<td width=200 valign='right'><li><a href="newjobcard.phtml?stage=7">against a serialized stock item</a><i>(Used to repair a serialized stock item using stock)</i> <font color=red>[* new]</font></td>
+    				</tr>
+    			</table>
+			</div>
+			<script language="JavaScript"> document.links[4].focus(); </script>
+			<?
+		}
+		else {
+			?>
+			<div class="choices">
+				Click on an option below to change the type of job card you are creating
+    			<table class="choices">
+    				<tr>
+    					<td width=200><li><a href="newjobcard.phtml?stage=2&jobcardserial=<?=$jobcardserial?>">because a vehicle has arrived</a> <i>(Our vehicle/property)</td>
+    					<?
+    					/*
+    					<td width=150><li><a href="newjobcard.phtml?stage=3&jobcardserial=<?=$jobcardserial?>">for a vehicle unit</a></td>
+    					<td width=150><li><a href="newjobcard.phtml?stage=4&jobcardserial=<?=$jobcardserial?>">for building work</a></td>
+    					*/
+    					?>
+       					<td width=150><li><a href="newjobcard.phtml?stage=5&jobcardserial=<?=$jobcardserial?>">for 3rd party work</a> <i>(Not our property/vehicle)</td>
+    				</tr>
+    			</table>
+			</div>
+
+			<?
+		}
+		?>
+		<br>
+		<?
+	}
+	
+	require_once("error.inc");
+    	require_once("serial.inc");
+	require_once("../php3/oracle.inc");
+    	//require_once("../php3/logs.inc");
+    	//require_once("../php3/misc.inc");
+	require_once("../php3/opstimes.inc");
+
+    	require_once("../php3/sec.inc");
+	require_once("functions.inc");
+
+    if( !open_oracle() )
+    	exit;
+    	
+    if( !AllowedFlag("MOVE_JOBCARDS" ) && !AllowedFlag("MOVE_ALL" ) )
+    	access( __FILE__ );
+
+   $tcur = ora_open( $conn );
+
+   
+	get_serial(getenv("REMOTE_USER"));
+	    
+	if( $stage==0 ) {
+		exit;
+	}
+	elseif( $stage==1 ) {
+		showChoices( -1 );
+	}
+	elseif( $stage==2 ) {	//Vehicle has arrived
+		if( empty( $jobcardserial ) ) {
+    		ora_parse( $cursor, "SELECT MOVE_JOBSERIAL.nextval FROM dual" );
+	   		ora_exec( $cursor );
+			$jobcardserial = ora_getColumn( $cursor, 0 );
+			$jobcardserial *= 10;
+		}
+		
+		showChoices( $jobcardserial );
+		?>
+		<div class="info">
+			Note that you will be asked for a kilometer reading once you have clicked continue.
+		</div>
+		<form name="jobform" method="post" action="newjobcard.phtml">
+		<input type="hidden" name="stage" value="21">
+		<table width=90%>
+			<tr class="head">
+				<td colspan=2>A Vehicle Has Arrived</td>
+			</tr>
+			<tr class="cell">
+				<td width=150>Company</td>
+				<td>
+					<input type=hidden name=company value=<?=$cookiecompany?>><b><?=$cookiecompanyname?></b>
+				</td>
+			</tr>
+			<tr class="altcell">
+				<td width=150>Depot</td>
+				<td>
+<?
+	$myip=getenv("REMOTE_ADDR");
+	if ($myip=="192.168.10.211" || $myip=="192.168.10.20" || $myip=="192.168.10.205")
+	if ($_SERVER["HTTP_X_FORWARDED_FOR"]!="")
+	{
+		$myip=$_SERVER['HTTP_X_FORWARDED_FOR'];
+		echo "<font color=red>PLEASE CONTACT IT TO FIX YOUR PROXY SETTINGS</font>";
+	}
+	$ipbits=explode(".",$myip);
+	
+	if ($ipbits[2]==39)
+		$ipbits[2]=$ipbits[3]; // VPN User
+
+	if ($ipbits[2]==210 || $ipbits[2]==211  || $ipbits[2]==208  || $ipbits[2]==209 || ($ipbits[2]>=8 && $ipbits[2]<=11))
+		$ipbits[2]=10;  //CT
+	elseif ($ipbits[2]>=96 && $ipbits[2]<=99) 
+		$ipbits[2]=96; // PTA
+
+	if ($ipbits[2]==70)
+		$ipbits[2]=12; // WHK
+	if ($ipbits[2]==13)
+		$ipbits[2]=43; // Upington
+
+	if (is_numeric($ipbits[2]) && $ipbits[0]=="192" && $ipbits[1]=="168") {
+	ora_parse($cursor,"select depot_code from depots where ip_address=$ipbits[2]");
+	ora_exec($cursor);
+	if (ora_fetch($cursor))
+		$cookiedepot=getdata($cursor,0);  // override my cookie with the actual physical depot I am in
+	}
+	
+
+?>
+					<select name="depot">
+					<option value="X">Please Select A Depot
+					<option value="X">-------------------------------------
+					<?
+					$dflag = false;
+					ora_parse( $cursor, "SELECT depot_code FROM DEPOTS ORDER BY depot_code" );
+					ora_exec( $cursor );
+					
+					while( ora_fetch_into( $cursor, $results ) ) {
+						if( trim( $cookiedepot ) == trim( $results[0] ) ) {
+							print "<option selected value=\"$results[0]\">$results[0]";
+							$dflag = true;
+						}
+						else print "<option value=\"$results[0]\">$results[0]";
+						
+						$results = array();
+					}
+					?>
+					</select>
+				</td>
+			</tr>
+			<tr class="cell">
+				<td width=150>MOVE Number</td>
+				<td>
+					<b>MOVE<?=$jobcardserial?></b>
+					<input type="hidden" name="jobcardserial" value="<?=$jobcardserial?>">
+				</td>
+			</tr>
+			<tr class="altcell">
+				<td >Comments (if any)</td>
+				<td ><input type="text" name="comments" size=70 maxlength=70></td>
+			</tr>
+			<tr class="cell">
+				<td width=150>Fleet Number</td>
+				<td>
+					<input name="code" type="text" maxlength=10 size=8>
+					<script language="JavaScript"> document.jobform.code.focus(); </script>					
+					<select name="tempcode" onChange="insertSerial();">
+					<option value="">Select a vehicle
+					<option value="">------------------------
+					<?
+						array( $results );
+						ora_parse( $cursor, "SELECT A.code, A.reg_no FROM VEHICLES A, MOVE_VEHICLES B WHERE A.is_current='Y' AND A.rented<>'Y' AND A.serial=B.coach AND B.company=$cookiecompany ORDER BY A.code" );
+						ora_exec( $cursor );
+						
+						while( ora_fetch_into( $cursor, $results ) ) {
+							print "<option value=\"$results[0]\">$results[0] --> $results[1]";
+							$vfnd++;
+							$results = array();
+						}
+					?>
+					</select><?
+
+			if ($vfnd<20)
+				echo " <font size=2><i> (No Vehicles listed? Check your <a href='changedepot.phtml'>Company setting</a>)";
+
+			?>
+				</td>
+			</tr>
+			<tr class="altcell">
+				<td width=150>Items</td>
+				<td><input type=checkbox name=addstan value='Y' checked> Add the list of standard items to this jobcard (UNTICK FOR SERVICES OR IF NOT WANTED)</td>
+			</tr>
+			<tr class="cell">
+                                <td width=150 valign=top><b>Jobcard Type</b></td>
+				<td>
+<input type=radio name=jflag value='S'> Service<br>
+<input type=radio name=jflag value='L' checked> Normal Repairs<br>
+<input type=radio name=jflag value='J'> Major Repairs<br>
+<input type=radio name=jflag value='N'> Non-critical Repairs <br>
+<input type=radio name=jflag value='C'> Campaign<br>
+<input type=radio name=jflag value='R'> Refurbishment<br>
+<input type=radio name=jflag value='B'> Breakdown<br>
+<input type=radio name=jflag value='A'> Accident<br>
+<input type=radio name=jflag value='I'> Due to Misuse<br>
+		</td></tr>
+		 <tr class="altcell">
+                                <td width=150 valign=top><b>Accident Type</b></td>
+                                <td>
+
+					<input type=radio name=aflag value='N' checked > NOT an Accident<Br>
+                                        <input type=radio name=aflag value='M' > Major Accident<Br>
+                                        <input type=radio name=aflag value='m' > Minor Accident</td>
+                        </tr>
+		</table>
+		<br>
+		<input type="button" value="Continue" onClick="if( depot.value=='X' ) { alert( 'You must select a depot' ); return; } if( code.value=='' ) { alert( 'You must select a vehicle' ); return; } setDepot( depot.value ); jobform.submit();">
+		</form>
+		<?
+	}
+	elseif( $stage==21 ) { //KM Reading for Vechicle Arrived
+		if (!strstr($code,"OLD"))
+			$code = str_replace( " ", "", $code );
+		$code = strtoupper( trim($code) );
+		ora_parse( $cursor, "SELECT serial, class, depot, service_bustype FROM VEHICLES WHERE code='$code' and is_Current='Y'" );
+		ora_exec( $cursor );
+		if (ora_fetch($cursor)) {
+		$unitserial = ora_getColumn( $cursor, 0 );
+		$class = ora_getColumn( $cursor, 1 );
+		$vehicle_depot=getdata($cursor, 2);
+		$servicetype=getdata($cursor,3);
+		  if ($servicetype==12 && $class=="t") {
+			ora_parse($cursor,"select sum(km) from ops_info A, ops_routes B where A.info=B.short_name and A.entry_type='t' and A.serial_no=$unitserial");
+			ora_exec($cursor);
+			if (ora_Fetch($cursor)) {
+				
+				$kmhint=getdata($cursor,0);
+			}
+
+		  } 
+		} 
+		else {
+			?>
+			<div class="info">
+				The fleet number (<?=$code?>) that you supplied <b>does not exist</b>.<br>
+				<a href="#" onClick="history.go(-1);">Click here</a> to go back and change it
+			</div>
+			<?
+			exit;
+		}
+
+		$depot=trim($depot);
+		if (($vehicle_depot=="PFH" && $depot!="PFH" && $depot!="PFB") || ($vehicle_depot!="PFH" && ($depot=="PFH" || $depot=="PFB"))) {
+			$pfwarning= "<table border=3><tr bgcolor=yellow><td><font style='background: yellow' color=red size=4>WARNING!  This is a $vehicle_depot Vehicle being serviced in $depot Depot.... ARE YOU SURE???</font></td></tr></table><i>Pathfinder buses should generally be serviced in the pathfinder depot and Intercape buses in the Intercape depot.<hr>";
+			echo $pfwarning;
+			echo "<script> alert('Sorry, but you have not specified the correct depot.  See the warning in yellow'); </script>";
+			if ($depot=="HAR" || $depot=="PFH" || $depot=="PFB" || $depot=="BUL") 
+				exit;
+
+		}
+		else
+			$pfwarning="";
+
+
+
+		// this code appears twice in this file
+		$qry="select to_char(when,'Day DD Mon YYYY'),name,A.jobcard from move_servicelog A, move_servicedef B where coach=$unitserial and B.serial=A.service order by when desc";
+		ora_parse($cursor,$qry);
+		ora_exec( $cursor);
+		if (ora_Fetch($cursor)) {
+			$tjc=ora_getcolumn($cursor,2);
+			if (!is_numeric($tjc)) {
+				echo "<font color=red><b>WARNING!  A \"<i>".ora_getcolumn($cursor,1)."\" service</i> was scheduled for ".ora_getcolumn($cursor,0).", but has not yet been added to a jobcard<bR></font></b>";
+
+
+			}
+		}
+
+
+		  $qry  = "SELECT A.jobcardserial, to_char( A.jobopendate, 'DD Mon' ), A.jobopenwho, COUNT(E.itemserial), A.depot ";
+                  $qry .= "FROM MOVE_JOBS A ";
+                  $qry .= "LEFT JOIN MOVE_JOBCARDITEMS E ON E.master_jobcardserial=A.jobcardserial AND E.statusengineer='Z' and E.faultdesc not like 'DO ITEMS%' ";
+                  $qry .= "WHERE ";
+                  $qry .= "A.completed='N' AND A.master='Y' AND A.unitserial=$unitserial group by  A.jobcardserial, A.jobopendate, A.jobopenwho, A.depot ORDER BY A.jobopendate desc";
+		$ofnd=0;
+//		echo "$qry<bR>";
+		ora_parse($cursor,$qry);
+		ora_exec($cursor);
+		while (ora_fetch_into($cursor,$ddata)) {
+			if ($ddata[3]>0) {
+			$ofnd++;
+			  if ($ofnd==1)
+                                echo "<b>WARNING!  Other Jobcard items still open for this vehicle:</b><bR>";
+
+			if ($ddata[1]==date("d M"))
+				echo "<h2><font color=red>";
+			echo "<a target=pjc href=viewjobcard.phtml?stage=0&jobcardserial=$ddata[0]&addto=$jobcardserial>MOVE$ddata[0]</a> ($ddata[4]) $ddata[1] $ddata[2] - $ddata[3] items open <a href=viewjobcard.phtml?stage=0&jobcardserial=$ddata[0]&addto=$jobcardserial>(click to view, with option of copying to this jobcard)</a><bR>";
+			if ($ddata[1]==date("d M"))
+                                echo "</h2></font>";
+
+			if (trim($ddata[4])=="OPS")
+					echo "<b><font color=red>*** Breakdown Jobcard MOVE$ddata[0] will be changed to your depot's responsibility ***</font></b><br>";
+
+			}
+//			else echo "$data[3]<bR>";
+			unset($ddata);
+		} // while
+
+		
+		
+	
+		ora_parse( $cursor, "SELECT km FROM MOVE_KM WHERE unitserial=$unitserial AND source='J' ORDER BY kmdate DESC" );
+		
+		ora_exec( $cursor );
+		$minkm = ora_getColumn( $cursor, 0 );
+		if( empty($minkm) ) $minkm=0;
+
+		$comments = str_replace( "\'", "'", $comments );
+		?>
+		<div class="info">
+			A job card will not be created unless a kilometer reading is entered.
+		</div>
+		<form name="kmreadingform" method="post" action="newjobcard.phtml">
+		<input type="hidden" name="stage" value="22">
+		<input type="hidden" name="depot" value="<?=$depot?>">
+		<input type="hidden" name="jobcardserial" value="<?=$jobcardserial?>">
+		<input type="hidden" name="comments" value="<?=$comments?>">
+		<input type="hidden" name="unitserial" value="<?=$unitserial?>">
+		<input type="hidden" name="company" value="<?=$company?>">
+		<input type="hidden" name="addstan" value="<?=$addstan?>">
+		<input type="hidden" name="code" value="<?=$code?>">
+		<input type="hidden" name="class" value="<?=$class?>">
+		<input type="hidden" name="jflag" value="<?=$jflag?>">
+
+		<script>
+			function gotodo(odo) {
+
+				if (document.getElementById('kmreading').value=='')
+					document.getElementById('kmreading').value=odo;
+			}
+		</script>
+
+		<table width=90%>
+			<tr  class="head">
+				<td width=250 colspan=2>New Vehicle KM Reading for <?=$code?></td>
+			</tr>
+			<tr class="cell">
+				<td width=150>KM Reading</td>
+				<td>
+					<input type="text" id="kmreading" name="kmreading" value='<?=$kmhint?>' <? if ($kmhint>0) echo "readonly"; ?> size=8 maxlength=8 value=""> (People putting WRONG figures in will be DISCIPLINED)
+					<?
+						if( AllowedFlag("MOVE_KM" ) ) {
+							?> <a href="#" onClick="window.open( 'kmreading.phtml?stage=3&close=Y&serial=<?=$unitserial?>', '', 'scrollbars=1, resizable=1, height=500, width=700' );">Click here</a> if this reading is incorrect <?
+						}
+					?>
+				</td>
+				<script language="JavaScript"> 
+					document.kmreadingform.kmreading.focus();
+					document.kmreadingform.kmreading.select();
+				</script>
+			</tr>
+<?  if (($class=="k" || $class=="s") && $jflag=="B") { ?>
+                        <tr class="cell">
+				<td width=150>Please classify Breakdown</td>
+                                <td><select name=breakdown_class><?
+					$freightcats = array();
+					$freightcats["NONE"] = "Please select...";
+					require("freightliner_categories.php");
+
+					echo makeselect($freightcats);
+				?></select>
+				</td>
+
+
+			</tr>
+<?  } 
+	
+    if ($class=="c" || $class=="t") { ?>
+			<tr class="altcell">
+                                <td width=150>Please Select the Last Trip</td>
+                                <td>
+<?
+					$todaysdate=date("Ymd");
+					$previousdate=prevdate($todaysdate,14);
+					ora_parse($cursor,"select A.seq, A.info, A.rundate, B.hours, B.depot_depart, B.from_stop from ops_info A left join ops_routes B on A.info=B.short_name where A.rundate<=$todaysdate and A.rundate>=$previousdate and A.serial_no=$unitserial and (A.entry_type='c' or A.entry_type='t') and seq is not null order by A.rundate desc,B.night_bus desc,B.depot_depart");
+					ora_exec($cursor);
+					unset($schedd);
+					$sched_found=0;
+					while (ora_fetch_into($cursor,$schedd)) {
+						echo "<input type=radio name=last_trip value=I$schedd[0]> $schedd[1] left $schedd[5] on ".afrikdate($schedd[2])."<br>"; // I = Intercape,  A=APM
+						$sched_found++;
+						unset($schedd);
+						if ($sched_found>3)
+							break;
+					} // while
+/*					ora_parse($cursor,"select A.seq, A.info, A.rundate, B.hours, B.depot_depart, B.from_stop from apm.ops_info A left join apm.ops_routes B on A.info=B.short_name where A.rundate<=$todaysdate and A.rundate>=$previousdate and A.serial_no=$unitserial and (A.entry_type='c'  or A.entry_type='t') order by A.rundate desc,B.night_bus desc,B.depot_depart");
+                                        ora_exec($cursor);
+                                        unset($schedd);
+                                        while (ora_fetch_into($cursor,$schedd)) {
+                                                echo "<input type=radio name=last_trip value=A$schedd[0]> $schedd[1] left $schedd[5] on ".afrikdate($schedd[2])."<br>"; // I = Intercape,  A=APM
+                                                $sched_found++;
+						if ($sched_found>3)
+							break;
+                                                unset($schedd);
+                                        } // while
+*/
+					
+					if ($sched_found==0) {
+						echo "<input type=hidden name=last_trip value=0>No recent trips found";
+					}
+                                        ?>
+                                </td>
+<?
+	} else echo "<input type=hidden name=last_trip value=0>";
+
+
+?>
+                        </tr>
+<?    $hanging=array();
+	ora_parse($cursor,"select pr_serial,nvl(final_text,request_text),capture_date, J.depot, on_order_flag from move_jobs_part_requests PR, move_jobs J where PR.deleted='N' and PR.jobcardserial<0 and J.jobcardserial=PR.jobcardserial*-1 and unitserial=$unitserial");
+	ora_exec($cursor);
+	unset($data);
+	while (ora_fetch_into($cursor,$data)) {
+		$hanging[]=$data;
+		unset($data);
+	}	
+	if (sizeof($hanging)>0) {
+		echo "<tr><td valign=top><b>Parts Requests</b></td><td>The following parts requests are \"hanging\" for this vehicle.  You can un-tick requests if you need to.   Otherwise these requests will be moved to this jobcard<br>\n";
+		echo "<table border=1 cellspacing=0 cellpadding=0>";
+
+		foreach ($hanging as $key => $data) {
+			echo "<tr><td><input type=checkbox name='hang$key' value='$data[0]' checked></td>";			
+			echo "<td>PR$data[0]</td><td>$data[3]</td><td>$data[2]</td><td>$data[1]";
+			if ($data[4]=="Y")
+				echo "<br><font color=red>ON ORDER</font>";
+			echo "</td></tr>\n";
+		}
+		echo "</table>";
+
+
+		echo "</td></tR>\n";
+	}
+?>
+
+		</table>
+		<br>
+		<input type="button" value="Back" onClick="history.go(-1);"> <input type="submit" value="Continue">
+		</form>
+		<?
+			echo $pfwarning;
+
+		if (($class!="t" && $class!="c" && $class!="k" && $class!="s") || substr($code,0,2)=="QU") {
+			echo "<iframe src='/mix/one_odometer.php?serial=$unitserial' width='100%' height=100></iframe>";
+		}
+	}
+	elseif( $stage==22 ) {	//Add vehicle arrived job card
+		if ($last_trip[0]=="I")
+		{
+			$trip_serial=substr($last_trip,1,999);
+			$trip_prefix="";
+		}
+		elseif ($last_trip[0]=="A") 
+		{
+			$trip_serial=substr($last_trip,1,999);
+                        $trip_prefix="apm."; 
+		} else {
+			$trip_prefix="";
+			$trip_serial=$last_trip;
+		}
+		$trip_date="null";
+		$trip_info="";
+		if ($trip_serial>0) {
+			ora_parse($cursor,"select rundate,info from $trip_prefix"."ops_info where seq=$trip_serial");
+			ora_exec($cursor);
+			if (!ora_fetch ($cursor)) {
+				echo 'Strange error occcurred <a href="#" onClick="history.go(-1);">Click here</a> to go back and try again';
+				exit;
+			}
+			$trip_date=getdata($cursor,0);
+			$trip_info=getdata($cursor,1);
+
+		} elseif (!is_numeric($trip_serial)) {
+?>
+                        <div class="info">
+                                You must select the last trip made by this bus. <a href="#" onClick="history.go(-1);">Click here</a>
+                                to go back and change it.
+                        </div>
+                        <?
+                        exit;
+
+		}
+
+		if (($class=="s" || $class=="k") && $jflag=="B" && substr($breakdown_class,0,6)=="Please") {
+			?>
+                        <div class="info">
+                                You must select the breakdown classification. <a href="#" onClick="history.go(-1);">Click here</a>
+                                to go back and change it.
+                        </div>
+                        <?
+                        exit;
+
+
+		}
+
+
+		$kmreading=trim($kmreading);
+		if( !is_numeric( $kmreading ) ) {
+			?>
+			<div class="info">
+				You must enter a <b>number</b> for the kilometer reading. <a href="#" onClick="history.go(-1);">Click here</a>
+				to go back and change it.
+			</div>
+			<?
+			exit;
+		}
+
+		if ($class=="t") { // check for africa trailers 
+			ora_parse( $cursor, "select fueltankcapacity from vehicles where serial=$unitserial");
+			ora_Exec($cursor);
+			ora_fetch($cursor);
+			if (getdata($cursor,0)>99)
+				$africa=true;
+		}
+		
+		ora_parse( $cursor, "SELECT km FROM MOVE_KM WHERE unitserial=$unitserial AND source='J' ORDER BY kmdate DESC" );
+		
+	        if (getenv("REMOTE_USER")=="Keeith")
+			echo "SELECT km FROM MOVE_KM WHERE unitserial=$unitserial AND source='J' ORDER BY kmdate DESC<bR>";
+		ora_exec( $cursor );
+		$tmaxkm = ora_getColumn( $cursor, 0 );
+		
+		if( $tmaxkm == NULL ) $tmaxkm=0;
+
+		$kmdebug=getenv("REMOTE_USER")." $code, typed in $kmreading. ";
+
+		unset($passkm);
+		ora_parse($cursor,"select /*+ FIRST_ROWS(1) */ km_reading from mix_odometer_readings where vehicle=$unitserial order by date_of_reading desc");
+		ora_exec($cursor);
+		if (ora_fetch($cursor))
+		{
+			$passkm=sprintf("%.1f",getdata($cursor,0));
+			if (getenv("REMOTE_USER")=="Keith") {		
+				echo "ODO from mix is $passkm<Br>";
+			}
+			if ($passkm>$tmaxkm)
+			{
+				$tmaxkm=$passkm;
+				$kmdebug.=" Using reading from MIX of $passkm.";
+			}
+			else
+				$kmdebug.=" Using last jobcard km (Instead of mix $passkm): $tmaxkm.";
+		} else
+			$kmdebug.=" Using last jobcard km: $tmaxkm.";
+	
+	
+		//print $tmaxkm;
+		$dow=date("D");
+
+		if ($class=="s" || $class=="k")
+			$gaplimit=45000;
+		else
+			$gaplimit =3000;
+
+		$kmdebug.=" allowing for $gaplimit grace.";
+
+		$logfile=fopen("/tmp/user_km.log","a+");
+		fputs($logfile,date("Y/m/d H:i:s")." ".$kmdebug."\n");
+		fclose($logfile);
+		
+		if (!isset($passkm) || (isset($passkm) && abs($passkm-$kmreading)>$gaplimit ) ) 
+		if( $kmreading < $tmaxkm  && $class!="s" && ($class != "t" || $africa) ) {  // && $dow!="Sat" && $dow!="Sun") {
+			?>
+			<div class="info">
+
+				The KM reading you entered is <b>incorrect</b>. The KM reading you entered was <?=$kmreading?>. 
+			<?
+				if (getenv("REMOTE_USER")=="Keith") {
+					echo "TMAX is $tmaxkm,  passkm is $passkm<br>";
+				}
+				ora_parse( $cursor,"SELECT jobopenwho,jobcardserial FROM move_jobs WHERE km=$tmaxkm AND unitserial=$unitserial");
+				ora_exec( $cursor);
+				if ( ora_fetch( $cursor)) {
+					echo "<b>If your figure is correct</b>, then please contact Esther or Your area manager to correct it.  The person to blame for the wrong figure is probably <b>" . ora_getColumn( $cursor,0) . " on MOVE". ora_getColumn( $cursor,1)."</b><br>";	
+
+				}
+
+			?>
+				<br>
+				<a href="#" onClick="history.go(-1);">Click here</a> to go back.
+			</div>
+			<?
+			if( $REMOTE_USER!="Travis" )
+				exit;
+		}
+
+
+        if (getenv("REMOTE_USER")=="Keeith")
+	{
+			echo "Compare $kmreading with $tmaxkm<br>";
+			echo "Africa is ";
+			if ($africa)
+				echo "TRUE";
+			else
+				echo "FALSE";
+			echo "<bR>";
+
+	}
+		
+	if ($africa)
+		$buffer=5200;
+	elseif ($class=="s" || $class=="k")
+		$buffer=45000;
+	else
+		$buffer=3000;
+	
+
+		if( $kmreading>$tmaxkm+$buffer && $continue!="Y" && ($africa || $class != "t" ) && $class!="s") {
+			$lasttripu=urlencode($last_trip);
+			?>
+			<div class="info">
+				The KM reading you entered seems <b>suspiciously large</b>. The KM reading you entered was <?=$kmreading?>.
+				You can either <a href="#" onClick="history.go(-1);">go back</a> or if <b>the KM reading is correct</b> 
+				<? if ($kmreading<=$tmaxkm+6000) print "<a href='newjobcard.phtml?stage=22&continue=Y&depot=$depot&jobcardserial=$jobcardserial&comments=$comments&unitserial=$unitserial&company=$company&addstan=$addstan&kmreading=$kmreading&last_trip=$lasttripu'>you can continue</a>"; else print "then please contact somebody senior to over-ride the km reading on the system."; ?>
+				<br>
+				
+			</div>
+			<?
+			if( $REMOTE_USER!="Travis" )
+				exit;
+		}
+		elseif ($REMOTE_USER=="Keeith")
+			echo "CLEAR2<br>";
+
+		
+		ora_parse( $cursor, "SELECT COUNT( jobcardserial ) FROM MOVE_JOBS WHERE jobcardserial>=$jobcardserial AND jobcardserial<$jobcardserial+10" );
+		ora_exec( $cursor );
+		if( ora_getColumn( $cursor, 0 )>0 ) {
+			?>
+			<div class="info">
+				<font color=red><b>An error seems to have occured</b></font>. A job card with the same MOVE number (<b><td><a href="#" onClick="window.open( 'previewjobcard.phtml?jobcardno=<?=$jobcardserial?>', '', 'scrollbars=1, resizable=1, height=650, width=700' );">MOVE<?=$jobcardserial?></a></b>)
+				has already been created. If you refreshed this page by pressing <b>F5</b> or by clicking <b>refresh</b> you will 
+				get this message. If you were attempting to create a new job card and <b>did not</b> try to refresh this page you will 
+				have to make a new job card. You can do that by <a href="newjobcard.phtml?stage=1">clicking here</a>.
+			</div>
+			<?
+			exit;
+		}
+           elseif ($REMOTE_USER=="Keeith")
+                        echo "CLEAR3 ($depot)";
+
+
+		// this code appears twice in this file...
+		    $qry="select to_char(when,'Day DD Mon YYYY'),name,A.jobcard from move_servicelog A, move_servicedef B where coach=$unitserial and B.serial=A.service order by when desc";
+                ora_parse($cursor,$qry);
+                ora_exec( $cursor);
+                if (ora_Fetch($cursor)) {
+                        $tjc=ora_getcolumn($cursor,2);
+                        if (!is_numeric($tjc)) {
+                                echo "<font color=red><b>WARNING!  A \"<i>".ora_getcolumn($cursor,1)."\" service</i> was scheduled for ".ora_getcolumn($cursor,0).", but has not yet been added to a jobcard<bR></font></b>";
+
+
+                        }
+                }
+
+	if (getenv("REMOTE_USER")=="Keeith")
+		exit;
+
+                  $qry  = "SELECT A.jobcardserial, to_char( A.jobopendate, 'DD Mon' ), A.jobopenwho, COUNT(E.itemserial), A.depot ";
+                  $qry .= "FROM MOVE_JOBS A ";
+                  $qry .= "LEFT JOIN MOVE_JOBCARDITEMS E ON E.master_jobcardserial=A.jobcardserial AND E.statusengineer='Z' and E.faultdesc not like 'DO ITEMS%' ";
+                  $qry .= "WHERE ";
+                  $qry .= "A.completed='N' AND A.master='Y' AND A.unitserial=$unitserial group by  A.jobcardserial, A.jobopendate, A.jobopenwho, A.depot ORDER BY A.jobopendate desc";
+                $ofnd=0;
+//              echo "$qry<bR>";
+                ora_parse($cursor,$qry);
+                ora_exec($cursor);
+		unset($doops);
+                while (ora_fetch_into($cursor,$ddata)) {
+                        if ($ddata[3]>0) {
+                        $ofnd++;
+                          if ($ofnd==1)
+                                echo "<b>WARNING!  Other Jobcard items still open for this vehicle:</b><bR>";
+
+                        echo "<a target=pjc href=viewjobcard.phtml?stage=0&jobcardserial=$ddata[0]&addto=$jobcardserial>MOVE$ddata[0]</a> ($ddata[4]) $ddata[1] $ddata[2] - $ddata[3] items open  <a href=viewjobcard.phtml?stage=0&jobcardserial=$ddata[0]&addto=$jobcardserial>(click to view with the option of copying to this jobcard)</a><bR>";
+                        if (trim($ddata[4])=="OPS") {
+                                        echo "<b><font color=red>*** Breakdown Jobcard MOVE$ddata[0] has been changed to your depot's responsibility ***</font></b><br>";
+				$doops[]=$ddata[0];
+			}
+
+                        }
+//                      else echo "$data[3]<bR>";
+                        unset($ddata);
+
+                } // while
+		if (is_array($doops)) {
+			reset($doops);
+			while (list($key,$val)=each($doops)) {
+				ora_parse($cursor,"UPDATE move_jobs SET depot='$cookiedepot' WHERE jobcardserial='$val'");
+				ora_exec($cursor);
+
+			}
+
+		}
+
+		$jobopen = date( "d/m/Y H:i:s" );
+		$comments = str_replace( "\'", "''", $comments );
+                        if (trim($depot)=="")
+                                $depot=$cookiedepot;
+
+//		echo "Depot is $depot<br>";
+		if (getenv("REMOTE_USER")=="Keeith")
+		{
+			ora_rollback($conn);
+			exit;
+		}
+		$flagx1="";
+		$flagx2="";
+
+		if ($jflag=="N") {
+			$flagx1=", non_critical ";
+			$flagx2=", 'Y' ";
+		} elseif ($jflag=="J" || $jflag=="M") {  // Used to be M, which is now used for Major Accident
+			$flagx1=", major_repair ";
+                        $flagx2=", 'Y' ";
+		}
+		//else echo "Using $aflag<BR>";
+	
+		$breakdown_class=str_replace("'","",$breakdown_class);
+
+		if ($jflag=="B")
+			$breakdown="Y";
+		else
+			$breakdown="N";
+	
+		$statement = "INSERT INTO MOVE_JOBS (jobcardserial, jobopenwho, jobopendate, completed, comments, unitserial, breakdown, km, type, depot, master, labour, company, auth, last_trip_date, last_trip_desc, accident, jobcard_type, breakdown_category $flagx1) ";
+		$statement .= "VALUES($jobcardserial, '$REMOTE_USER', to_date( '$jobopen', 'DD/MM/YYYY HH24:MI:SS' ), 'N', '$comments', '$unitserial', '$breakdown', $kmreading, '1', '$depot', 'Y', NULL, $company , 'N', $trip_date, '$trip_info', '$aflag', '$jflag', '$breakdown_class' $flagx2)";
+		$jobcardtype=1;
+		
+		//Create the jobcard
+		ora_parse( $cursor, $statement );
+    	if( !ora_exec( $cursor ) )
+    		showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not create jobcard" );
+    	
+    	
+    	//Find the jobcard
+    	ora_parse( $cursor, "SELECT class,code,default_jobcard FROM VEHICLES WHERE serial=$unitserial" );
+    	ora_exec( $cursor );
+    	$class = strtoupper( ora_getColumn( $cursor, 0 ) );
+	$testcode = substr(ora_getcolumn($cursor,1),0,3);
+	$defcard=ora_getColumn($cursor,2);
+	$notyre=false;
+
+    	$foundcard = true;
+
+	if ($defcard>0) {
+		ora_parse( $cursor, "SELECT $defcard from dual" );
+                $mydebug=4;
+	}	
+        elseif ($cookiedepot=="DBN" && $testcode=="APM") {
+		ora_parse( $cursor, "SELECT serial FROM MOVE_JOBCARDS WHERE active='Y' AND company=$company AND name like 'DBN APM%'" );
+		$mydebug=1;
+	}
+	elseif ($testcode=="APM" && $code!="APM001" && $code!="APM002" && $code!="APM003" && $code!="APM004") {
+		ora_parse( $cursor, "SELECT serial FROM MOVE_JOBCARDS WHERE active='Y' AND company=$company AND name='APM STANDARD C'" );
+		$notyre=true;
+		$mydebug=2;
+	}
+    	elseif( substr( $code, 0, 3 )=="TRA" ) {
+    		ora_parse( $cursor, "SELECT serial FROM MOVE_JOBCARDS WHERE active='Y' AND company=$company AND name='STANDARD T'" );
+//		echo "SELECT serial FROM MOVE_JOBCARDS WHERE active='Y' AND company=$company AND name='STANDARD T'<br>";
+		$mydebug=3;
+	}
+    	else { ora_parse( $cursor, "SELECT serial FROM MOVE_JOBCARDS WHERE active='Y' AND company=$company AND name='STANDARD C'" );
+ //   		echo "SELECT serial FROM MOVE_JOBCARDS WHERE active='Y' AND company=$company AND name='STANDARD C'<br>";	
+			$mydebug=4;
+	}
+    	ora_exec( $cursor );
+    	if( !ora_fetch( $cursor ) ) {
+    		print "<div class=info>Ooops, there is no <b>STANDARD</b> jobcard for <b>" . getCompany( $company );
+    		print "</b>. This means no items will be added to this jobcard. </div>";
+    		$foundcard = false;
+    	} else $jobgeneralserial = ora_getColumn( $cursor, 0 );
+
+
+	// Add hanging PRs
+	foreach ($_POST as $key => $val) if (substr($key,0,4)=="hang") {
+		$hangsrl = $val;
+		if (is_numeric($hangsrl)) {
+			ora_parse($cursor,"update move_jobs_part_requests set jobcardserial=$jobcardserial where pr_serial=$hangsrl");
+			ora_exec($cursor);
+//			echo ora_numrows($cursor)." PR updated: update move_jobs_part_requests set jobcardserial=$jobcardserial where pr_serial=$hangsrl<br>";
+			$us=getuserserial(false);
+			ora_parse($cursor,"insert into  move_jobs_part_request_notes values (move_part_request_note.nextval,$hangsrl,CURRENT_TIMESTAMP,$us,'Added to Jobcard $jobcardserial') ");
+			ora_exec($cursor);
+
+		}
+	} // foreach
+
+/*	if (getenv("REMOTE_USER")=="Keith" ){
+
+		ora_rollback($conn);
+		echo "ROLLBACK<Br>";
+		
+		exit;
+	}
+*/
+    	
+    	//Add the items from the general jobcard in
+    	if( $addstan=="Y" && $foundcard) {
+	    	$flag = true;
+	    	$outtext = "<table width=80%>";
+	    	$outtext .= "<tr class=title><td colspan=2>Items added to this jobcard</td></tr>";
+	    	$outtext .= "<tr class=head><td>Fault Class</td><td>Description</td></tr>";
+	    	
+	    	ora_parse( $cursor, "SELECT A.serial, A.faultclass, A.description, B.description FROM MOVE_JOBGENERAL A, MOVE_FAULTCLASS B WHERE A.jobcard=$jobgeneralserial AND A.faultclass=B.serial AND A.active='Y' ORDER BY A.orderby, A.description" );
+	    	ora_exec( $cursor );
+	    	while( ora_fetch( $cursor ) ) {
+	    		$jiserial = ora_getColumn( $cursor, 0 );
+	    		$jifc = ora_getColumn( $cursor, 1 );
+	    		$jidesc = ora_getColumn( $cursor, 2 );
+	    		$fcdesc = ora_getColumn( $cursor, 3 );
+	    		
+			   	( $flag ) ? $outtext .= "<tr class=cell>" : $outtext .= "<tr class=altcell>";
+			   	$outtext .= "<td>$fcdesc</td><td>$jidesc</td></tr>";
+			   	
+				ora_parse( $tcur, "SELECT digit FROM MOVE_FAULTGROUPS WHERE depot='$cookiedepot' AND serial='$jifc'" );
+				ora_exec( $tcur );
+				$digit = ora_getColumn( $tcur, 0 );
+
+				if( $digit==null ) {
+//					mail( "allit@intercape.co.za", "Digit is null", "Item has a null digit for a jobcard (MOVE_FAULTGROUPING): itemserial (MOVE_JOBCARDITEMS) $itemserial" );
+					$digit = 0;
+				}
+				
+				$tempjobserial = $jobcardserial + $digit;
+
+				ora_parse( $tcur, "SELECT jobcardserial FROM MOVE_JOBS WHERE jobcardserial='$tempjobserial'" );
+				ora_exec( $tcur );
+				if( ora_getColumn( $tcur, 0 ) == null ) {
+					//It doesn't exist, so we need to create a new one
+		
+					//But first, is it a master job card?
+					if( $digit==0 ) $master="Y";
+					else $master="N";
+		
+					//And then we can insert stuff into it
+                        if (trim($depot)=="")
+                                $depot=$cookiedepot;
+
+					$statement  = "INSERT INTO MOVE_JOBS ( jobcardserial, unitserial, jobopendate, jobopenwho, jobclosedate, breakdown, km, completed, comments, type, depot, master, labour, auth, last_trip_date, last_trip_desc ) ";
+					$statement .= "( SELECT '$tempjobserial', unitserial, jobopendate, jobopenwho, jobclosedate, breakdown, km, completed, comments, type, depot, '$master', '-1', auth, last_trip_date, last_trip_desc FROM MOVE_JOBS WHERE jobcardserial=$jobcardserial )";
+					ora_parse( $tcur, $statement );
+			    	if( !ora_exec( $tcur ) )
+		    			showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not add duplicate job card" );
+				}
+
+			   	ora_parse( $tcur, "SELECT MOVE_ITEMS.nextval FROM dual" );
+	    		ora_exec( $tcur );
+	    		$itemserial = ora_getColumn( $tcur, 0 );
+	
+			
+				$statement = "INSERT INTO MOVE_JOBCARDITEMS ( itemserial, jobcardserial, unitserial, reportedwho, reporteddate, faultclass, faultdesc, faultpicture, type, faultvalid, statusengineer, fromitem, jobcardgeneral ) ";
+				$statement .= "VALUES( $itemserial, $tempjobserial, '$unitserial', '$REMOTE_USER', to_date( '$jobopen', 'DD/MM/YYYY HH24:MI:SS' ), $jifc, '$jidesc', 'N', '1', 'N', 'Z', 0, $jiserial )";
+				
+				ora_parse( $tcur, $statement );
+				if (!ora_exec( $tcur ))
+					echo "ERROR: $statement<br>";
+				
+				$flag = !$flag;
+	    	}
+	    	
+	    	$outtext .= "</table>";
+	    }
+    	
+    	
+		// add tyre audit
+
+/*
+		if (!checkIfAudited( $unitserial) && !$notyre) {
+			ora_parse( $tcur, "SELECT MOVE_ITEMS.nextval FROM dual" );
+                        ora_exec( $tcur);
+                        ora_fetch( $tcur);
+                        $defitem = ora_getColumn( $tcur, 0);
+			$now=date("Ymd");
+
+			$qry = "INSERT INTO MOVE_JOBCARDITEMS ( itemserial, jobcardserial, faultclass, faultvalid, faultdesc, faultpicture, statusengineer, reporteddate, reportedwho, reportedonbehalf, reportcomments, unitserial, type, fromitem) VALUES ( $defitem, $jobcardserial, 2274, 'N', 'Please do a tyre audit using new audit form', 'N', 'Z', to_date('$now','YYYYMMDD'), 'System', 'J. Ferreira', 'No tyre audit has been logged for over 1 month for this vehicle', $unitserial, 1, 0)";
+			ora_parse( $cursor, $qry);
+			if ( !ora_exec($cursor))
+				echo "ERR!<br>";
+		// TODO: Replace 2274 with proper company-specific category
+
+		} // tyre audited
+*/
+
+		//  get hanging faults....
+
+		$now=date("YmdHis");
+		ora_parse( $cursor, "SELECT A.itemserial, A.jobcardserial, A.faultclass, A.faultvalid, A.faultdesc, A.faultpicture, A.statusengineer, to_char( A.reporteddate, 'YYYYMMDDHH24MISS'), A.reportedwho, A.reportedonbehalf, A.reportcomments, A.completedate, A.unitserial, A.mechanicnotes, A.servicetypeserial, A.type, A.completedwho, A.minutes, A.fromitem, A.jobcardgeneral FROM move_jobcarditems A,move_jobs B WHERE A.jobcardserial=B.jobcardserial AND A.unitserial=$unitserial AND statusengineer in ('I','D','P') AND deferred_to is null AND (jobcardgeneral is NULL or jobcardgeneral in ( select serial from move_jobgeneral where jobcard in  ( select B.serial from move_timed_items A, move_jobcards B where A.jobcardgeneral=B.serial)  ))");
+		ora_exec( $cursor);
+		while ( ora_fetch_into( $cursor, $oinfo)) {
+
+			ora_parse( $tcur, "SELECT MOVE_ITEMS.nextval FROM dual" );
+			ora_exec( $tcur);
+			ora_fetch( $tcur);
+			$defitem = ora_getColumn( $tcur, 0);
+
+			$digit = $oinfo[1] % 10;
+
+			$tempjobserial = $jobcardserial + $digit;
+			if ( !is_numeric( $oinfo[14]))
+				$oinfo[14] = "null";
+			if ( !is_numeric( $oinfo[19]))
+                                $oinfo[19] = "null";
+			for ($zz=0;$zz<14;$zz++)
+				$oinfo[$zz]=str_replace("'","",$oinfo[$zz]);
+			
+			if (!is_numeric($oinfo[18]))
+				$oinfo[18]="null";
+
+			$qry = "INSERT into move_jobcarditems (itemserial, jobcardserial, faultclass, faultvalid, faultdesc, faultpicture, statusengineer, reporteddate, reportedwho, reportedonbehalf, reportcomments, completedate, unitserial, mechanicnotes, servicetypeserial, type, completedwho, minutes, fromitem, jobcardgeneral, deferred_to) VALUES ( $defitem, $tempjobserial, $oinfo[2], '$oinfo[3]', '$oinfo[4]', '$oinfo[5]', 'Z', to_date( '$oinfo[7]', 'YYYYMMDDHH24MISS'), '$oinfo[8]', '$oinfo[9]', '$oinfo[10]', null, $oinfo[12], '$oinfo[13]', $oinfo[14], $oinfo[15], null, null, $oinfo[18], $oinfo[19], null)";
+			//echo "$qry<bR>";
+			ora_parse( $tcur, $qry);
+			if (ora_exec( $tcur)) {
+				$qry = "UPDATE move_jobcarditems SET deferred_to = $defitem WHERE itemserial = $oinfo[0]";
+				ora_parse( $tcur, $qry);
+				ora_exec( $tcur);
+			} // if
+			else mail("keith@intercape.co.za","newjobcard error",$qry);
+	
+			unset($oinfo);
+		} // while
+
+
+
+		// **NOT** !! This is ad-hoc - KW
+		$statement = "SELECT COUNT(unitserial) FROM MOVE_JOBCARDITEMS WHERE unitserial='$unitserial' AND jobcardserial=0";
+		ora_parse( $cursor, $statement );
+		ora_exec( $cursor );
+		$addeditems = ora_getColumn( $cursor, 0 );
+		
+		//For now this is using for scheduling services....
+		//Was originally used in viewjobcard.phtml to readd faults
+		$themaster=$jobcardserial-($jobcardserial%10);
+		ora_parse( $cursor, "select faultdesc, description, reporteddate  from MOVE_JOBCARDITEMS A, MOVE_FAULTCLASS B WHERE unitserial='$unitserial' AND (jobcardserial=0   OR master_jobcardserial=$jobcardserial   ) AND faultclass=B.serial ORDER BY reporteddate");
+		ora_exec( $cursor);
+		while( ora_fetch_into( $cursor, $hangd)) 
+			$hanginfo.="<tr class=altcell><td><B>$hangd[1]</b></td><td>$hangd[0]</td><td nowrap><font size=2>$hangd[2]</td></tr>";
+		if ($hanginfo!="")
+			$hanginfo="<hr><table>$hanginfo</table><hr>";
+		$statement = "UPDATE MOVE_JOBCARDITEMS SET jobcardserial=$jobcardserial,master_jobcardserial=$themaster WHERE unitserial='$unitserial' AND jobcardserial=0";
+		ora_parse( $cursor, $statement );
+		ora_exec( $cursor );		//Add hanging items on
+
+		$kcur = ora_open($conn);	
+
+		// NEW JULY 2005 : Timed Items -> Upgraded to CAMPAIGNS in April 2024
+			require_once("../php3/opstimes.inc");
+			$hanginfo2="";
+			$now=date("YmdHi");
+			$today=date("Ymd");
+			$thissmonth=date("Ym");
+			$thissdate=date("d");
+			$dow=date("w");
+
+			$qry="select A.serial, A.interval, A.do_on, A.faultclass, A.description, A.picture, A.notes, to_char(B.last_date,'YYYYMMDD') last_date,B.last_km, A.fault_category, A.jobcardgeneral from move_timed_items A, move_timed_units B where A.serial=B.serial AND B.unitserial=$unitserial and A.type=$jobcardtype AND A.start_date<=to_date('$now','YYYYMMDDHH24MI') AND A.end_date>=to_date('$now','YYYYMMDDHH24MI')";
+			//echo "$qry<BR>";
+			ora_parse($cursor,$qry);
+			ora_exec($cursor);
+			unset($timed);
+			while (ora_fetch_into($cursor, $timed, ORA_FETCHINTO_ASSOC)) {
+				$doit=false;
+				if ($timed['LAST_DATE']=="") {
+                                                        $timed['LAST_DATE']="20000101";
+                                                        $doit=true;
+                                                }
+
+				switch ($timed['INTERVAL']) {
+					// check here
+					case "M": // monthly
+						// allow for later than 'do on' day....
+						if (($thissdate>=$timed['DO_ON'] && $thissmonth!=substr($timed['LAST_DATE'],0,6)) || ( $timed['LAST_DATE']!=$today && $thissdate==$timed['DO_ON']  ) ) {
+							$doit=true;
+						}
+						break;
+					case "B": // bimonthly
+                                                // allow for later than 'do on' day....
+						if (nextdate($timed['LAST_DATE'],32)<$today && $thissdate==$timed['DO_ON'] ) {
+                                                        $doit=true;
+						}
+						if (nextdate($timed['LAST_DATE'],61)<$today && $thissdate>=$timed['DO_ON'])
+							$doit=true;
+                                                break;
+					case "W":  //weekly
+						if ($dow==$timed['DO_ON'] && $timed['LAST_DATE']!=$today) 
+							$doit=true;
+
+						//allow it to be late...
+						if ($timed['LAST_DATE']<=prevdate($today,7))
+								$doit=true;
+						break;
+					case "2": // 14 days
+						if ( $timed['LAST_DATE']<=prevdate($today,14))
+                                                        $doit=true;
+
+                                                break;
+					case "3": // 21 days
+						if ( $timed['LAST_DATE']<=prevdate($today,21))
+                                                        $doit=true;
+                                                break;
+	
+					case "F": // fortnightly (14 days)
+						if (($dow==$timed['DO_ON'] && $timed['LAST_DATE']<prevdate($today,7) )   || $timed['LAST_DATE']<=prevdate($today,14))
+                                                        $doit=true;
+						
+						break;
+					case "K": // kilometer
+						$last=$timed['LAST_KM'];	
+						if (!is_numeric($last))
+							$last=0;
+						if ($kmreading-$last>=$timed['DO_ON'])
+							$doit=true;
+						break;	
+					case "D": // daily
+						if ($today!=$timed['LAST_DATE'])
+							$doit=true;
+						break;
+				} // switch	
+//				$doit=true; // test
+				if ($doit) {
+					$fault_type = $timed["FAULT_CATEGORY"];
+                                        if (!is_numeric($fault_type))
+                                                $fault_type = "null";
+
+					$jobgeneral = $timed["JOBCARDGENERAL"];
+					if (is_numeric($jobgeneral)) {
+						// I AM HERE
+
+
+						// fetch items from movegeneral
+				
+						ora_parse( $kcur, "SELECT A.serial, A.faultclass, A.description, B.description FROM MOVE_JOBGENERAL A, MOVE_FAULTCLASS B WHERE A.jobcard=$jobgeneral AND A.faultclass=B.serial AND A.active='Y' ORDER BY A.orderby, A.description" );
+  		  	 	                ora_exec( $kcur );
+             				        while( ora_fetch( $kcur ) ) {
+				                        $jiserial = ora_getColumn( $kcur, 0 );
+				                        $jifc = ora_getColumn( $kcur, 1 );
+               					        $jidesc = ora_getColumn( $kcur, 2 );
+                				        $fcdesc = ora_getColumn( $kcur, 3 );
+
+							ora_parse($tcur,"select  MOVE_ITEMS.nextval FROM DUAL");
+		                                        ora_exec($tcur);
+               			                        ora_Fetch($tcur);
+		                                        $newitem=ora_getcolumn($tcur,0);
+
+                                        		$statement = "INSERT INTO MOVE_JOBCARDITEMS ( itemserial, jobcardserial, unitserial, reportedwho, reporteddate, faultclass, faultdesc, faultpicture, type, faultvalid, statusengineer, fromitem, jobcardgeneral, fault_category ) ";
+		                                        $statement .= "VALUES( $newitem , $jobcardserial, '$unitserial', '$REMOTE_USER', to_date( '$jobopen', 'DD/MM/YYYY HH24:MI:SS' ), $jifc, '$jidesc', 'N', '1', 'N', 'Z', 0, $jiserial, $fault_type )";
+             			                        echo "$statement<bR>";
+		                                        ora_parse($tcur,$statement);
+		                                        ora_exec($tcur);
+
+		                                        $statement = "insert into move_timed_items_assigned values (".$timed["SERIAL"].", $unitserial, $jobcardserial, $newitem, CURRENT_TIMESTAMP, null)";
+		                                        echo "$statement<Br>";
+		                                        ora_parse($tcur,$statement);
+		                                        ora_exec($tcur);
+						}
+
+					} else {
+						ora_parse($tcur,"select  MOVE_ITEMS.nextval FROM DUAL");
+						ora_exec($tcur);
+						ora_Fetch($tcur);
+						$newitem=ora_getcolumn($tcur,0);
+
+
+						$statement = "INSERT INTO MOVE_JOBCARDITEMS ( itemserial, jobcardserial, unitserial, reportedwho, reporteddate, faultclass, faultdesc, faultpicture, type, faultvalid, statusengineer, fromitem, jobcardgeneral, fault_category ) ";
+	                                	$statement .= "VALUES( $newitem , $jobcardserial, '$unitserial', '$REMOTE_USER', to_date( '$jobopen', 'DD/MM/YYYY HH24:MI:SS' ), ".$timed['FAULTCLASS'].", '".$timed['DESCRIPTION']."', 'N', '1', 'N', 'Z', 0, null, $fault_type )";
+	//					echo "$statement<bR>";
+						ora_parse($tcur,$statement);
+						ora_exec($tcur);
+
+						$statement = "insert into move_timed_items_assigned values (".$timed["SERIAL"].", $unitserial, $jobcardserial, $newitem, CURRENT_TIMESTAMP, null)";
+						echo "$statement<Br>";
+						ora_parse($tcur,$statement);
+	                                        ora_exec($tcur);
+
+					}
+
+
+					$nowt=date("YmdHis");
+					$statement="update move_timed_units SET last_km=$kmreading,last_itemserial=$newitem,last_date=to_date('$nowt','YYYYMMDDHH24MISS') WHERE serial=".$timed['SERIAL']." and unitserial=$unitserial";
+					ora_parse($tcur,$statement);
+					ora_exec($tcur);
+//					echo "$statement<bR>";
+					
+					ora_parse($tcur,"select description from move_faultclass where serial=".$timed['FAULTCLASS']);
+					ora_exec($tcur);
+					ora_Fetch($tcur);
+					$fclass=ora_getcolumn($tcur,0);
+					$hanginfo2.= "<tr class=altcell><td><b>$fclass</b></td><td>".$timed['DESCRIPTION']."</td><td>Timed/Schedule Item <font size=2>(".$timed['NOTES'].")</td></tr>";
+
+// MOVE_ITEMS.nextval
+				}
+				unset($timed);
+			}
+		if ($hanginfo2!="")
+			$hanginfo.="<table>$hanginfo2</table><hr>";
+
+		// End of Timed Items
+
+		$statement = "INSERT INTO MOVE_KM ( unitserial, kmdate, source, km ) VALUES( '$unitserial', to_date( '$jobopen', 'DD/MM/YYYY HH24:MI:SS' ), 'J', $kmreading )";
+		ora_parse( $cursor, $statement );
+		ora_exec( $cursor );		//Insert the KM reading
+
+		// check to see if a service was scheduled for today...
+
+		$today=date("Ymd");
+		ora_parse( $cursor, "select * from move_servicelog where coach=$unitserial and when=to_date('$today','YYYYMMDD') and jobcard is null");
+		ora_exec( $cursor);
+		if (ora_fetch( $cursor)) {
+
+			$servinfo="<br><font color=red size=4><u><b>SERVICE IS SCHEDULED!!</b></u> <a href=newjobcarditems.phtml?stage=6&jobcardserial=$jobcardserial>Click Here to add to Jobcard</a></font><br>";
+		}
+		
+		print "<div class=info>Jobcard <b>MOVE$jobcardserial</b> has been created and the job items have been added on<br><font style='Arial' size=3>$hanginfo</font>$servinfo</div>";
+//		print "<br>$outtext<br>";
+
+		if( $jobcardtype==1 ) {
+                ora_parse( $cursor," select vehicle,to_char(date_generated,'HH24:MI DD/Mon/YYYY'),alert from service_alerts where vehicle=$unitserial");
+                ora_exec( $cursor);
+                if (ora_fetch_into( $cursor, $alerts)) {
+                        echo "Service alerts as at $alerts[1]:<table border=1><tr class=cell><td><span id=salerts>$alerts[2]</span></td></tr></table>";
+
+                }
+		
+ora_parse($cursor,"select B.coach,to_char(B.when,'YYYY/MM/DD'),B.actualkm,B.jobcard from move_servicelog B where coach=$unitserial and jobcard is not null order by B.when desc ");
+ora_exec($cursor);
+if (ora_fetch_into($cursor,$sdata)) {
+	$diff=$kmreading-$sdata[2];
+	if ($diff>39000)
+	{
+		echo "<font color=red size=+4  style='background: yellow' >";
+		echo "<script> document.getElementById('salerts').style.fontSize='200%'; </script>";
+	}
+	else
+		echo "<font style='background: yellow'>";
+	if ($diff>1000)
+		$diff=substr($diff,0,-3)." ".substr($diff,-3);
+	echo "NOTE: $diff km since last service</font><Br>";
+}
+
+
+		}
+
+		print "<form action='newjobcarditems.phtml' method=post><input type=hidden name=stage value=1>";
+		print "<input type=hidden name=jobcardserial value='$jobcardserial'>";
+		print "<input type='submit' value='Add More Items'>";
+		print "</form>";
+		print "<form method=post action='viewjobcard.phtml'><input type=hidden name=stage value=0>";
+		print "<input type=hidden name=jobcardserial value='$jobcardserial'>";
+		print "<input type='submit' value='Clear Faults on this jobcard'>";
+		print "</form>";
+		print "<form method=post action='printerjobcard.phtml'>";
+		print "<input type=hidden name=jobcardserial value='$jobcardserial'>";
+		print "<input type='submit' value='Print this jobcard'>";
+		print "</form>";
+		print "<form method=post><input type=hidden name=stage value=1>";
+		print "<input type='submit' value='Create a new jobcard'>";
+		print "</form>";
+//		ora_rollback($conn) ; // test TEST!!!!
+		echo "<iframe src='job_file_upload.phtml?jobcardserial=$jobcardserial' width='100%' height='500px'></iframe>";
+
+
+		
+	}
+	elseif( $stage==3 ) { //Vehicle Unit
+		if( empty( $jobcardserial ) ) {
+			$jobok = false;
+    		do {
+	    		ora_parse( $cursor, "SELECT MOVE_JOBSERIAL.nextval FROM dual" );
+	    		ora_exec( $cursor );
+    			$i = ora_getColumn( $cursor, 0 );
+		    		
+    			$parta = (int) substr( $i, 0, 1 );
+    			$partb = (int) substr( $i, -1 );
+			    		
+    			if( ( substr( $i, 0, 1 )+substr( $i, -1 ) )%3==0 ) {
+		   			$jobok = true;
+   					$jobcardserial = $i;
+	   			}
+	   		} while( $jobok == false );
+		}
+		
+		showChoices( $jobcardserial );
+		?>
+		<form  method="post">
+		<input type="hidden" name="stage" value="21">
+		<table width=90%>
+			<tr class="head">
+				<td colspan=2>Vehicle Unit</td>
+			</tr>
+			<tr class="cell">
+				<td width=150>MOVE Number</td>
+				<td>
+					<b>MOVE<?=$jobcardserial?></b>
+					<input type="hidden" name="jobcardserial" value="<?=$jobcardserial?>">
+				</td>
+			</tr>
+			<tr class="cell">
+				<td>Comments (if any)</td>
+				<td><input type="text" name="comments" size=70 maxlength=70></td>
+			</tr>
+			<tr class="cell">
+				<td width=150>Fleet Code</td>
+				<td>
+					<select name="unitserial">
+					<?
+						array( $results );
+						ora_parse( $cursor, "SELECT serial, code FROM MOVE_COACHINFO ORDER BY code" );
+						ora_exec( $cursor );
+						
+						while( ora_fetch_into( $cursor, $results ) ) {
+							print "<option value=\"$results[0]\">$results[1]";
+							$results = array();
+						}
+					?>
+					</select>
+				</td>
+			</tr>
+		</table>
+		<br>
+		<input type="submit" value="Continue">
+		</form>
+		<?
+	}
+	elseif( $stage==31 ) { //Vehicle Unit
+		?>
+		<div class="info">
+			This page is under construction
+		</div>
+		<br>
+		<?
+		$jobopen = date( "d/m/Y H:i:s" );
+		$comments = str_replace( "\'", "''", $comments );
+                        if (trim($depot)=="")
+                                $depot=$cookiedepot;
+
+		$statement = "INSERT INTO MOVE_JOBS (jobcardserial, jobopenwho, jobopendate, completed, comments, unitserial, type, auth ) ";
+		$statement .= "VALUES($jobcardserial, '$remoteserial', to_date( '$jobopen', 'DD/MM/YYYY HH24:MI:SS' ), 'N', '$comments', '$unitserial', '2', 'N')";
+	}
+	elseif( $stage==4 ) { //Building
+		if( empty( $jobcardserial ) ) {
+			$jobok = false;
+    		do {
+	    		ora_parse( $cursor, "SELECT MOVE_JOBSERIAL.nextval FROM dual" );
+	    		ora_exec( $cursor );
+    			$i = ora_getColumn( $cursor, 0 );
+		    		
+    			$parta = (int) substr( $i, 0, 1 );
+    			$partb = (int) substr( $i, -1 );
+			    		
+    			if( ( substr( $i, 0, 1 )+substr( $i, -1 ) )%3==0 ) {
+		   			$jobok = true;
+   					$jobcardserial = $i;
+	   			}
+	   		} while( $jobok == false );
+		}
+		
+		showChoices( $jobcardserial );
+		?>
+		<form  method="post">
+		<input type="hidden" name="stage" value="21">
+		<table width=90%>
+			<tr class="head">
+				<td colspan=2>Building Work</td>
+			</tr>
+			<tr class="cell">
+				<td width=150>MOVE Number</td>
+				<td>
+					<b>MOVE<?=$jobcardserial?></b>
+					<input type="hidden" name="jobcardserial" value="<?=$jobcardserial?>">
+				</td>
+			</tr>
+			<tr class="cell">
+				<td>Comments (if any)</td>
+				<td><input type="text" name="comments" size=70 maxlength=70></td>
+			</tr>
+			<tr class="cell">
+				<td width=150>Fleet Code</td>
+				<td>
+					<select name="unitserial">
+					<?
+						array( $results );
+						ora_parse( $cursor, "SELECT serial, code FROM MOVE_COACHINFO ORDER BY code" );
+						ora_exec( $cursor );
+						
+						while( ora_fetch_into( $cursor, $results ) ) {
+							print "<option value=\"$results[0]\">$results[1]";
+							$results = array();
+						}
+					?>
+					</select>
+				</td>
+			</tr>
+		</table>
+		<br>
+		<input type="submit" value="Continue">
+		</form>
+		<?
+	}
+	elseif( $stage==41 ) { //Insert for building
+		?>
+		<div class="info">
+			This page is under construction
+		</div>
+		<br>
+		<?
+		$jobopen = date( "d/m/Y H:i:s" );
+		$comments = str_replace( "\'", "''", $comments );
+                        if (trim($depot)=="")
+                                $depot=$cookiedepot;
+
+		$statement = "INSERT INTO MOVE_JOBS (jobcardserial, jobopenwho, jobopendate, completed, comments, type, auth) ";
+		$statement .= "VALUES($jobcardserial, '$remoteserial', to_date( '$jobopen', 'DD/MM/YYYY HH24:MI:SS' ), 'N', '$comments', '$3', 'N')";
+	}
+	elseif( $stage==5 ) { //3rd Party
+		if( empty( $jobcardserial ) ) {
+    		ora_parse( $cursor, "SELECT MOVE_JOBSERIAL.nextval FROM dual" );
+	   		ora_exec( $cursor );
+			$jobcardserial = ora_getColumn( $cursor, 0 );
+			$jobcardserial *= 10;
+		}
+				
+		showChoices( $jobcardserial );
+		?>
+		<form  method="post">
+		<input type="hidden" name="stage" value="51">
+		<table width=90%>
+			<tr class="head">
+				<td colspan=2>3rd Party Work</td>
+			</tr>
+			<tr class="cell">
+				<td width=150>MOVE Number</td>
+				<td>
+					<b>MOVE<?=$jobcardserial?></b>
+					<input type="hidden" name="jobcardserial" value="<?=$jobcardserial?>">
+				</td>
+			</tr>
+			<tr class="cell">
+				<td>Company</td>
+				<td>
+					<input type=hidden name=company value='<?=$cookiecompany?>'><b><?=$cookiecompanyname?></b>
+				</td>
+			</tr>
+			<tr class="cell">
+				<td>3rd Party</td>
+				<td>
+					<?
+					ora_parse( $cursor, "SELECT COUNT( serial ) FROM MOVE_DEBTORS WHERE active='Y' AND serial>=0" );
+					ora_exec( $cursor );
+					if( ora_getColumn( $cursor, 0 ) >0 ) {
+						?>
+						<select name="debtor">
+						<?
+						$results = array();
+						ora_parse( $cursor, "SELECT serial, name, account FROM MOVE_DEBTORS WHERE active='Y' AND serial>=0 ORDER BY UPPER( name )" );
+						ora_exec( $cursor );
+						
+						while( ora_fetch_into( $cursor, $results ) ) {
+							print "<option value=\"$results[0]\">$results[1] [$results[2]]";
+							$results = array();
+						}
+						?>
+						</select>
+						<a href="managedebtors.phtml?stage=1&goback=Y&jobcardserial=<?=$jobcardserial?>">Add a new debtor</a>
+						<?
+					} else {
+						?>
+						There are no debtors, but you can <a href="managedebtors.phtml?stage=1&goback=Y&jobcardserial=<?=$jobcardserial?>">add a new debtor</a>
+						<?
+					}
+					?>
+				</td>
+			</tr>
+			<tr class="cell">
+				<td>Work</td>
+				<td><input type="text" name="comments" size=70 maxlength=70></td>
+			</tr>
+		</table>
+		<br>
+		<input type="submit" value="Start Adding Items">
+		</form>
+		<?
+	}
+	elseif( $stage==7) { // *** BOOK A JOBCARD AGAINST A STOCK ITEM ***
+		
+		$jobcardserial=0;
+		?>
+		<form  method="post" name="createjob" action="newjobcard.phtml">
+		<input type="hidden" name="stage" value="8">
+		<table width=90%>
+			<tr class="head">
+				<td colspan=2>Create a Jobcard for a stock serialized item for repairs etc.</td>
+			</tr>
+			<tr class="cell">
+				<td>Company</td>
+				<td>
+					<input type=hidden name=company value='<?=$cookiecompany?>'><b><?=$cookiecompanyname?></b>
+				</td>
+			</tr>
+			<tr class="cell">
+				<td>Serial Number of Part</td>
+				<td><input type="text" name="serial" size=10 maxlength=10 id=serial onkeyup="if (serial.value.length>5) frame1.location='captureparts2.phtml?pop=Y&iframe=Y&stage=115&barcode='+serial.value;" tabindex="0"></td>
+			</tr>
+		</table>
+		<br>
+		<input type="submit" value="Create">
+<iframe id=frame1 name=frame1 width=100% height=800></iframe>
+		</form>		
+		<?
+		exit;
+	
+	}
+	
+	elseif( $stage==8) { // save serial to jobcard 
+		// Check if the part exists
+		$qry = "SELECT serial FROM STK_SERIALASS WHERE track = '$serial'";
+		ora_parse( $cursor, $qry );
+		ora_exec( $cursor );
+		if (!ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)) {
+			echo "Sorry, I cannot find serial (ICG) $serial<Br>";
+			$serial="*";
+		} else {
+		$serial = $data['SERIAL'];
+		ora_parse( $cursor, "SELECT MOVE_JOBSERIAL.nextval FROM dual" );
+                        ora_exec( $cursor );
+                        $jobcardserial = ora_getColumn( $cursor, 0 );
+                        $jobcardserial *= 10;
+                }
+		
+		
+		if($serial != ""){
+			if (trim($depot)=="")
+				$depot=$cookiedepot;
+		       $jobopen = date( "d/m/Y H:i:s" );
+			$statement = "INSERT INTO MOVE_JOBS (jobcardserial, jobopenwho, jobopendate, completed, comments, unitserial, breakdown, km, type, depot, master, labour, company, auth ) ";
+			$statement .= "VALUES($jobcardserial, '$REMOTE_USER', to_date( '$jobopen', 'DD/MM/YYYY HH24:MI:SS' ), 'N', '$comments', '$serial', 'N', null, '6', '$depot', 'Y', NULL, $company , 'N')";
+			ora_parse($cursor,$statement);
+			if (!ora_exec($cursor)) {
+				echo "ERROR! <br>$statement<br>";
+				exit;
+			}
+			
+
+		}
+		else{
+		
+			echo "<font color='red'><b>The serial number is invalid, try again.</b></font><p><input type=button value=Back onClick='history.go(-1);'>";
+		
+		}
+		echo "MOVE$jobcardserial has been created<bR><a href=newjobcarditems.phtml?stage=1&jobcardserial=$jobcardserial>Add items to this jobcard</a>";	
+//		ora_rollback($conn); // test TEST!!!
+		exit;
+	}
+	
+	elseif( $stage==50) { // take ownership 
+		$depot=trim($cookiedepot);
+		if (strlen($depot)==0) {
+			echo "Error!";
+			exit;
+		}
+		if (!is_numeric($jobcardserial)) {
+
+			echo "Error!!";
+			exit;
+		}
+		$qry="UPDATE MOVE_JOBS SET depot='$depot' WHERE depot='OPS' AND jobcardserial=$jobcardserial";
+		if (!ora_parse($cursor,$qry))
+			echo "Error: $qry<bR>";
+		else {
+			if (!ora_exec( $cursor)) {
+				echo "Error: $qry<BR>";
+			}
+			else {
+				echo "<script>window.location='checkjobcard.phtml';</script>";
+				translog("Took ownership of MOVE$jobcardserial to $depot Depot");
+			}
+			exit;
+			
+		}
+		exit;
+	}
+	elseif( $stage==51 ) { //Insert for 3rd party work
+		$jobopen = date( "d/m/Y H:i:s" );
+		$comments = str_replace( "'", "", $comments );
+                        if (trim($depot)=="")
+                                $depot=$cookiedepot;
+
+		$statement = "INSERT INTO MOVE_JOBS (jobcardserial, jobopenwho, jobopendate, completed, comments, type, unitserial, master, depot, breakdown, labour, company, auth ) ";
+		$statement .= "VALUES($jobcardserial, '$REMOTE_USER', to_date( '$jobopen', 'DD/MM/YYYY HH24:MI:SS' ), 'N', '$comments', '4', $debtor, 'Y', '$cookiedepot', 'N', NULL, $company, 'N' )";
+		ora_parse( $cursor, $statement );
+		if( !ora_exec( $cursor ) )
+			showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not add job card" );
+			
+    	?>
+    	<form name="temp" method="post" action="newjobcarditems.phtml"><input type="hidden" name="stage" value="1"><input type="hidden" name="jobcardserial" value="<?=$jobcardserial?>"></form>
+    	<script language="JavaScript"> temp.submit() </script>
+    	<?
+	}
+	elseif( $stage==6 ) {	//close a job card
+		array( $results );
+
+		if (!is_numeric($jobcardserial))
+			exit;
+		ora_parse($cursor,"select depot from move_jobs where jobcardserial>=$jobcardserial AND jobcardserial<$jobcardserial+10 and depot='OPS'");
+		ora_exec($cursor);
+		if (ora_fetch($cursor)) {
+			echo "<font color=red>SORRY, YOU CANNOT CLOSE THIS YET!   Nobody has taken ownership of it!</font>";
+			exit;
+		}
+
+               echo "<b>Parts Used:</b>";
+                ora_parse($cursor,"select A.ipartno, B.track, A.when, A.who, A.quantity, C.description FROM stk_movement A left join stk_parts C on A.ipartno=C.serial  left join stk_serialass B ON A.iserial=B.serial WHERE lcode=4 AND location='$jobcardserial'");
+                ora_exec($cursor);
+                echo "<table><tr class=head><td>Part No</td><td>Part Desc</td><td>Serial/ICG</td><td>Date</td><Td>Who</td><td>Quantity</td></tr>";
+                while (ora_fetch_into( $cursor, $data)) {
+                        echo "<tr class=cell><td>M$data[0]</td><td><font size=2>$data[5]</td><td>$data[1]</td><Td>$data[2]</td><td>$data[3]</td><td align=right>$data[4]</td></tr>";
+                        unset($data);
+                }
+                echo "</table>";
+
+		?>
+		<div class="info">
+			<font size=+1><b>Closing these job cards means you will not be able to add any more items to them</b></font>
+		</div>
+		<br>
+		<div class="info">
+			The date should be the date that the last job card was finished on, and is only necessary for master job cards 
+			(the job cards that end in a 0)
+		</div>
+		<form method="post">
+		<input type="hidden" name="stage" value="62">
+		<table width=80%>
+		<tr class="title"><td colspan=3>Job Cards</td></tr>
+		<tr class="head"><td>MOVE</td><td colspan=2>Check boxes to complete</td></tr>
+		<?
+		$tmp = ora_open( $conn );
+		
+		ora_parse( $cursor, "SELECT jobcardserial FROM MOVE_JOBS WHERE jobcardserial>=$jobcardserial AND jobcardserial<$jobcardserial+10 AND completed='N'" );
+		ora_exec( $cursor );
+
+		while( ora_fetch( $cursor ) ) {
+			$serial = ora_getColumn( $cursor, 0 );
+			
+			if( $serial%10==0 ) {
+				print "<tr class=cell><td width=150>MOVE$serial</td><td><input name=\"jc[]\" type=\"checkbox\" value=\"$serial\"></td>";
+				print "<td><input type=text name=jobclosea size=3 maxlength=2><input type=text name=jobcloseb size=8 maxlength=6 value=" . date( "mY" ) . "></td>";
+			} else {
+				print "<tr class=cell><td width=150>MOVE$serial</td><td colspan=2><input name=\"jc[]\" type=\"checkbox\" value=\"$serial\"></td>";
+			}
+			
+			print "</tr>";
+		}
+		ora_close( $tmp );
+
+		ora_parse($cursor,"select pr_serial, request_text from move_jobs_part_requests where jobcardserial=$jobcardserial and accepted_date is null");
+		ora_exec($cursor);
+		$rqfound=0;
+		echo "</table><br>";
+		while (ora_fetch_into($cursor,$rqdata)) {
+			$rqfound++;
+			if ($rqfound==1) 
+				echo "<b>ARE YOU SURE?  The Following parts request(s) has/have not yet been received (closed off)</b><bR><table border=1>";
+			echo "<tr><td>PR$rqdata[0]</td><td>$rqdata[1]</td></tr>";
+			unset($rqdata);
+		}
+		if ($rqfound>0)
+			echo "</table><font color=red>Please check with stores FIRST before closing the job card</font>";
+		?>
+		<br>
+		<input type="submit" value="Complete">
+		</form>
+		<form method=post><input type=button value='Go Back' onClick='history.go(-1);'></form>
+		<?
+	}	
+	elseif( $stage==61 ) {
+		$close = false;
+		$master = false;
+		
+		if (!is_numeric($jobcardserial)) {
+			echo "No jobcard number given<bR>";
+			exit;
+		}
+		if( $jobcardserial%10 == 0 ) {	//This is a master job card, so make sure everything else is closed
+			$master = true;
+			
+			ora_parse( $cursor, "SELECT completed, jobcardserial FROM MOVE_JOBS WHERE jobcardserial>$jobcardserial AND jobcardserial<$jobcardserial+10" );
+			ora_exec( $cursor );
+			while( ora_fetch( $cursor ) ) {
+				if( ora_getColumn( $cursor, 0 )=="N" )
+					$close = true;
+			}
+		}
+		
+
+		if( $close ) {
+			$opencards = "";
+			
+			ora_parse( $cursor, "SELECT jobcardserial FROM MOVE_JOBS WHERE jobcardserial>$jobcardserial AND jobcardserial<$jobcardserial+10 AND completed='N'" );
+			ora_exec( $cursor );
+			while( ora_fetch( $cursor ) ) {
+				$temp = ora_getColumn( $cursor, 0 );
+				$opencards .= "<a href=\"viewjobcard.phtml?stage=0&jobcardserial=$temp\">MOVE$temp</a><br>";
+			}
+			?>
+			<div class="info">
+				You need to close off the following job cards before you can close this one<br><br>
+				<?=$opencards?>
+			</div>
+			<?
+			exit;
+		}
+		
+		if( $master ) {
+/*			if( !isset( $jobclosea ) || !isset( $jobcloseb ) ) {
+				?>
+				<form method=post>
+				<input type="hidden" name="stage" value=61>
+				<input type="hidden" name="jobcardserial" value="<?=$jobcardserial?>">
+				<table width=75%>
+				<tr class=title><td>Date the job card was finished</td></tr>
+				<tr class=cell>
+					<td>
+						<input type="text" name="jobclosea" size=3 maxlength=2>
+						<input type="text" name="jobcloseb" size=8 maxlength=6 value="<?=date("mY")?>">
+						<br>DD MMYYYY
+					</tr>
+				</tr>
+				</table>
+				<br>
+				<input type=submit value="Close Job">
+				</form>
+				<script language="JavaScript"> document.forms[0].elements[2].focus(); </script>
+				<?
+				exit;
+			} else {
+*/
+				$jobclose = $jobclosea . $jobcloseb;
+				$dcheck1=substr( $jobclose, 2, 2 );
+				$dcheck2=substr( $jobclose, 0, 2 );
+				$dcheck3= substr( $jobclose, 4, 4 );
+				if (!is_numeric($dcheck1))	
+					$dcheck1=-1;	
+                                if (!is_numeric($dcheck2))
+                                        $dcheck2=-1;
+                                if (!is_numeric($dcheck3))
+                                        $dcheck3=-1;
+
+				if( !checkdate( $dcheck1,$dcheck2,$dcheck3) ) {
+					?>
+					<div class=info>
+						The date that you entered was incorrect. Please enter it again
+					</div>
+					<br>
+					<form method=post>
+					<input type="hidden" name="stage" value=61>
+					<input type="hidden" name="jobcardserial" value="<?=$jobcardserial?>">
+					<table width=75%>
+					<tr class=title><td>Date the job card was finished</td></tr>
+					<tr class=cell>
+						<td>
+							<input type="text" name="jobclosea" size=3 maxlength=2>
+							<input type="text" name="jobcloseb" size=8 maxlength=6 value="<?=$jobcloseb?>">
+						<br>DD MMYYYY
+						</td>
+					</tr>
+					</table>
+					<br>
+					<input type=submit value="Close Job">
+					</form>
+					<script language="JavaScript"> document.forms[0].elements[2].focus(); </script>
+					<?
+					exit;
+//				}
+			}
+		} else $jobclose = date( "dmY" );
+
+                if (!is_numeric($jobclose)) {
+?>
+                                        <div class=info>
+                                                The date that you entered was incorrect. <a href="#" onClick="history.go(-1);">Click here</a> to go back and change it.
+                                        </div>
+
+<?
+				exit;
+
+                }
+
+                $yesterday=date("Ymd",time()-24*60*60);
+		$today=date("Ymd");
+
+                $dcheck=substr($jobclose,4,4).substr($jobclose,2,2).substr($jobclose,0,2);
+
+		
+                echo "...Check $dcheck >= $yesterday and $dcheck <= $today<bR>";
+
+
+                if ($dcheck<$yesterday || $dcheck> $today) {
+?>
+                                        <div class=info>
+                                                The date that you entered was incorrect. <a href="#" onClick="history.go(-1);">Click here</a> to go back and change it.
+                                        </div>
+<?
+			exit;
+
+
+                }
+		
+
+		$myuname=getenv("REMOTE_USER");
+
+		ora_parse( $cursor, "UPDATE MOVE_JOBS SET completed='Y', jobclosewho='$myuname', jobclosedate=to_date( '$jobclose', 'DDMMYYYY' ) WHERE jobcardserial=$jobcardserial and completed!='Y' " );
+    	if( !ora_exec( $cursor ) )
+	{
+    		showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not close job card" );
+	} else { 
+		if ( ora_numrows($cursor)!=1)
+			showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not close job card. Is it already closed?" );
+		else {
+                     check_hang($jobcardserial);
+		}
+	}
+
+		ora_parse($cursor,"select unitserial, type from move_jobs where jobcardserial=$jobcardserial");
+		ora_exec($cursor);
+		ora_commit($conn);
+		if (ora_fetch($cursor)) {
+			if (getdata($cursor,1)==1) {
+				$vs=getdata($cursor,0);
+				ora_parse($cursor,"select code from vehicles where serial=$vs");
+				orA_exec($cursor);
+				if (ora_fetch($cursor)) {
+					$vcode=getdata($cursor,0);
+					if (substr($vcode,0,3)=="APM") {
+							echo "Sending Costing Email <!input type=button value='See detail' onclick=\"document.getElementById('costing$jobcardserial').style.display='visible';\"><br><div id=costing$jobcardserial style='display:none'>";
+
+					                system("/usr/local/bin/curl  -u dummy:ydum4 http://127.0.0.1//move/jobcard_daily_auth.phtml?stage=4\&subjob_more=true\&jobserial=$jobcardserial\&apm_mail=Y\&docsv=1 > /tmp/jcc.1 2> /tmp/jcc.2");
+							echo "</div>";
+					} 
+					else {
+
+ 						system("/usr/local/bin/curl  -u dummy:ydum4  http://127.0.0.1//move/jobcard_daily_auth.phtml?stage=4\&subjob_more=true\&jobserial=$jobcardserial\&apm_mail=N\&docsv=1");
+
+ 					}
+
+
+				}
+
+			}
+
+		}
+    	
+		//event( $jobcardserial, 2 );
+		if( $master ) {
+	    	?>
+	    	<b>The master jobcard was closed</b><br><br>
+	    	<form name="temp" method="post" action="managestock.phtml"><input type=hidden name=stage value=120><input type=hidden name=type value='J'><input type=hidden name=extra value='MOVE<?=$jobcardserial?>'><input type=submit value='Add Parts to This Job Card'></form>
+	    	<form name="temp" method="post" action="checkjobcard.phtml"><input type="hidden" name="stage" value="0"><input type=submit value='Back To All Jobcards'></form>
+	    	<?
+	    } else {
+	    	?>
+    		<form name="temp" method="post" action="viewjobcard.phtml"><input type=hidden name=jobcardserial value="<?=$jobcardserial?>"><input type="hidden" name="stage" value="0"></form><script language="JavaScript"> temp.submit() </script>
+	    	<?
+	    }
+	}
+	elseif( $stage==62 ) {
+		//$jobclose = date( "d/m/Y H:i:s" );
+		$tempclose = date( "dmY" );
+		if (is_numeric($jobclosea))
+			$jobclosea=sprintf("%02d",$jobclosea);
+		else
+		{
+?>
+                                        <div class=info>
+                                                The date that you entered was incorrect. <a href="#" onClick="history.go(-1);">Click here</a> to go back and change it.
+                                        </div>
+
+<?
+				exit;
+
+		}
+		if (!is_numeric($jobcloseb)) {
+?>
+                                        <div class=info>
+                                                The date that you entered was incorrect. <a href="#" onClick="history.go(-1);">Click here</a> to go back and change it.
+                                        </div>
+
+<?
+			exit;
+
+                }
+
+		$jobclose = $jobclosea . $jobcloseb;
+		
+		$yesterday=date("Ymd",time()-24*60*60);
+	
+		$dcheck=substr($jobcloseb,2,4).substr($jobcloseb,0,2).$jobclosea;
+
+		echo "Check $dcheck >= $yesterday<bR>";
+
+
+		if ($dcheck<$yesterday) {
+?>
+                                        <div class=info>
+                                                The date that you entered was incorrect. <a href="#" onClick="history.go(-1);">Click here</a> to go back and change it.
+                                        </div>
+<?
+			exit;
+
+
+		}
+		
+		if( sizeof( $jc ) == 0 ) {
+			?>
+			<div class="info">
+				You did not select any job cards to complete. <a href="#" onClick="history.go(-1);">Click here</a> to go back and select some, 
+				<a href="#" onClick="history.go(-2);">or here</a> to return to where you were.
+			</div>
+			<?
+			exit;
+		}
+		
+		for( $i=0; $i<sizeof( $jc ); $i++ ) {
+			if( $jc[$i]%10 == 0 ) {	//Only worry about the date if we're closing the master job card
+				if( !checkdate( substr( $jobclose, 2, 2 ), substr( $jobclose, 0, 2 ), substr( $jobclose, 4, 4 ) ) ) {
+					?>
+					<div class=info>
+						The date that you entered was incorrect. <a href="#" onClick="history.go(-1);">Click here</a> to go back and change it.
+					</div>
+					<?
+					exit;
+				}
+			}
+		}
+
+		$string = "";
+		$string2 = "";
+		
+		$t_masterclose = false;
+		$masterclose = -1;
+		
+		for( $i=0; $i<sizeof( $jc ); $i++ ) {
+			if( $jc[$i]%10 == 0 )	//Trying to close the master file, need to do this one last
+				$masterclose = $i;
+			else {		//Close off everything else
+				ora_parse( $cursor, "SELECT count( jobcardserial ) FROM MOVE_JOBCARDITEMS WHERE jobcardserial=$jc[$i] AND statusengineer='Z'" );
+				ora_exec( $cursor );
+				$items = ora_getColumn( $cursor, 0 );
+				
+				if( $items>0 ) { //There are incomplete items, so we can't close it
+					$string .= "<a href=\"viewjobcard.phtml?stage=0&jobcardserial=$jc[$i]\">MOVE$jc[$i]</a> (<b>$items</b> open items)<br>";
+				} else {
+					$myuname=getenv("REMOTE_USER");
+
+					ora_parse( $cursor, "UPDATE MOVE_JOBS SET completed='Y', jobclosewho='$myuname', jobclosedate=to_date( '$tempclose', 'DDMMYYYY' ) WHERE jobcardserial=$jc[$i]" );
+			    	if( !ora_exec( $cursor ) )
+	    				showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not close job card" );
+				else {
+	   		             check_hang($jc[$i]);
+				}
+	    			
+	    			//event( $jc[$i], 2 );
+	    			$string2 .= "<b>MOVE$jc[$i] was closed</b><br>";
+				}
+			}
+		}
+		
+		if( $masterclose>=0 ) {	//Now only try close the master job card
+			$close = false;
+			
+			ora_parse( $cursor, "SELECT completed, jobcardserial FROM MOVE_JOBS WHERE jobcardserial>$jc[$masterclose] AND jobcardserial<$jc[$masterclose]+10" );
+			ora_exec( $cursor );
+			while( ora_fetch( $cursor ) ) {
+				if( ora_getColumn( $cursor, 0 )=="N" )
+					$close = true;
+			}
+	
+			if( $close ) {
+				$opencards = "";
+				
+				ora_parse( $cursor, "SELECT jobcardserial FROM MOVE_JOBS WHERE jobcardserial>$jc[$masterclose] AND jobcardserial<$jc[$masterclose]+10" );
+				ora_exec( $cursor );
+				while( ora_fetch( $cursor ) ) {
+					$temp = ora_getColumn( $cursor, 0 );
+					$opencards .= "<a href=\"viewjobcard.phtml?stage=0&jobcardserial=$temp\">MOVE$temp</a><br>";
+				}
+				?>
+				<div class="info">
+					You need to close off the following job cards before you can close this one (MOVE<?=$jc[$masterclose]?>)<br><br>
+					<?=$opencards?>
+				</div>
+				<br><br>
+				<?
+			}
+			else {
+				ora_parse( $cursor, "SELECT  COUNT( statusengineer ) FROM MOVE_JOBCARDITEMS WHERE jobcardserial=$jc[$masterclose] AND statusengineer='Z'" );
+				ora_exec( $cursor );
+				if( ora_getColumn( $cursor, 0 ) != 0 ) {
+					?>
+					<div class="info">
+						There are still open items on the master job card. <a href="viewjobcard.phtml?stage=0&jobcardserial=<?=$jc[$masterclose]?>">Click here</a> to complete them
+					</div>
+					<br>
+					<?
+				} else {
+					$myuname=getenv("REMOTE_USER");
+
+					ora_parse( $cursor, "UPDATE MOVE_JOBS SET completed='Y', jobclosewho='$myuname',  jobclosedate=to_date( '$jobclose', 'DDMMYYYY' ) WHERE jobcardserial=$jc[$masterclose]" );
+				    	if( !ora_exec( $cursor ) )
+		    				showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not close job card" );
+		    			else { 	
+						print "<b>MOVE$jc[$masterclose] was closed</b><br><br>";
+						$t_masterclose = true;
+						//event( $jc[$masterclose], 2 );
+				                check_hang($jc[$masterclose]);
+					}
+				}
+			}
+		}
+		
+		if( $string2!="" ) { //Some job cards were completed
+			?>
+			The following job cards were completed<br><br>
+			<?
+			print $string2 . "<br>";
+		}
+		if( $string!="" ) { //Some job cards could not be completed
+			?>
+			<div class="info">
+				The following job cards could not be completed (You can click on the job card number to complete the items)<br><br>
+				<?=$string?>
+			</div>
+			<?
+		}
+		
+		if( $t_masterclose ) {
+			?>
+		   	<form name="temp" method="post" action="managestock.phtml"><input type=hidden name=stage value=120><input type=hidden name=type value='J'><input type=hidden name=extra value='MOVE<?=$jc[$masterclose]?>'><input type=submit value='Add Parts to This Job Card'></form>
+		   	<form name="temp" method="post" action="checkjobcard.phtml"><input type="hidden" name="stage" value="0"><input type=submit value='Back To All Jobcards'></form>
+			<?
+		}
+	} elseif( $stage==63 ) {
+			if ($bdclass!="" && is_numeric($jobcardserial)) {
+				$bdclass=str_replace("'","",$bdclass);
+				ora_parse($cursor,"update move_jobs set breakdown_category='$bdclass' where jobcardserial=$jobcardserial");
+				ora_Exec($cursor);
+			}
+
+		if (!is_numeric($jobcardserial)) {
+			echo "Bad jobcard number";
+			exit;
+		}
+
+		ora_parse($cursor,"select unitserial from move_jobs where jobcardserial=$jobcardserial and type='1'");
+		ora_Exec($cursor);
+		if (ora_Fetch($cursor)) {
+			$findlastops = getdata($cursor,0);
+                        $findlastops_exclude=$jobcardserial;
+                        require_once("show_last_ops.phtml");
+
+
+			
+		}
+	
+		//First we check if all the jobcards have no items on them
+		$noitems = 0;
+		
+		for( $i=0; $i<10; $i++ ) {
+			$tjs = $jobcardserial/10;
+			$test = $tjs . $i;
+			
+			ora_parse( $cursor, "SELECT  COUNT( statusengineer ) FROM MOVE_JOBCARDITEMS WHERE jobcardserial=$test AND statusengineer='Z' "  );
+			ora_exec( $cursor );
+			$noitems += ora_getColumn( $cursor, 0 );
+		}
+		
+		if( $noitems>0 ) {	//There are still open items
+			?> <div class=info> There are still <b><?=$noitems?></b> open items. <a href="viewjobcard.phtml?jobcardserial=<?=$jobcardserial?>">Click here</a>
+			to close them </div>
+			<?
+			exit;
+		}
+
+                ora_parse($cursor,"select breakdown, breakdown_category,original_type from move_jobs where jobcardserial=$jobcardserial and breakdown='Y'");
+                ora_exec($cursor);
+                if (ora_fetch($cursor)) {
+			$brcat=getdata($cursor,1);
+			$original_type=getdata($cursor,2);
+			if ($original_type=="O")
+				echo "<b>THIS JOBCARD CAN ONLY BE CLOSED BY A REGIONAL TECH MANAGER</b><br>";
+			$prwarning="";
+			if ($brcat == "" )   {
+				$prwarning = "<font color=red size=+2>You must first select breakdown classification</font><br>";
+				echo $prwarning;
+				$block_close = true;
+			}
+			echo "<form method=post action=newjobcard.phtml?stage=63&jobcardserial=$jobcardserial>";
+			echo "Select Breakdown Classification: <select onchange=\"document.getElementById('savebutton').style.background='lightpink';\" name=bdclass><option value=''>Please Select</option>";
+			ora_parse($cursor,"select name from stk_categories order by name");
+			ora_exec($cursor);
+			while (ora_Fetch($cursor)) {
+			  $c=getdata($cursor,0);
+			  if (trim($c)!="") {	
+				echo "<option";
+				if ($c == $brcat)
+					echo " SELECTED";
+				echo ">$c</option>";
+			  }
+
+			}	
+			echo "</select> <input type=submit id=savebutton value=Save>";
+			echo "</form>";
+				
+				
+                        ora_parse($cursor,"select 'x' from move_jobs_part_requests where jobcardserial=$jobcardserial");
+                        ora_exec($cursor);
+                        if (!ora_fetch($cursor)) {
+                                $prwarning .= "<font color=red size=+2>WARNING!  No PARTS REQUESTS for this BREAKDOWN jobcard!  <b>Have you remembered to log call-outs?</b></font><bR>";
+                        }
+			echo $prwarning;
+
+                }
+
+		// report on parts used
+
+		echo "<b>Parts Used:</b>";
+		ora_parse($cursor,"select A.ipartno, B.track, A.when, A.who, A.quantity, C.description FROM stk_movement A left join stk_parts C on A.ipartno=C.serial  left join stk_serialass B ON A.iserial=B.serial WHERE lcode=4 AND location='$jobcardserial'");
+		ora_exec($cursor);
+		echo "<table><tr class=head><td>Part No</td><td>Part Desc</td><td>Serial/ICG</td><td>Date</td><Td>Who</td><td>Quantity</td></tr>";
+		while (ora_fetch_into( $cursor, $data)) {
+			echo "<tr class=cell><td>M$data[0]</td><td><font size=2>$data[5]</td><td>$data[1]</td><Td>$data[2]</td><td>$data[3]</td><td align=right>$data[4]</td></tr>";
+			unset($data);
+		}
+		echo "</table>";
+
+		if ($original_type=="O")
+			if (!AllowedFlag("REGIONAL_TECH") ) 
+			{
+				echo "<font color=red>Only regional Tech managers can close this job card</font>";
+				exit;
+			
+			}
+
+		?>
+		<form action='newjobcard.phtml' method=post>
+		<input type="hidden" name="stage" value=64>
+		<input type="hidden" name="jobcardserial" value="<?=$jobcardserial?>">
+		<table width=75%>
+<?php /*
+		<tr class=title><td>Date the job card was finished</td></tr>
+		<tr class=cell>
+			<td>
+				<input type="text" name="jobclosea" size=3 maxlength=2>
+				<input type="text" name="jobcloseb" size=8 maxlength=6 value="< ?=date("mY")? >">
+			</tr>
+		</tr>
+*/
+?>
+		</table>
+<?   if ($block_close) 
+		exit;
+?>
+		<br>
+		<input type=submit value="Close Job">
+		<? echo $prwarning; ?>
+		</form>
+		<script language="JavaScript"> try {document.forms[0].elements[2].focus();} catch (error) { console.log(error); }  </script>
+		<?
+	}
+	elseif( $stage==64 ) {
+/*		$jobclose = $jobclosea . $jobcloseb;
+
+		if (!is_numeric($jobcardserial)) {
+			echo "Error!  No Jobcard number given<BR>";
+			exit;
+		}
+
+		if( !checkdate( substr( $jobclose, 2, 2 ), substr( $jobclose, 0, 2 ), substr( $jobclose, 4, 4 ) ) ) {
+			?>
+			<div class=info>
+				The date that you entered was incorrect. <a href="#" onClick="history.go(-1);">Click here</a> to go back and change it.
+			</div>
+			<?
+			exit;
+		}
+*/
+
+		//Check again if all the jobcards have no items on them
+		$noitems = 0;
+		
+		for( $i=0; $i<10; $i++ ) {
+			$tjs = $jobcardserial/10;
+			$test = $tjs . $i;
+			
+			ora_parse( $cursor, "SELECT COUNT( statusengineer ) FROM MOVE_JOBCARDITEMS WHERE jobcardserial=$test AND statusengineer='Z'" );
+			ora_exec( $cursor );
+			$noitems += ora_getColumn( $cursor, 0 );
+		}
+		
+		if( $noitems>0 ) {	//There are still open items
+			?> <div class=info> There are still <b><?=$noitems?></b> open items. <a href="viewjobcard.phtml?jobcardserial=<?=$jobcardserial?>">Click here</a>
+			to close them </div>
+			<?
+			exit;
+		}
+		
+		$allcorrect = true;
+
+		
+		$now=date("YmdHis");
+		for( $i=1; $i<10; $i++ ) {
+			$tjs = $jobcardserial/10;
+			$test = $tjs . $i;
+			
+			$myuname=getenv("REMOTE_USER");
+
+			$qry  = "UPDATE MOVE_JOBS SET jobclosedate=to_date( '$now', 'YYYYMMDDHH24MISS' ), jobclosewho='$myuname', completed='Y' WHERE jobcardserial=$test";
+			if( !ora_parse( $cursor, $qry ) ) $allcorrect = false;
+			if( !ora_exec( $cursor ) ) 
+				$allcorrect = false;
+			else {
+				check_hang($test);
+			}
+		}
+		
+		if( $allcorrect ) {
+			$myuname=getenv("REMOTE_USER");
+
+			if( !ora_parse( $cursor, "UPDATE MOVE_JOBS SET jobclosewho='$myuname', jobclosedate=to_date( '$now', 'YYYYMMDDHH24MISS' ), completed='Y' WHERE jobcardserial=$jobcardserial" ) ) $allcorrect = false;
+			if( !ora_exec( $cursor ) ) $allcorrect = false;
+			else { 
+				$logs[]="Closed jobcard $jobcardserial";
+                                check_hang($jobcardserial);
+
+			}
+
+			ora_parse($cursor,"select unitserial, type from move_jobs where jobcardserial=$jobcardserial");
+                ora_exec($cursor);
+		ora_commit($conn);
+                if (ora_fetch($cursor)) {
+                        if (getdata($cursor,1)==1) {
+                                $vs=getdata($cursor,0);
+                                ora_parse($cursor,"select code from vehicles where serial=$vs");
+                                orA_exec($cursor);
+                                if (ora_fetch($cursor)) {
+                                        $vcode=getdata($cursor,0);
+                                        if (substr($vcode,0,3)=="APM") {
+							 echo "Sending Costing Email  <!input type=button value='See detail' onclick=\"document.getElementById('costing$jobcardserial').style.display='visible';\"><br><div id=costing$jobcardserial style='display:none'>";
+
+                                                        system("/usr/local/bin/curl  -u dummy:ydum4  http://127.0.0.1//move/jobcard_daily_auth.phtml?stage=4\&subjob_more=true\&jobserial=$jobcardserial\&apm_mail=Y\&docsv=1 > /tmp/jcc.1 2> /tmp/jcc.2");
+                                                        echo "</div>";
+                                        } else {
+
+                                                system("/usr/local/bin/curl  -u dummy:ydum4  http://127.0.0.1/movereport.phtml?mreportcode=jc\&stage=4\&subjob_more=true\&jobserial=$jobcardserial\&apm_mail=N\&docsv=1 >> /tmp/closedtlog ");
+						system("LYNX_TEMP_SPACE=/tmp ; export LYNX_TEMP_SPACE ;  TERM=vt100 ; export TERM ; /usr/bin/lynx -dump -auth dummy:ydum4  http://192.168.10.4/booking/movereport.phtml?mreportcode=jc\&stage=4\&subjob_more=true\&jobserial=$jobcardserial >> /tmp/costlog");
+
+
+                                        }
+
+                                }
+
+                        }
+
+                }
+
+
+		}
+		
+		if( !$allcorrect ) {
+			ora_rollback( $conn );
+			?> <div class=info>An error has occurred. Try <a href="viewjobcard.phtml?jobcardserial=<?=$jobcardserial?>">closing</a> each job card individually</div> <?
+			exit;
+		} elseif (is_array($logs)) {
+			reset( $logs);
+			while( list( $key, $val) = each( $logs))
+				translog( $val);
+
+
+		}
+
+	   	$tjs = $jobcardserial/10;
+	   	$tjs .= "0";
+	   	?>
+	   	<b>Your jobcards were closed</b><br><br>
+		<form name="temp" method="post" action="managestock.phtml"><input type=hidden name=stage value=120><input type=hidden name=type value='J'><input type=hidden name=extra value='MOVE<?=$tjs?>'><input type=submit value='Add Parts to This Job Card'></form>
+	   	<form name="temp" method="post" action="checkjobcard.phtml"><input type="hidden" name="stage" value="0"><input type=submit value='Back To All Jobcards'></form>
+		<?
+	}
+	elseif( $stage==70 ) {		//Adding parts to a jobcard
+		print "Oops";
+		exit;
+		
+		$jobcardserial = (int) ($jobcardserial/10);
+		$jobcardserial *= 10;
+		
+		if( $jobcardserial%10!=0 ) {
+			print "Not a master jobcard";
+			exit;
+		}
+		
+		if( $only!="Y" ) $only = "N";
+
+		print "<form method=post><input type=hidden name=stage value=70>";
+		print "<input type=hidden name=jobcardserial value=$jobcardserial>";
+		print "<table cellspacing=1 width=80%>";
+		print "<tr class=title><td colspan=2>Add Stock to A Jobcard: MOVE$jobcardserial</td></tr>";
+		print "<tr class=cell>";
+		print "<td>IC Part No <font color=red>I</font></td><td><input type=text name=partno size=10></td>";
+		print "</tr>";
+		print "<tr class=cell>";
+		print "<td><b>OR</b> Description</td><td><input type=text name=desc size=30></td>";
+		print "</tr>";
+		print "<tr class=cell>";
+		print "<td>Bin Location</td>";
+		print "<td><input type=text name=bin size=10></td>";
+		print "</tr>";
+		print "<tr class=cell>";
+		print "<td>Search in any depot for stock?</td>";
+		print "<td><input type=checkbox name=only value='Y'"; if( $only=="Y" ) print " checked"; print "></td>";
+		print "</tr>";
+		print "<tr class=cell>";
+		print "<td><input type=submit value='Search'></td></form>";
+		print "<form method=post action='checkjobcard.phtml'><td bgcolor=gold><input type=hidden name=stage value=0><input type=submit value='Back to Jobcards'></td></form>";
+		print "</tr></table>";
+		
+		$partno = trim( $partno );
+		$desc = trim( strtoupper( $desc ) );
+		$bin = trim( $bin );
+		
+		if( $bin!="" )
+			if( !getBin( $bin, $tloc, $depot, false ) ) {
+				print "That bin location does not exist [$bin]";
+			}
+		
+		if( $partno=="" && $desc=="" && $bin=="" )
+			exit;
+			
+		$qry  = "SELECT A.i_partno, A.shelf, A.scol, A.quantity, B.description, A.depot, B.unit, C.depot FROM STK A, STK_PARTS B, MOVE_JOBS C ";
+		$qry .= "WHERE C.jobcardserial=$jobcardserial AND A.i_partno=B.serial AND B.serialize='N' ";
+		
+		if( $partno!="" ) $qry .= "AND A.i_partno=$partno ";
+		if( $desc!="" ) $qry .= "AND B.description LIKE '%$desc%' ";
+		if( $bin!="" ) $qry .= "AND A.shelf='$tloc[0]' AND A.scol='$tloc[1]' ";
+		if( $only!="Y" ) $qry .= "AND A.depot=C.depot ";
+		
+		$qry .= "ORDER BY A.i_partno";
+		
+		//print $qry;
+		
+		$i=0;
+		$flag = true;
+		print "<form method=post><input type=hidden name=stage value=71>";
+		print "<input type=submit value='Allocate to Jobcard'><br><br>";
+		print "<input type=hidden name=jobcardserial value=$jobcardserial>";
+		
+		print "<table width=100%>";
+		print "<tr class=title><td>IC Part No</td><td>Description</td><td>Bin</td><td>Quantity</td><td>Book Out</td></tr>";
+		
+		ora_parse( $cursor, $qry );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			$serial = ora_getColumn( $cursor, 0 );
+			$shelf = chop( ora_getColumn( $cursor, 1 ) );
+			$scol = ora_getColumn( $cursor, 2 );
+			$quantity = ora_getColumn( $cursor, 3 );
+			$desc = ora_getColumn( $cursor, 4 );
+			$depot = ora_getColumn( $cursor, 5 );
+			$unit = ora_getColumn( $cursor, 6 );
+			$jdepot = ora_getColumn( $cursor, 7 );
+			
+			print "<input type=hidden name=ipartno[$i] value='$serial'>";
+			print "<input type=hidden name=location[$i] value='$depot,$shelf,$scol,$quantity'>";
+			( $flag ) ? print "<tr class=cell>" : print "<tr class=altcell>";
+			print "<td>" . showI( $serial ) . "</td>";
+			print "<td>$desc</td>";
+			
+			if( $jdepot==$depot )
+				print "<td bgcolor=lightgreen>$depot, $shelf$scol</td>";
+			else print "<td>$depot, $shelf$scol</td>";
+			
+			print "<td>$quantity ";
+			if( $unit=="M" ) print "<font color=red><i>kg</i>/<i>l</i></font>";
+			print "</td>";
+			print "<td><input type=text name=book[$i] size=5 value='0'></td>";
+			print "</tr>";
+			
+			$flag = !$flag;
+			$i++;
+		}
+		
+		print "<input type=hidden name=count value=$i>";
+		print "</table><br>";
+		print "<input type=submit value='Allocate to Jobcard'>";
+		print "</form>";
+	}
+	elseif( $stage==71 ) {
+		print "Oops";
+		exit;
+
+		ora_commitoff( $conn );
+		$allcorrect = true;
+		
+		for( $i=0; $i<$count; $i++ ) {
+			if( $book[$i]==0 ) continue;
+			
+			ora_parse( $cursor, "SELECT unit FROM STK_PARTS B WHERE serial='$ipartno[$i]'" );
+			ora_exec( $cursor );
+			if( ora_getColumn( $cursor, 0 )!="M" ) $book[$i] = intval( $book[$i] );
+			
+			$loc = explode( ",", $location[$i] );
+			$loc[0] = chop( $loc[0] ); $loc[1] = chop( $loc[1] ); $loc[2] = chop( $loc[2] ); $loc[3] = chop( $loc[3] );
+			$loc[3] = (int) $loc[3];
+			//$book[$i] = (int) $book[$i];
+			
+			/*
+			if( $book[$i]>$loc[3] ) print "<font color=red><b>*** SKIPPING, not enough in stock. I$ipartno[$i], want to move $book[$i], but $loc[3] in stock</b></font><br>";
+			else {
+				if( !removeStockBin( $ipartno[$i], $loc[0], $loc[1], $loc[2], $book[$i] ) ) $allcorrect = false;
+				if( !moveStock2(  $ipartno[$i], O_STOCK, "$loc[0],$loc[1],$loc[2]", D_JOBCARD, $jobcardserial, 1, $book[$i] ) ) $allcorrect = false;
+				
+				print "Moving <b>$book[$i]</b> of <b>I$ipartno[$i]</b> to <b>MOVE$jobcardserial</b> from depot <b>$loc[0]</b>";
+				print ": <b>$loc[1]$loc[2]</b><br>";
+			}
+			*/
+			if( $book[$i]>$loc[3] ) print "<font color=red><b>*****Stock was moved even though there wasn't enough in stock. I$ipartno[$i], want to move $book[$i], $loc[3] in stock</b></font><br>";
+
+			if( !removeStockBin( $ipartno[$i], $loc[0], $loc[1], $loc[2], $book[$i] ) ) $allcorrect = false;
+			if( !moveStock2(  $ipartno[$i], O_STOCK, "$loc[0],$loc[1],$loc[2]", D_JOBCARD, $jobcardserial, 1, $book[$i] ) ) $allcorrect = false;
+				
+			print "Moving <b>$book[$i]</b> of <b>I$ipartno[$i]</b> to <b>MOVE$jobcardserial</b> from depot <b>$loc[0]</b>";
+			print ": <b>$loc[1]$loc[2]</b><br>";
+		}
+		
+		print "<hr><font color=red><b>";
+		( $allcorrect ) ? print "OKAY" : print "NOT OKAY";
+		print "</b></font><hr>";
+		
+		if( !$allcorrect )
+			ora_rollback( $conn );
+		else ora_commit( $conn );
+		
+		?>
+		<form method=post><input type=hidden name=stage value=70><input type=hidden name=jobcardserial value=<?=$jobcardserial?>><input type=submit value='Book More Parts Out'></form>
+		<?
+	}
+	else {
+		showError( __FILE__, __LINE__, "NA", "No...." );
+	}
+	?>
+	</body>
+</html>

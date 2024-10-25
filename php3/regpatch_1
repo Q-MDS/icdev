@@ -1,0 +1,66 @@
+*** keep/register.inc	2023-10-03 11:19:34.830629854 +0200
+--- ./register.inc	2023-10-03 11:23:41.709629854 +0200
+***************
+*** 48,65 ****
+    {
+          session_start();
+          $ic_session_started = true;
+    }
+  
+!   if ($_GET["ic_logout"]=="Y") {
+  	session_unset();
+  	session_destroy();
+  	session_start();
+  	$the_current_url = str_replace("ic_logout=Y","ic_logout=DONE", $the_current_url);
+  
+  
+! 	if ($_SERVER["HTTP_X_FORWARDED_HOST"]== "secure.intercape.co.za")
+                  {
+                          $ic_orig_url="/testsys".$the_current_url;
+  
+                  }
+                  else
+--- 48,65 ----
+    {
+          session_start();
+          $ic_session_started = true;
+    }
+  
+!   if (isset($_GET["ic_logout"]) && $_GET["ic_logout"]=="Y") {
+  	session_unset();
+  	session_destroy();
+  	session_start();
+  	$the_current_url = str_replace("ic_logout=Y","ic_logout=DONE", $the_current_url);
+  
+  
+! 	if (isset($_SERVER["HTTP_X_FORWARDED_HOST"]) && $_SERVER["HTTP_X_FORWARDED_HOST"]== "secure.intercape.co.za")
+                  {
+                          $ic_orig_url="/testsys".$the_current_url;
+  
+                  }
+                  else
+***************
+*** 83,93 ****
+  	$ic_session_user->username = chop($ic_session_user->username);
+  	putenv("REMOTE_USER=".$ic_session_user->username);
+  	$REMOTE_USER = $ic_session_user->username;
+  
+    } else {
+! 		if ($_SERVER["HTTP_X_FORWARDED_HOST"]== "secure.intercape.co.za") 
+  		{
+  			$ic_orig_url=urlencode("/testsys".$the_current_url);
+  
+  		}
+  		else
+--- 83,93 ----
+  	$ic_session_user->username = chop($ic_session_user->username);
+  	putenv("REMOTE_USER=".$ic_session_user->username);
+  	$REMOTE_USER = $ic_session_user->username;
+  
+    } else {
+! 		if (isset($_SERVER["HTTP_X_FORWARDED_HOST"]) && $_SERVER["HTTP_X_FORWARDED_HOST"]== "secure.intercape.co.za") 
+  		{
+  			$ic_orig_url=urlencode("/testsys".$the_current_url);
+  
+  		}
+  		else

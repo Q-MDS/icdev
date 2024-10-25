@@ -1,0 +1,50 @@
+
+function afrikdate($tdate,$year=0,$short=0)
+{
+
+$afrikd[0]="Son";
+$afrikd[1]="Maan";
+$afrikd[2]="Dins";
+$afrikd[3]="Woens";
+$afrikd[4]="Dond";
+$afrikd[5]="Vry";
+$afrikd[6]="Sat";
+
+$afrikm[1]="Jan";
+$afrikm[2]="Feb";
+$afrikm[3]="Maart";
+$afrikm[4]="Apr";
+$afrikm[5]="Mei";
+$afrikm[6]="Jun";
+$afrikm[7]="Jul";
+$afrikm[8]="Aug";
+$afrikm[9]="Sep";
+$afrikm[10]="Okt";
+$afrikm[11]="Nov";
+$afrikm[12]="Des";
+
+
+ 
+   $mdate=vgetdate($tdate);
+   $dow=date("w",$mdate);
+   $mon=date("n",$mdate);
+//   $mdate=$tdate%100;
+//   $adate=$afrikd[$dow]." $mdate ".$afrikm[$mon];
+    if ($short==1):
+	   if ($year==1):
+		$adate=date("DdM",$mdate);
+	   else:
+		$adate=date("Dd",$mdate);
+	   endif;
+	else:
+	if ($year==0):
+    $adate=date("D d M",$mdate);
+	else:
+	   $adate=date("D d M Y",$mdate);
+	endif;
+	endif;
+
+   return $adate;
+}
+
+

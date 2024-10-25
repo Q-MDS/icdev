@@ -1,0 +1,21 @@
+<html>
+	<head><title>Test Error</title></head>
+	
+	<body>
+		<? require_once ( "menu.inc" ); ?>
+		<?
+		require_once ("error.inc");
+		require_once("../php3/oracle.inc");
+		
+		if( !open_oracle() )
+    		exit;
+    		
+		if( !ora_parse( $cursor, "SELECT" ) )
+			showError( __FILE__, __LINE__, "NA", "This is an example test message" );
+			
+		if( !ora_exec( $cursor ) )
+			showError( __FILE__, __LINE__, "NA", "This is an example test message" );
+			
+		?>
+	</body>
+</html>

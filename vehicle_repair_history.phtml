@@ -1,0 +1,239 @@
+<?php require_once("stock.inc"); ?>
+
+<?php 
+// DISPLAY ALL THE STOCK ITEMS WITH A OPTION TO SET MAXIMUM AND MINIMUM STOCK LEVELS FOR A PARTICULAR DEPOT
+
+
+
+// ----------------------------------------------------------------------------------------------------------------------
+// ADD MOVE MENU TO HEADER
+// ----------------------------------------------------------------------------------------------------------------------
+
+   require_once ( "menu.inc" );
+
+
+// ----------------------------------------------------------------------------------------------------------------------
+// SECURITY HEADER
+// ----------------------------------------------------------------------------------------------------------------------
+
+        require_once("../php3/oracle.inc");        
+        require_once("../php3/colors.inc");
+        require_once("../php3/logs.inc");
+        require_once("../php3/misc.inc");
+        require_once("../php3/sec.inc");        
+        
+        if (!open_oracle()) { Exit; };
+        //if (!AllowedAccess("STK_MANAGER")) { Exit; };
+        get_colors(getenv("REMOTE_USER"));
+
+
+?>
+
+<html>
+
+	<head>
+		<meta http-equiv="content-type" content="text/html;charset=iso-8859-1">
+		<meta name="generator" content="Adobe GoLive 6">
+		<title>Vehicle Faults History</title>
+		<LINK href="move_style.css" type=text/css rel=stylesheet></link>
+	</head>
+
+	<body bgcolor="#ffffff" class='tyre'>
+
+		<form action="vehicle_repair_history.phtml?stage=2" method="post" name="Search_Form">
+
+
+                Select a Vehicle: <select name='coaches_list'>
+<?php
+                // List all the active vehicles
+    	        ora_parse( $cursor, "SELECT code, reg_no, serial FROM VEHICLES WHERE is_current='Y' ORDER BY code" );
+    	        ora_exec( $cursor );
+    	
+    	        while (ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)){ 
+        
+                        echo "<option value='".$data['SERIAL']."'";
+                        if ($coaches_list == $data['SERIAL']){echo " selected"; $vehicle_selected = $data['CODE'];}
+                        echo ">".$data['CODE']." -> ".$data['REG_NO'];
+                        echo "</option>"; 
+        
+                }
+
+		echo "</select>";
+
+		if ($coaches_list=="") {
+			$remove="Y";
+			$sortby="C";
+			$nodefer="Y";
+
+		}
+		
+		if ($datefrom=="")
+		{
+			$datefrom=date("Ymd",time()-92*86400);
+			$dateto=date("Ymd");
+			$warning= " <font style='background: yellow' color=red>THIS REPORT IS BASED ON 180 DAYS - Use the date filters above to change this</font><hR>";
+		}
+                
+                ?>
+
+                <P>
+                Date (YYYYMMDD) <input type='text' value='<?php if ($datefrom != ""){echo $datefrom;}else {echo date('Ymd');} ?>' name='datefrom' size='8' maxlength='8'> to <input type='text' value='<?php if ($dateto != ""){echo $dateto;}else {echo date('Ymd');} ?>' name='dateto' size='8' maxlength='8'> <p>
+                Remove Standard 'Do Items' from List <input type='checkbox' name='remove' value='Y' <?php if ($remove == "Y"){echo "checked";} ?>><p>
+		Remove Deferred Items from List <input type='checkbox' name='nodefer' value='Y' <?php if ($nodefer == "Y"){echo "checked";} ?>><p>
+
+		Sort by <select name=sortby><option value=D>Date, then fault class<option value=C<? if ($sortby=="C") echo " SELECTED"; ?>>Fault Class, then date</select><p>
+                <input type='submit' value='Search' name="subsearch">
+		</form>
+                <hr>
+
+<?php 
+
+if ($stage == "2"){
+        
+
+        // ----------------------------------------------------------------------------------------------------------------------
+        // LIST ALL THE REPAIRS DONE FOR THE SELECTED VEHICLE
+        // ----------------------------------------------------------------------------------------------------------------------   
+
+        ?>
+        
+        <br>
+        <?php if ($vehicle_selected != ""){echo "Vehicle: <B><a href=managecoachinfo.phtml?stage=51&ser=$coaches_list>$vehicle_selected</a></b>";} 
+
+	echo $warning;
+	?>
+	<!--
+	- Date: 12-09-2024
+	- Desc: Add jobcard comments to report. Display if checkbox is ticked
+	- 
+	- START
+	-->
+	<table border='0' cellpadding='3' cellspacing='1' width='1200' bgcolor='black'>
+		<tr bgcolor='#BBCFE9'>
+			<td width='140'><b>DATE</b></td>
+			<td width='200'><b>PERSON</b></td>
+			<td><b>COMMENT</b></td>
+		</tr>
+		<?php
+		// $coaches_list = 3405;
+		$rcur = ora_open($conn);
+		$sql = "
+		SELECT A.* 
+		FROM move_jobcards_comments A 
+		INNER JOIN move_jobs B 
+		ON A.jobcardserial = B.jobcardserial 
+		WHERE A.create_date >= 1724827730 
+		AND A.create_date <= 1725827730 
+		AND B.unitserial = $coaches_list 
+		ORDER BY A.create_date DESC
+		";
+
+		ora_parse($rcur, $sql);
+		ora_exec($rcur);
+
+		while (ora_fetch_into($rcur, $data, ORA_FETCHINTO_ASSOC))
+		{ 
+			$create_date = date('Y-m-d H:i:s', $data['CREATE_DATE']);
+			echo "<tr bgcolor='#ffffff'>";
+			echo "<td>" . $create_date . "</td>";
+			echo "<td>" . htmlspecialchars($data['PERSON']) . "</td>";
+			echo "<td>" . htmlspecialchars($data['COMMENT_DESC']) . "</td>";
+			echo "</tr>";
+
+		} 
+		unset ($data);
+		ora_close($rcur);
+		?>
+	</table>
+	<!--
+	END
+	-->
+
+	<br/><br/>
+
+	<form action="stock_levels.phtml?stage=2" method="post" name="Stock_Levels">
+	
+	<table border='0' cellpadding='3' cellspacing='1' width='1200' bgcolor='black'>
+	
+	<tr bgcolor='#BBCFE9'><td width='80' bgcolor='#FEB0B0'><b>REPORTED</b></td><td nowrap><b>FAULT CLASS</b></td><td width='370'><b>DESCRIPTION</b></td><td><b>BY</b></TD><td bgcolor='lightgreen' align='center'><b>COMPLETED</b></TD><td width='300'><b>MECHANIC NOTES</b></TD><td><b>MINS</B></TD></TR>
+<?php
+
+// SAVE FAULT CLASS TO ARRAY TO USE LATER
+
+        $query = "SELECT * FROM move_faultclass";
+
+        //echo $query;
+	$reply = ora_parse($cursor, $query);  ora_exec($cursor);
+
+        while (ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)){ 
+                $class_value = $data['SERIAL'];
+                $class_description = $data['DESCRIPTION'];
+                $fault_class[$class_value][0] = $class_description;
+        
+        } 
+        unset ($data);
+        
+        // ----------------------------------------------------------
+        
+        $counter=0; $bgcolor="#E8E5E5";
+        $query = "SELECT distinct * FROM move_jobcarditems WHERE unitserial = '".$coaches_list."' AND reporteddate >= to_date('".$datefrom."','YYYYMMDD') AND reporteddate <= to_date('".$dateto."','YYYYMMDD') ORDER BY ";
+
+	if ($sortby=="C")
+		$query.="faultclass, reporteddate, itemserial";
+		else $query.="reporteddate ,faultclass, itemserial";
+//echo $query;
+        //echo $query;
+	$reply = ora_parse($cursor, $query);  ora_exec($cursor);
+
+        while (ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)){ 
+
+                if ($bgcolor=='#E8E5E5'){$bgcolor="white";}else{$bgcolor="#E8E5E5";}
+                
+                        if (($remove == "Y" && (substr($data['FAULTDESC'],0,15) == "DO ITEMS AS PER" || $data['JOBCARDGENERAL']!="" || $data['FAULTDESC']=="Please do a tyre audit using new audit form" )      )|| ( $nodefer == "Y" && is_numeric($data['DEFERRED_TO']) )  ){}
+                        else{
+                                echo "<tr bgcolor='$bgcolor'>";
+                                echo "<td valign='top'>".$data['REPORTEDDATE']."</td>";
+                                echo "<td valign='top'>".$fault_class[$data['FAULTCLASS']][0]."</td>"; 
+                                echo "<td valign='top'>".ucfirst(strtolower($data['FAULTDESC']));
+				if (is_numeric($data['DEFERRED_TO']))
+					echo " <b>(Deferred)</b>";
+				echo "</td>";
+                                echo "<td valign='top'>".$data['REPORTEDWHO']."</td>";
+                                echo "<td valign='top'>".$data['COMPLETEDATE']."</td>";                        
+                                echo "<td valign='top'>".ucfirst(strtolower($data['MECHANICNOTES']))."</td>";  
+                                echo "<td  valign='top' align='center'>".$data['MINUTES']."</td>";                                                   
+                        
+                                // Display Fault Class
+                        
+                                echo "</tr>\n"; 
+                        }
+
+                unset($data);
+                
+                $counter++;
+        }			
+
+        echo "</table>";
+        
+        ?>
+
+               
+                </table>
+                <br><input type='submit' name='subbut' value='Update'><p>
+ <?php } ?>
+ 
+<?php 
+
+
+if ($stage == "20"){
+        
+        // CHECK WHICH STOCK IS SHORT IN EACH DEPOT
+        
+}        
+?>
+
+                <a href='manageindex.phtml'>Back to Main Menu</a>
+                </form>
+	</body>
+
+</html>

@@ -1,0 +1,104 @@
+Questions
+
+1. How is manger linked to vechiles? Is the manager linked to a depot and vechile is matched via depot?
+2. What if more than 1 issue is found?
+
+
+POA
+- screen with a list of vechiles for that manager
+  -- will need to see who is logged in: $REMOTE_USER = getenv(“REMOTE_USER”); and use with below sql to get vehicle list
+  *** VEHICLES TABLE: vehicle -> select serial, code from vehicles where is_current='Y' and schedule='Y' and class in ('o','c'); ***
+  -- WIll need run month for month so if 1st to 31st show same list if now it is the 2nd then a new batch of records must be created and status is all unchecked
+  --  list must be of vehicles currently in the depot
+  -- handy to show when came in, when leaving -> see what info is in table
+  *** FAULT TABLE: technical_faults_category
+- user picks one
+  -- new screen or modal/hide-show div
+  -- At top show vehicle details
+  -- show full checklist and the user 
+     -- have 2 options YES NO
+	 -- user can select multiple issues
+     -- save will as issues as per spec in document
+  -- The vehicle is removed from the list or is placed below in list called CHECKED VEHICLES
+     -- Here the date checked must show and the number of defaults
+	 -- nice to have will be a popup with the issues found - manager can followup on the issues
+
+
+Fault list include & other:
+- https://secure.intercape.co.za/move/newadhocitem.phtml?stage=1
+- getenv("REMOTE_USER");
+- include("pick_fault.phtml");
+- it looks like if you set $campaign = true  before including pick_fault, it wont pop up the textarea
+
+dontletmedown3
+
+
+TODO 22-10-2024
+1. Upload picture
+2. Save the page
+
+MANAGER CHECKLIST
+
+// PHP POA on index.PHP
+// POA
+/**!SECTION
+ * - will need a query to get all the fleet records where s_current = 'y', schedule = 'y' and class in ('o','c')
+ * - process each record to get serial
+ * - next we add the record to the vehicle_checklist on these conditions:
+ *   - if serial is in table AND work_date is not the same as today then update if found: update work_date, depot and class
+ *     - else 
+ *   - if serial is not in table then ADD with today as the work_date and add_date, checked is false, depot and class
+ * 
+ * - use inner join on page to get the other data
+ */
+
+
+ 
+<!-- 
+- WHEN THE MANAGER SELECTS VEHICLE CHECKLIST THEN DO THE MASTER TABLE CHACK AND COPY/ADD
+- CHILD TABLE HOLDS ALL BUSES AND HAS CHECKBOX, ADD_DATE, WORK_DATE, DEPOT, SERIAL
+- CONSTANT READING OF MASTER WILL BAICALLY ADD ALL RECORDS ON FIRST USE AND THEN ADD/REMOVE BUSSES AS WELL AS UPDATE THE DEPOT
+- MASTER TO CHILD SYNC: If iit is a new record add it, else check if the serila exists, if the date is newer set WORK_DATE to new date IF IF IF IF checked is false
+- WHEN USER SELECTS CHECKED WORK_DATA CHANGES AS WELL AS THE Check_by, date/time, check_faults, check_faults_fixed_by, oc_reason (check shit goes into the detail table)
+- CREATE A SUB/DETAILS TABLE FOR THE CHECKED RECORDS
+Controlling table structure
+- Need to get entrire fleet
+- Read from master vehicle table eg. 2000 records => s_current='Y' and schedule='Y' and class in ('o','c'); 
+- Add to a new table: id, serial, code, reg_no, make, model, depot, add_date, check_result, check_date/time, check_by, check_faults, check_faults_fixed_by o/c, oc_reason
+- when user set checked = true, we need to set next check date/time + 30 days; sql query: if today > work_date + 30 (or next check date) => see next line 
+    -- before I can set this flag to false IF IT IS FALSE A REASON MUST BE GIVEN - there must be a way for this record to be singled out and shown on the daskboard: After that given then the next check date can be set to 30
+	-- then check = false
+  - can only set the next-check_date + 30 if the class != o/c
+
+  --- When the user selects CHECKED then the work_date goes + 30 days
+
+- read from master table, get recs for depot, add to child table, if not there at all add and put ADDED_DATE - 14-10 AND WORK_DATE = 14-10. If next day then it will find record and update WORK_DATE to 15-11
+- the list shown will be based on WORK_DATE
+- 
+
+- POA
+- read all vehicles where is_current='Y' and class in ('o','c')
+
+-->
+
+// Get the fault id
+// Get the vc_id
+// Send to server
+/*
+$REMOTE_USER = getenv(“REMOTE_USER”); 
+INSERT INTO MOVE_JOBCARDITEMS ( itemserial, jobcardserial, unitserial, 
+reportedwho, reporteddate, faultclass, faultdesc, faultpicture, type, 
+faultvalid, statusengineer,reportcomments, fault_category ) VALUES( 
+MOVE_ITEMS.nextval, 0, '$vehicleserial', '$REMOTE_USER',CURRENT_TIMESTAMP, 
+14616, '$faultdescription', 'N', '1', 'N', 'Z', '', $fault ) 
+if there is a picture, set faultpicture to “Y” and upload the file to 
+/usr/local/www/pages/move/uploads/$itemserial 
+($faultdescription will be any text entered describing the issue,  $fault is the 
+tfc_id from technical_faults_category 
+*/
+
+
+
+
+
+  

@@ -1,0 +1,292 @@
+<? ob_start();
+
+
+// todo -  force subcategory on breakdown jobcards
+
+?><html>
+
+	<head><link type="text/css" rel="stylesheet" href="style.css"><title>JOBCARD EXPORT</title><head>
+	
+	<body>
+	<? require_once ( "menu.inc" ); ?>
+	<?
+    require_once("serial.inc");
+    require_once("error.inc");
+    require_once("stock.inc"); // this might not be needed
+    require_once("../php3/oracle.inc");
+    require_once("../php3/sec.inc");
+    require_once("../php3/misc.inc"); 
+
+    if( !open_oracle() )
+    	exit;
+
+	$jtype=array();
+
+	$jtype["S"]="Service";
+	$jtype["L"]="Normal Repairs";
+	$jtype["J"]="Major Repairs";
+	$jtype["N"]="Non-critical Repairs";
+	$jtype["C"]="Campaign";
+	$jtype["R"]="Refurbishment";
+	$jtype["B"]="Breakdown";
+	$jtype["U"]="Breakdown";
+	$jtype["A"]="Accident";
+	$jtype["I"]="Due to Misuse";
+
+	if( !AllowedAccess( "" ) )
+		exit;
+	ora_parse($cursor,"select serial, code, vehicle_end_date, class, schedule from vehicles order by code, vehicle_end_date");
+        ora_exec($cursor);
+	$vehicles=array();
+	$non_ic_vehicles=array();
+
+        while (ora_Fetch_into($cursor,$data)) {
+                        if ($data[2]!="")
+                                $vehicles[$data[0]] ="$data[1] (Deleted $data[2])";
+                        else
+                                $vehicles[$data[0]] = "$data[1] (Current)";
+                        if (substr($data[1],0,3)=="APM")
+                                $non_ic_vehicles[$data[1]]=true;
+                        if ( ($data[3]=="k" || $data[3]=="s") && $data[4]=="Y")
+                                $non_ic_vehicles[$data[1]]=true;
+                        if (substr($data[1],0,1) =="P")
+                                $non_ic_vehicles[$data[1]]=true;
+
+                        unset($data);
+        }
+
+
+	if ($output=="") {
+		
+		echo "<form method=get>";
+		echo "Select type: <input type=radio name=output value=L> Labour or <input type=radio name=output value=P> Parts<br>";
+		echo "Date range from: <input name=datefrom size=8 maxlength=8 value='$datefrom'> to <input name=dateto size=8 maxlength=8 value='$dateto'> <select name=datetype><option value='C'>Close Date<option value='O'>Open Date</select><Br>";
+		echo "Vehicle Type: <select name=vtype><option value=''>All";
+		ora_parse($cursor,"select serial, name, in_use from move_service_bustypes");
+		ora_Exec($cursor);
+		while (ora_Fetch_into($cursor,$data)) {
+                        echo "<option value='$data[0]'";
+                        if ($data[0]==$vtype)
+                                echo " SELECTED";
+                        echo ">$data[1]";
+                        if ($data[3]=="N")
+                                echo " (Deleted)";
+                        else
+                                echo " (Current)";
+                        unset($data);
+                }
+                echo "</selecT><br>";
+
+		echo "Vehicle: <select name=specificv><option value=''>All";
+		
+		echo makeselect2($vehicles, $specificv);
+		echo "</select><br>";
+		echo "Company: <select name=filter><option value=''>All<option value=IC";
+		if ($filter=="IC")
+			echo " SELECTED";
+		echo ">Intercape<option value=IFL";
+		if ($filter=="IFL")
+			echo " SELECTED";
+		echo ">Freightliner<option value=APM";
+		if ($filter=="APM")
+			echo " SELECTED";
+		echo ">APM<option value=P";
+		if ($filter=="P")
+			echo " SELECTED";
+		echo ">Pathfinder</select><br>";
+		echo "Part Category: <select name=partcat><option value=''>All";
+		ora_parse($cursor,"select name from stk_categories order by name");
+		ora_Exec($cursor);
+		while (ora_Fetch($cursor)) {
+			$cat=getdata($cursor,0);
+			if ($cat!="") {
+			  if ($cat==$partcat)
+				echo "<option SELECTED>$cat";
+			  else
+				echo "<option>$cat";
+			}
+		}
+		echo "</select><br>";
+		echo "Part Type: <select name=part_type><option value='A'>All<option value=S";
+		if ($part_type=="S")
+			echo " SELECTED";
+		echo ">Serialized only<option value=N";
+		if ($part_type=="N")
+			echo " SELECTED";
+		echo ">Non-Serialized only</select><br>";
+		echo "Specific Parts <textarea name=listparts  cols=50 rows=10></textarea><br>";		
+		echo "Display only (dont download) <input type=checkbox name=onlydisp value=Y";
+		if ($onlydisp=="Y")
+			echo " CHECKED";
+		echo "><br>";
+		echo "<input type=submit value=Go>";
+		echo "</form>";	
+		exit;
+	}
+/*       Job Card Open Date
+         Job Card Close Date
+         Depot
+         Fleet nr.
+         Kilometres noted on Job Card
+*/
+		
+	$filter=str_replace("'","",$filter);
+
+	$icfilter=false;
+	if ($filter=="IC") {
+		$filterx="";
+		$icfilter=true;
+	}
+	elseif ($filter=="IFL") {
+		$filterx=" and class in ('k','s') and schedule='Y' ";
+	}
+	elseif ($filter!="") {
+		$filterx=" and C.code like '$filter%'";
+	} else $filterx="";
+
+	if ($datefrom!="")
+	{
+		if ($datetype=="O")
+			$filterx.=" and B.jobopendate>=to_date('$datefrom"."000000','YYYYMMDDHH24MISS') ";
+		else
+			$filterx.=" and B.jobclosedate>=to_date('$datefrom"."000000','YYYYMMDDHH24MISS') ";
+	}
+	if ($dateto!="")
+        {
+                if ($datetype=="O")
+                        $filterx.=" and B.jobopendate<=to_date('$dateto"."235959','YYYYMMDDHH24MISS') ";
+                else
+                        $filterx.=" and B.jobclosedate<=to_date('$dateto"."235959','YYYYMMDDHH24MISS') ";
+        }
+	if (is_numeric($specificv))
+		$filterx.=" and B.unitserial=$specificv and B.type='1' ";
+
+	if (is_numeric($vtype))
+		$filterx.=" and B.unitserial in (select serial from vehicles where service_bustype=$vtype) ";
+
+
+
+	if ($output=="L") {
+		ob_end_clean();
+		ora_parse($cursor,"select distinct B.jobopendate,B.jobclosedate,B.depot,C.code,B.km,A.*,Z.jobcardgeneral from move_jobs B, vehicles C, jobcard_costing_labour A left join move_jobcarditems Z on Z.itemserial=A.entry_serial where A.jobcardserial=B.jobcardserial and B.unitserial=C.serial $filterx");
+		ora_exec($cursor);
+		$filename="labour.csv";
+		$header= "Open Date,Close Date,Depot,Fleet No,Odo Reading,Jobcard,Entry,Minutes,Fault Description,Mechanic Notes,Mechanic,Other Notes,Standardized\n";
+	} else {
+		ob_end_clean();
+		$listparts=str_replace("\r","\n",$listparts);
+		$listparts=str_replace(" ","\n",$listparts);
+		$listparts=str_replace(",","\n",$listparts);
+		$listparts=str_replace("M","",$listparts);
+		$listparts=str_replace("m","",$listparts);
+		$bits=explode("\n",$listparts);
+		$onlyparts=array();
+		$look_only_parts=false;
+		foreach($bits as $key => $val) {
+			if (is_numeric($val)) {
+				$onlyparts[$val]=true;
+				$look_only_parts=true;
+			}
+		}
+		ora_parse($cursor,"select * from stk_ass");
+		ora_exec($cursor);
+		while (ora_fetch($cursor))
+			$category[getdata($cursor,0)]=getdata($cursor,1);
+
+		$is_serial=array();
+		ora_parse($cursor,"select serial from stk_parts where serialize='Y'");
+		ora_exec($cursor);
+		while (ora_fetch($cursor))
+			$is_serial[getdata($cursor,0)]=true;
+		
+		ora_parse($cursor,"select distinct B.jobopendate,B.jobclosedate,C.code,B.km,A.jobcardserial,A.entry_serial,A.part_no,A.order_no,A.quantity, A.price_each, (A.quantity*A.price_each) value,A.description,B.depot,D.site_id,D.orig_currency,B.jobcard_type from move_jobs B, vehicles C,jobcard_costing_parts A left join purchase_requests D on D.order_no=A.order_no and D.superceded_by=-1 and D.order_no>0  where A.jobcardserial=B.jobcardserial and B.unitserial=C.serial $filterx");
+                ora_exec($cursor);
+		$filename="parts.csv";
+		$header="Open Date,Close Date,Fleet No,Odo Reading,Jobcard,Entry,M Part No,Order No,Quantity,Price Each,Value,Description,Depot,Site,Currency,Jobcard Category,Part Category\n";
+	}
+if (getenv("REMOTE_USER")=="Keeith") {
+echo "<pre>";
+	echo "select distinct B.jobopendate,B.jobclosedate,C.code,B.km,A.*,B.depot,D.site_id,D.orig_currency,B.jobcard_type from move_jobs B, vehicles C,jobcard_costing_parts A left join purchase_requests D on D.order_no=A.order_no and D.superceded_by=-1 and D.order_no>0  where A.jobcardserial=B.jobcardserial and B.unitserial=C.serial $filterx<br>";
+
+} else {
+	if ($onlydisp!="Y") {
+
+           header("Content-type: text/csv");
+        header("Content-Disposition: attachment; filename=$filename");
+	} 
+	else
+		echo "<table border=1 cellspacing=0>";
+
+
+
+}
+   if ($onlydisp=="Y")
+	 echo "<tr><td>".str_replacE(",","</td><td>",$header)."</td></tr>";
+
+    else
+    echo $header;
+	while (ora_fetch_into($cursor,$data,ORA_FETCHINTO_ASSOC)) {
+//		$test_data=$data;
+		if ($icfilter) {
+			echo "IC FILTER<Br>";
+			if (isset($non_ic_vehicles[$data["CODE"]])) {
+				echo "SKIPPING ".$data["CODE"]."<br>";
+				unset($data);
+				continue;
+			}
+
+		}
+		if ($output=="P")	
+		{
+			if ($look_only_parts && !isset($onlyparts[$data["PART_NO"]])) {
+				//echo "Ignore ".implode(",",$data)."<br>\n";
+				unset($data);
+				continue;
+			}
+			$data["CATEGORY_NAME"]=$category[$data["PART_NO"]];
+			if (isset($jtype[$data["JOBCARD_TYPE"]]))
+				$data["JOBCARD_TYPE"] = $jtype[$data["JOBCARD_TYPE"]];
+			if ($partcat!="" && $data["CATEGORY_NAME"]!=$partcat) {
+				 //  echo "Ignore ".implode(",",$data)."<br>\n";
+				unset($data);
+				continue;
+			}
+			if ($part_type=="S" && !isset($is_serial[$data["PART_NO"]])) {
+				  //echo "Ignore ".implode(",",$data)."<br>\n";
+				unset($data);
+				continue;
+			}
+			if ($part_type=="N" && isset($is_serial[$data["PART_NO"]])) {
+				 // echo "Ignore ".implode(",",$data)."<br>\n";
+				unset($data);
+				continue;
+			}
+			
+		}
+//		echo "output:";
+//		var_dump($data);
+//		print_r($data);
+		$string= '"'.implode('","',$data).'"';
+		$string=str_replace("\n"," ",$string);
+		$string=str_replace("\r"," ",$string);
+	        $string=str_replace("  "," ",$string);
+		$string=str_replace("  "," ",$string);
+
+		if ($onlydisp=="Y")
+		{
+			echo "<tr><td>".str_replace('"','',str_replacE('","',"</td><td>",$string))."</td></tr>";
+		}
+		else
+			echo "$string\n";
+		unset($data);
+	}
+	close_oracle();
+	if ($onlydisp=="Y")
+		echo "</table>";
+
+//	var_dump($test_data);
+	exit;
+?>
+</body>
+</html>
+

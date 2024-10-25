@@ -1,0 +1,299 @@
+<?php
+
+
+putenv("ORACLE_HOME=/u01/oracle/orainstall");
+
+
+function VV($name) {
+        global $$name;
+
+        if (!isset($$name))
+                $$name = "";
+}
+
+function GPV($name) {
+        if (isset($_POST[$name]))
+                return $_POST[$name];
+        if (isset($_GET[$name]))
+                return $_GET[$name];
+
+        return "";
+}
+
+ini_set("display_errors","off");
+
+ob_end_flush(); // fix php5 feature/bug
+
+
+if (isset($_SERVER["REQUEST_URI"]))
+  if (strstr($_SERVER["REQUEST_URI"],"wp-admin/admin-ajax.php"))
+     ini_set("memory_limit","500M");
+
+
+
+// sessions for everything EXCEPT /ignite and /kiosk 
+
+if (isset($_SERVER["REQUEST_URI"]))
+{
+$the_current_url=$_SERVER["REQUEST_URI"];
+$the_current_url=str_replace("//","/",$the_current_url);
+}
+else
+   $the_current_url = "";
+
+
+if (substr($the_current_url,0,7)!="/ignite" && substr($the_current_url,0,6)!="/kiosk"  && substr($the_current_url,0,6)!="/sales" && isset($_SERVER["REMOTE_ADDR"])){
+
+  if (!isset($_SESSION) && !isset($ic_session_started))
+  {
+        session_start();
+        $ic_session_started = true;
+  }
+
+  if (isset($_GET["ic_logout"]) && $_GET["ic_logout"]=="Y") {
+	session_unset();
+	session_destroy();
+	session_start();
+	$the_current_url = str_replace("ic_logout=Y","ic_logout=DONE", $the_current_url);
+
+
+	if (isset($_SERVER["HTTP_X_FORWARDED_HOST"]) && $_SERVER["HTTP_X_FORWARDED_HOST"]== "secure.intercape.co.za")
+                {
+                        $ic_orig_url="/testsys".$the_current_url;
+
+                }
+                else
+                {
+                        $ic_orig_url=$the_current_url;
+                }
+	echo "<script> window.location='$ic_orig_url'; </script>";
+	exit;
+
+  }
+
+  if (isset($_SESSION["user"]) || isset($_SESSION["user_active"])) {
+        // already logged in
+
+	if (isset($_SESSION["user_active"]))
+		$ic_session_user = $_SESSION["user_active"];
+	else
+		$ic_session_user = $_SESSION["user"];
+
+	
+	$ic_session_user->username = chop($ic_session_user->username);
+	putenv("REMOTE_USER=".$ic_session_user->username);
+	$REMOTE_USER = $ic_session_user->username;
+
+  } else {
+		if ($_SERVER["HTTP_X_FORWARDED_HOST"]== "secure.intercape.co.za") 
+		{
+			$ic_orig_url=urlencode("/testsys".$the_current_url);
+
+		}
+		else
+		{
+			$ic_orig_url=urlencode($the_current_url);
+		}
+		$ic_force_login = true;
+  }
+
+
+}
+
+
+
+// register global variables for legacy code...
+
+if (!isset($REMOTE_USER))
+       $REMOTE_USER=getenv("REMOTE_USER");
+
+
+if (!isset($skipglobals)) {
+    $superglobals = array($_SERVER, $_ENV,
+        $_FILES, $_COOKIE, $_POST, $_GET);
+    if (isset($_SESSION)) {
+        array_unshift($superglobals, $_SESSION);
+    }
+    foreach ($superglobals as $superglobal) {
+        extract($superglobal, EXTR_SKIP);
+    }
+    unset($superglobals);
+    if (isset($_COOKIE['otrusername']))
+	 if ($_COOKIE['otrusername']!="")
+		$otrusername=$_COOKIE['otrusername'];
+    if (isset($user)) {
+	if (isset($_POST["user"])) {
+		unset($user);
+		$user = $_POST["user"];
+	} elseif (isset($_GET["user"])) {
+		unset($user);
+                $user = $_GET["user"];
+
+	}
+    }
+}
+
+// NB: there must be NO BLANK LINES outside of the php code - it breaks graphs
+
+if (getenv("REMOTE_USER")=="Keeith") {
+	echo "POST:";
+	var_Dump($_POST);
+	echo "<br>SESSION:<br>";
+	var_dump($_SESSION);
+	echo "<bR>";
+
+}
+
+// ADDED FOR PHP v8 Migration:
+if (!function_exists('each')) {
+
+    function each(&$arr) {
+        $key = key($arr);
+        $result = ($key === null) ? false : [$key, current($arr), 'key' => $key, 'value' => current($arr)];
+        next($arr);
+        return $result;
+    }
+
+}
+
+
+if (!function_exists('utf8_encode')) {
+        function utf8_encode($str) {
+                return mb_convert_encoding($str, 'UTF-8');
+        }
+}
+
+
+
+
+
+//	echo $_SERVER[REQUEST_URI];
+
+$regdebug="1";
+if (substr($_SERVER["SCRIPT_NAME"],0,5)=="/move")
+{
+	$regdebug.="2";
+	$checkurl=$_SERVER["REQUEST_URI"];
+	
+	$loadignite=false;
+
+	if (getenv("REMOTE_USER")=="dummy") {
+
+		 $loadignite=false;
+                $regdebug="d";
+
+	}
+
+	if (strstr($checkurl,"/showcompany.phtml"))
+	{
+		$loadignite=false;
+		$regdebug="3";
+	}
+
+	
+        if (strstr($checkurl,"/jc_check.phtml"))
+        {
+                $loadignite=false;
+                $regdebug="J";
+        }
+
+        if (strstr($checkurl,"/document_show.phtml"))
+	{
+                $loadignite=false;
+		$regdebug="4";
+	}
+
+      if (strstr($checkurl,"/move/payaccess/"))
+        {
+                $loadignite=false;
+                $regdebug="p";
+        }
+
+
+
+
+	
+	  if (strstr($checkurl,"/barcode.phtml?"))
+	{
+                $loadignite=false;
+		$regdebug="5";
+	}
+
+	if (strstr($checkurl,"/sales.phtml?stage=5"))
+	{
+		$loadignite=false;
+		$regdebug="6";
+	}
+	
+        if (strstr($checkurl,"/style.css"))
+	{
+                $loadignite=false;
+		$regdebug="7";
+	}
+
+
+        if (strstr($checkurl,"/showstk.phtml"))
+	{
+                $loadignite=false;
+		$regdebug="8";
+	}
+
+	if (strstr($checkurl,"scrapstock.phtml?showpic="))
+	{
+		$loadignite=false;
+
+		$regdebug="9";
+	}
+
+
+
+	if ($loadignite) {
+
+
+	$regdebug.="I";
+
+//      echo "Including ignite:";
+	if ($_SERVER["REMOTE_ADDR"]=="192.168.10.4" || $_SERVER["REMOTE_ADDR"]=="127.0.0.1") 
+	{	
+//		echo "Batch";
+		 putenv("REMOTE_USER=dummy"); 
+		$REMOTE_USER="dummy";
+		$regdebug.="d";
+	}
+	else
+	{
+//		echo " going to ignite<Br>";
+		
+		$regdebug.="s";
+	        require_once("/usr/local/www/pages/ignite/session.php");
+		
+		
+	}
+
+
+	} // loadignite
+	else {
+//		  putenv("REMOTE_USER=dummy");
+ //               $REMOTE_USER="dummy";
+//		echo "Coming from ". $_SERVER["REMOTE_ADDR"]."<BR>";
+		$regdebug.="N";
+
+	}
+
+}
+if (!isset($_SERVER)) {
+	$_SERVER = array();
+} 
+	if (!isset($_SERVER["REQUEST_URI"])) {
+		$_SERVER["REQUEST_URI"] = "";
+	}
+	if (!isset($_SERVER["HTTP_USER_AGENT"])) {
+		$_SERVER["HTTP_USER_AGENT"] = "";
+	}
+	if (!isset($_SERVER["REMOVE_USER"])) {
+                $_SERVER["REMOTE_USER"] = getenv("REMOTE_USER");
+        }
+
+
+
+?>

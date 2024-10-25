@@ -1,0 +1,132 @@
+<!-- 
+- Will need to design boards
+- Will nedd logic to decide on logo and board template
+- Will need to design the board template X 2
+- Will need a onload function which calls api and get check_id back plus 1st record instance
+- Returned data will decide which template to use and logo
+- If there is no connection then show "Please check back later"
+- Every 30 seconds call the api to get the next record instance
+  - the result will be a html injection of the next record instance 
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boarding1</title>
+<style>
+	/* Ensure the body takes up the full viewport height and width */
+	/* 1300 x 731 */
+	html, body {
+	  height: 100%;
+	  margin: 0;
+	  padding: 0;
+	  font-family: Arial, Helvetica, sans-serif;
+	  color: #ffffff;
+	}
+  
+	/* Container to maintain 16:9 aspect ratio */
+	.aspect-ratio-16-9 {
+	  position: relative;
+	  width: 100%;
+	  height: 0;
+	  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+	}
+  
+	/* Content inside the container */
+	.aspect-ratio-16-9 > .content {
+	  position: absolute;
+	  display: flex;
+	  flex-direction: column;
+	  justify-content: center;
+	  align-items: center;
+	  top: 0;
+	  left: 0;
+	  width: 100%;
+	  height: 100%;
+	}
+</style>
+</head>
+<body>
+	<!-- <div style="color: black;">sdfsdfsdfsdf</div> -->
+	<div id="ic" class="aspect-ratio-16-9" style="display: block">
+		<div class="content">
+			<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #ffffff;">
+					<img src="ic_logo.svg" style="height: 80%;">	
+				</div>
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #F37721; font-size: 5.5vw; font-weight: bold">ARE YOU ON THE RIGHT COACH?</div>
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
+			</div>
+			<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold" onclick="isOffline()">1154</div>
+				<div style="display: flex; flex-direction: row; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">Express Mthatha to Cape Town Via Queenstown</div>
+			</div>
+		</div>
+	</div>
+	
+	<div id="bs" class="aspect-ratio-16-9" style="display: none">
+		<div class="content">
+			<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #ffffff;">
+					<img src="bs_logo.svg" style="height: 80%;">	
+				</div>
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #0A78BB; font-size: 5.5vw; font-weight: bold">ARE YOU ON THE RIGHT COACH?</div>
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
+			</div>
+			<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold">1154</div>
+				<div style="display: flex; flex-direction: row; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
+				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">Express Mthatha to Cape Town Via Queenstown</div>
+			</div>
+		</div>
+	</div>
+	
+	
+	<div id="offline" class="aspect-ratio-16-9" style="display: none">
+		<div class="content">
+			<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; color: black;" onclick="isOffline()">Please check back later</div>
+		</div>
+	</div>
+
+</body>
+</html>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/icdev/tv/service-worker.js').then(function(registration) {
+      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+    }, function(err) {
+      console.log('ServiceWorker registration failed: ', err);
+    });
+  });
+}
+
+function init()
+{
+	console.log('You are 2: ' + navigator.onLine);
+}
+
+function isOffline()
+{
+	console.log('Offline check...');
+	if (!navigator.onLine)
+	{
+		console.log('You are offline');
+		document.getElementById('ic').style.display = 'none';
+		document.getElementById('bs').style.display = 'none';
+		document.getElementById('offline').style.display = 'block';
+	}
+	else 
+	{
+		console.log('You are online');
+		document.getElementById('ic').style.display = 'block';
+		document.getElementById('bs').style.display = 'none';
+		document.getElementById('offline').style.display = 'none';
+	}
+}
+
+// Initialize
+init();
+</script>

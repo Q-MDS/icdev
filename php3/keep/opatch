@@ -1,0 +1,101 @@
+*** ora_old.inc	2018-01-11 09:04:30.597439993 +0200
+--- /root/ora_old.inc	2018-05-14 10:53:43.455548909 +0200
+***************
+*** 33,43 ****
+   else
+  	$using_a_tablet=false;
+  
+  
+  ////////////////// VERY IMPORTANT:  //////////////////////
+!         $REMOTE_USER=$_SERVER[REMOTE_USER];
+  	if ($REMOTE_USER=="")
+  		$REMOTE_USER=$otrusername;
+          putenv("REMOTE_USER=$REMOTE_USER");
+  //////////////////////////////////////////
+  
+--- 33,43 ----
+   else
+  	$using_a_tablet=false;
+  
+  
+  ////////////////// VERY IMPORTANT:  //////////////////////
+!         $REMOTE_USER=$_SERVER['REMOTE_USER'];
+  	if ($REMOTE_USER=="")
+  		$REMOTE_USER=$otrusername;
+          putenv("REMOTE_USER=$REMOTE_USER");
+  //////////////////////////////////////////
+  
+***************
+*** 209,227 ****
+  
+  function ora_commitoff($conn) {
+  	// do nothing - we are always in this mode...
+  }
+  
+! function Ora_Fetch(&$cursor,$hide_error=false) 
+  { 
+          if ($cursor[2] == 1) $cursor[2]=0; 
+  
+! 	if ($hide_error)
+!         	$data=@oci_fetch($cursor[1]); 
+! 	else
+! 		$data=oci_fetch($cursor[1]);
+! 
+  	if ($data===false) {
+  
+                   $e = oci_error($cursor[1]);
+  
+  		if ($e===false)
+--- 209,223 ----
+  
+  function ora_commitoff($conn) {
+  	// do nothing - we are always in this mode...
+  }
+  
+! function Ora_Fetch(&$cursor) 
+  { 
+          if ($cursor[2] == 1) $cursor[2]=0; 
+  
+!         $data=oci_fetch($cursor[1]); 
+  	if ($data===false) {
+  
+                   $e = oci_error($cursor[1]);
+  
+  		if ($e===false)
+***************
+*** 259,274 ****
+  echo "ASSOC = ".OCI_ASSOC."<bR>";
+  echo "NUM = ".OCI_NUM."<bR>";
+  echo "NULLS = ".OCI_RETURN_NULLS."<bR>";
+  */
+  
+  function ora_fetch_into(&$cursor,&$data,$flags="")
+  {
+  	if ($cursor[2] == 1) $cursor[2]=0;
+  	if (strstr($flags,"ORA_FETCHINTO_ASSOC"))
+  		$flags=OCI_ASSOC|OCI_RETURN_NULLS;
+! 	else
+  	{
+  		$flags=OCI_NUM|OCI_RETURN_NULLS;
+  //		echo "going for numbers";
+  	}
+  
+--- 255,272 ----
+  echo "ASSOC = ".OCI_ASSOC."<bR>";
+  echo "NUM = ".OCI_NUM."<bR>";
+  echo "NULLS = ".OCI_RETURN_NULLS."<bR>";
+  */
+  
++ define("ORA_FETCHINTO_ASSOC",OCI_ASSOC|OCI_RETURN_NULLS);
++ 
+  function ora_fetch_into(&$cursor,&$data,$flags="")
+  {
+  	if ($cursor[2] == 1) $cursor[2]=0;
+  	if (strstr($flags,"ORA_FETCHINTO_ASSOC"))
+  		$flags=OCI_ASSOC|OCI_RETURN_NULLS;
+! 	elseif ($flags=="")
+  	{
+  		$flags=OCI_NUM|OCI_RETURN_NULLS;
+  //		echo "going for numbers";
+  	}
+  

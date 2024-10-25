@@ -1,0 +1,1136 @@
+<?
+
+
+$sage_queue=array();
+$wemade=array();
+
+/*  Notes: TODO:  
+
+* Need to take into account items ALREADY on an invoice...
+* Need a select/deselect RFP option
+* Click to view RFP
+		
+*/
+
+//echo "Inv is $inv<BR>";
+
+?>
+<html><body>
+<?
+require("../php3/oracle.inc");
+require("../php3/colors.inc");
+require("../php3/logs.inc");
+require("../php3/misc.inc");
+require("../php3/sec.inc");
+require("../php3/opstimes.inc");
+require("daterange.phtml");
+require("move_creditor_activity.phtml");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+GET_colors(getenv("REMOTE_USER"));
+
+?><link rel="stylesheet" type="text/css" href="move_cred.css" />
+
+<HEAD>
+<SCRIPT LANGUAGE="JavaScript">
+	
+	
+
+function layerObject(id,left) {
+
+}
+function layerSetup() {
+
+}
+
+
+function movefloater()
+{
+ba=total.style.top;
+a=ba.length; a=a-2; c=ba.substring(0,a);
+if (c<101)
+        direction=1;
+if (c>300)
+        direction=0;
+//alert(c+' '+direction);
+
+if (direction==0)
+        {
+                d=100;
+        }
+else
+                d=-100;
+c=c-d; total.style.top=c;
+
+}
+
+function floatObject() {
+
+} 
+function main() {
+
+}
+function mainTrigger() {
+
+}
+function floatStart() {
+
+}
+function animator() {
+
+}
+function start() {
+
+}
+//  End -->
+</script>
+</HEAD>
+<BODY onLoad="start()">
+<b><font color=blue><DIV id="total" style="position: absolute; left:400px;   height:20px; width:200px;  bxackground-color:#FFFFFF;   layer-background-color:#FFFFFF; ">0</DIV></font></b>
+
+<script language=javascript>
+
+/*
+function update(amnt, obj)
+{
+	var fin=0;
+	if(document.getElementById(obj).checked==true)
+		fin= parseInt(document.getElementById('total').innerHTML) + parseFloat(amnt);
+	else
+		fin= parseInt(document.getElementById('total').innerHTML) - parseFloat(amnt);
+		
+		document.getElementById('total').innerHTML= fin;
+}
+*/
+
+</script>
+<?
+$ord= $_GET['order'];
+if (!is_numeric($ord))
+	$ord=$_POST['order'];
+
+	if (isset($_GET['inv']))
+		$inv= $_GET['inv'];
+	else
+		$inv=$_POST['inv'];
+	if (isset($_GET['cred']))
+		$cred= $_GET['cred'];
+	else
+		$cred=$_POST['cred'];
+if (!is_numeric($ord)){
+	echo "ERROR! $ord is not na number!";
+	exit;
+}
+
+ora_parse($cursor,"select request_no, autogrn from purchase_requests where order_no=$ord and superceded_by=-1");
+ora_exec($cursor);
+if (!ora_fetch($cursor)) {
+	 echo "Order B$ord not found!<BR>";
+	 exit;
+} else {
+		$req=getdata($cursor,0);
+		$autogrn=getdata($cursor,1);
+}
+echo "Order B$order, Request Q$req ";
+
+if ($autogrn=="Y")
+	echo "AUTORFP";
+echo "<br>";
+
+
+if ($dosage=="Y") {
+
+          require_once("../sage/creditors_invoice.phtml");
+
+
+
+	ora_parse($cursor,"select request_no,invoice_no,inv_serial from purchase_invoices where request_no=$req and inv_serial is not null");
+//	echo "select request_no,invoice_no,inv_serial from purchase_invoices where request_no=$req and inv_serial is not null<br>";
+        ora_exec($cursor);
+        while (ora_fetch($cursor)) {
+                $sageinfo[0]=getdata($cursor,0); // request number
+                $sageinfo[1]=getdata($cursor,1); // invoice number
+                $sageinfo[2]=getdata($cursor,2);; // serial
+                $sage_queue[]=$sageinfo;
+        }
+
+                reset($sage_queue);
+                while (list($sqkey,$sqval)=each($sage_queue)) {
+                        // function sage_creditors_invoice($q="",$inv="",$invserial="")
+                        echo "<table border=3><tr><td><font size=1><pre>";
+                        ob_start();
+                        ob_start();
+                        ob_start(); // put it 2 layers in because of an ob_clean in the SAGE code
+                        sage_creditors_invoice($sqval[0],$sqval[1],$sqval[2]);
+                        $soutput=ob_get_contents();
+                        ob_end_clean();
+                        $soutput.=ob_get_contents();
+                        ob_end_clean();
+                        $soutput.=ob_get_contents();
+                        ob_end_clean();
+
+
+			if (strstr($soutput,"already in SAGE")) {
+                                echo "<font color=green><B>Already in SAGE</B></font> ";
+                                $lbits=explode("\n",$soutput);
+                                reset($lbits);
+                                while (list($slkey,$slval)=each($lbits)) {
+                                        if (strstr($slval,"already in SAGE"))
+                                                echo $slval;
+                                }
+                        }
+                        elseif (strstr($soutput,"(I) SAVED"))
+                        {
+                                echo "<font color=green><B>Saved to SAGE</B></font> ";
+                                $lbits=explode("\n",$soutput);
+                                reset($lbits);
+                                while (list($slkey,$slval)=each($lbits)) {
+                                        if (strstr($slval,"(I) SAVED"))
+                                                echo $slval;
+                                }
+
+                        }
+                        else {
+                                 echo "<font color=red><b>ERROR SAVING TO SAGE</b><Br>";
+
+                                 $lbits=explode("\n",$soutput);
+                                reset($lbits);
+                                while (list($slkey,$slval)=each($lbits)) {
+                                        if (strstr($slval,"BLOK"))
+                                                echo $slval;
+                                }
+
+                                echo "</font>";
+
+                                echo $soutput;
+                        }
+                        $credlog=fopen("../sage/logs/cred$sqval[2].log","a");
+                        fputs($credlog,$soutput);
+                        fclose($credlog);
+                        echo "</font></td></tr></table><Br>";
+                        $pause=true;
+                }
+		echo "<hr>";
+
+} // dosage
+
+$invoices= array();
+ 
+
+// Look for invoices to delete
+reset($_POST);
+while (list($key,$val)=each($_POST)) {
+ //	 echo "$key=$val<bR>";
+		if (substr($key,0,5)=="clear") {
+				$srl=substr($key,5,999);
+				//echo "Clear $srl<bR>";
+				if (is_numeric($srl)) {
+						echo "DELETE OF INVOICE SUSPENDED - SPEAK TO KEITH<Br>";
+
+/*
+						ora_parse($cursor,"delete from move_invoices where serial=$srl");
+						if (ora_exec($cursor)) {
+								orA_parse($cursor,"delete from move_invoice_nums where invoice_serial=$srl");
+								ora_exec($cursor);
+					//				echo "done<bR>";
+						} //else echo "FAiled<bR>";
+*/
+					
+				}
+			}
+		}
+reset($_GET);
+while (list($key,$val)=each($_GET)) {
+ //	 echo "$key=$val<bR>";
+		if (substr($key,0,5)=="clear") {
+				$srl=substr($key,5,999);
+				//echo "Clear $srl<bR>";
+				if (is_numeric($srl)) {
+					echo "DELETE OF INVOICE SUSPENDED - SPEAK TO KEITH<Br>";
+/*
+						ora_parse($cursor,"delete from move_invoices where serial=$srl");
+						if (ora_exec($cursor)) {
+								orA_parse($cursor,"delete from move_invoice_nums where invoice_serial=$srl");
+								ora_exec($cursor);
+					//				echo "done<bR>";
+						} //else echo "FAiled<bR>";
+*/
+					
+				}
+		 }	
+		}  
+ 
+ 
+if ($doprop!="" && is_numeric($req) && is_numeric($cred) && is_numeric($credserial)) {  //doprop=Y&cred=$cred&order=$order&inv=$inv&req=$req>
+		ora_parse($cursor,"select distinct vat from purchase_details where request_no=$req union select distinct vat from purchase_noparts where request_no=$req");
+		ora_exec($cursor);
+		if (ora_fetch($cursor))
+				$vat=getdata($cursor,0);
+		else
+				$vat=1; // hmm....
+		
+		$kcursor=ora_open($conn);
+		ora_parse($kcursor,"select A.invoice_no, nvl(A.invoice_amount, B.cost), to_char(invoice_paper_date,'YYYYMMDD'), to_char(A.invoice_date,'YYYYMMDD')  from purchase_invoices A, purchase_requests B where A.request_no=$req and A.request_no=B.request_no");
+		ora_exec($kcursor);
+		$total=0;
+		$username=getenv("REMOTE_USER");
+		while (ora_fetch($kcursor)) { 
+		 
+			 $invoice=getdata($kcursor,0);
+			 $invamt=getdata($kcursor,1);
+			 $invdate=getdata($kcursor,2);
+			 $realdate=getdata($kcursor,3);
+ 			$prevserial="";
+			echo "Checking Inv $invoice... ";
+			 
+			 if ($realdate>=20060901) {
+			 
+	
+			
+			 if (!is_numeric($vat))
+			 		$vat=1.14;
+			 	$invamt=$invamt/$vat;
+
+				ora_parse($cursor,"select inv_serial from purchase_invoices where request_no=$req and invoice_no='$invoice'");
+				orA_exec($cursor);
+				if (!ora_fetch($cursor)) {
+					echo "<font color=red>ERROR! Invoice not found!</font><bR>";
+					ora_rollback($conn);
+					exit;
+				} else {
+					$prevserial=getdata($cursor,0);
+					if ($prevserial!="" && $prevserial!=$wemade[$req.$invoice]) {
+
+						ora_parse($cursor,"select 'x' from move_invoices where serial=$prevserial");
+						ora_exec($cursor);
+						if (ora_fetch($cursor)) {
+							echo "Invoice $invoice already accepted<Br>";
+							continue;
+/*							echo "<font color=red>ERROR! Invoice already accepted!!</font><bR><br>select inv_serial from purchase_invoices where request_no=$req and invoice_no='$invoice' ($prevserial != ".$wemade[$req.$invoice].") and select 'x' from move_invoices where serial=$prevserial";
+	              	       		                ora_rollback($conn);
+                       		                 	exit;
+*/
+						}
+					}
+
+				}
+			  
+				if ( $prevserial=="") {
+			 			ora_parse($cursor,"select move_inv_seq.nextval from dual");	
+						ora_exeC($cursor);
+						ora_fetch($cursor);
+						$pk=getdata($cursor,0);
+						$wemade[$req.$invoice]=$pk;
+			 			$qry="insert into move_invoice_nums (invoice, invoice_serial, used, importance, date_added) values ('$invoice', $pk, 'N', 0,CURRENT_TIMESTAMP) ";
+			 			
+						if (getenv("REMOTE_USER")=="Keeith")
+							echo "*1 $qry<br>";
+			 			ora_parse($cursor,$qry);
+			 			if (ora_exec($cursor)) {
+								ora_parse($cursor,"update purchase_invoices set inv_serial=$pk where request_no=$req and invoice_no='$invoice'");
+								if (!ora_exec($cursor))
+									$pk="";
+						} else $pk="";
+				} else $pk=$prevserial;
+
+				if ($pk!="") {
+								
+			 					$qry="insert into move_invoices (serial, account_number, amount_cents, due_date, quantity, capturedby, items, row_id, used, request_no, vat) values ($pk, $credserial, $invamt, to_date('$invdate','YYYYMMDD')+30, 1, '$username', 'Refer to order B$order', MOVE_INVOICE_ROWID.nextval, 'Y', $req, $vat)";
+								if (getenv("REMOTE_USER")=="Keeith")
+		                                                        echo "$qry<br>";
+
+			 					ora_parse($cursor,$qry);
+			 					if (ora_exec($cursor))
+			 							ora_commit($conn);
+			 					else
+			 							ora_rollback($conn);
+			 				
+			 				
+			   } // pk
+			   
+			  } // date ok
+			echo "<Br>";
+				} // fetch		  kcursor
+				
+
+}  // doprop
+
+if($stage=='10')
+{
+	if (!is_numeric($credserial)) {
+			echo "Please first go back and select an account<BR>";
+			exit;
+	}
+  ob_start();
+	//echo "This will allocate items to invoice <br>";
+	$invoice= $inv; // $_GET['invoice'];
+	if($invoice=="")
+	{
+		echo "You didnt choose an invoice...";
+		echo "<a onClick=\"window.history.go(-1);\">GO BACK</a>";
+		die();
+	}
+	$myctr=0;
+	foreach($_POST as $k=>$v)
+	{
+		
+		//echo "$k => $v <br>";
+		if ($k[0]=="q") {
+					$dt=explode("_",substr($k,1,9999));
+					$invoices[$myctr][0]=$v; // quantity
+					$invoices[$myctr][1]=$dt[0]; // delivery note 
+					$invoices[$myctr][2]=$dt[1]; // M part number or nopart serial
+					
+					$myctr++;
+		}
+	  
+	} // foreach
+	//prohibit same invoice twice
+	
+	//***write it to mins_invoice_nums
+	
+	//*************
+	// NOTE!!!!  account_number was being checked against $cred, surely this should be $credserial ??? - POSSIBLE BUG sorted by replacing with $req
+	//****************
+	if (getenv("REMOTE_USER")=="Keeith")
+		echo "select invoice_serial from move_invoice_nums A, move_invoices B where A.invoice_serial=B.serial and invoice='$invoice' and request_no=$req<br>";
+	ora_parse($cursor,"select invoice_serial from move_invoice_nums A, move_invoices B where A.invoice_serial=B.serial and invoice='$invoice' and request_no=$req ");
+	ora_exeC($cursor);
+	if (ora_fetch($cursor))
+	{
+			$pk=getdata($cursor,0);
+			if (getenv("REMOTE_USER")=="Keeith")
+				echo "GOT serial $pk<br>";
+	}
+
+	else {
+		  $pk="";
+		 ora_parse($cursor,"select inv_serial from purchase_invoices where request_no=$req and invoice_no='$invoice'");
+                                orA_exec($cursor);
+                                if (!ora_fetch($cursor)) {
+                                        echo "<font color=red>ERROR! Invoice not found!</font><bR>";
+                                        ora_rollback($conn);
+                                        exit;
+                                } else {
+					$prevserial=getdata($cursor,0);
+					if ($prevserial!="" && $wemade[$req.$invoice]=="") {
+						$pk=$prevserial;
+					} elseif ($prevserial!="" && $prevserial!=$wemade[$req.$invoice]) {
+
+                                                echo "<font color=red>ERROR! Invoice already accepted!</font><bR><br>select inv_serial from purchase_invoices where request_no=$req and invoice_no='$invoice'.  W:".$wemade[$req.$invoice];
+                                                ora_rollback($conn);
+                                                exit;
+                                        }
+
+
+                                }
+
+
+		/*srand();
+		$pk=chr(rand(65, 90));
+		$pk.=chr(rand(65, 90));
+		$pk.=rand(10000, 1000000);
+		*/
+
+		if ($pk=="") { // create new serial
+		ora_parse($cursor,"select move_inv_seq.nextval from dual");
+			ora_exeC($cursor);
+			ora_fetch($cursor);
+			$pk=getdata($cursor,0);
+			$wemade[$req.$invoice]=$pk;
+
+		
+		ora_parse($cursor, "insert into move_invoice_nums values('$invoice', '$pk', 'N', '0', '',CURRENT_TIMESTAMP)");
+		if (getenv("REMOTE_USER")=="Keeith")
+			echo "*2 insert into move_invoice_nums values('$invoice', '$pk', 'N', '0', '',CURRENT_TIMESTAMP)<br>";
+
+
+		ora_exec($cursor);
+
+		 ora_parse($cursor,"update purchase_invoices set inv_serial=$pk where request_no=$req and invoice_no='$invoice'");
+                 ora_exec($cursor);
+		} // create
+
+	}
+	
+	//***write it to mins_invoices
+	for($o=0; $o< $myctr; $o++)
+	{
+		$invoices[$o][0]=trim($invoices[$o][0]);
+		//echo "Invoices $o is ".$invoices[$o][0]."<bR>";
+		if(is_numeric($invoices[$o][0]) )  // positive or negative quantity
+		{
+//			echo "cool<BR>";
+			$dn=$invoices[$o][1];
+			$pn=$invoices[$o][2];
+			//select relevant info for parts
+			if ($pn[0]=="M") {
+				$pn=substr($pn,1,999);
+				//$qry="select quantity, price_each, description, request_no , vat from purchase_details A,stk_parts B where A.part_serial=B.serial and request_no=$req and part_serial='$pn'";
+				$qry="select null,pr.price,description,request_no,vat from purchase_details A,stk_parts B, purchase_received pr where A.part_serial=B.serial and request_no=$req and pr.part_serial='$pn' and A.part_serial=pr.part_serial and pr.delnote=$dn";
+				if (getenv("REMOTE_USER")=="Keeith")
+						echo "$qry<bR>";
+				ora_parse($cursor,$qry);
+				
+				ora_exec($cursor);
+			
+				
+				$q= $invoices[$o][0];  // was abs() //ora_getcolumn($cursor, 0); 
+				$p= ora_getcolumn($cursor, 1);
+				$d= ora_getcolumn($cursor, 2);
+				$r= ora_getcolumn($cursor, 3);
+				$v= ora_getcolumn($cursor, 4); // new 
+				
+				$theday= date("Ymd");
+				
+				if ($autogrn)
+						$grnnum=1;
+				else
+						unset($grnnum);
+				
+				if ($dn>0) {
+					ora_parse($cursor, "select grn from purchase_received A,purchase_deliveries B  where A.delnote=$dn and A.part_serial=$pn and A.delnote=B.delnote");
+					ora_exec($cursor);
+					if (ora_fetch($cursor))
+						$grnnum= ora_getcolumn($cursor, 0); 
+				}
+				
+				if (!isset($grnnum)) {
+					
+						echo "Cannot find RFP Number for Q$r $d<bR>";
+						$grnnum=-1;			
+					
+				}
+			
+				ora_parse($cursor,"select row_id  from move_invoices where serial='$pk' and part_serial=$pn and del_note='$dn'");
+				ora_exec($cursor);
+				$checkupdate=false;
+				if (ora_fetch($cursor)) {
+					$rowid=getdata($cursor,0);
+					$checkupdate=true;
+					if ($q==0)
+							$q1="delete from move_invoices where row_id=$rowid";
+					else
+							$q1= "update move_invoices set amount_cents=$p, due_date= TO_DATE('$theday', 'YYYYMMDD'), grn_serial='$grnnum', quantity=$q, capturedby='".getenv('REMOTE_USER')."', used='Y',request_no=$req, vat=$v where row_id=$rowid";
+				}
+				else
+				  if ($q==0)
+				  	 $q1="";
+				  else
+						$q1= "insert into move_invoices values ('$pk',  '$credserial',   '$p',  'R',  TO_DATE('$theday', 'YYYYMMDD'), '$grnnum',  '$q', null, '".getenv('REMOTE_USER')."', '$d', '', MOVE_INVOICE_ROWID.nextval, '$dn', 'Y', $req, $pn, $v)";
+				
+			} else {
+				
+				if (!is_numeric($dn))
+						$qry="select quantity, price_each, description, request_no , vat from purchase_noparts where serial='$pn'";
+				else
+			// $qry="select quantity, price_each, description, request_no , vat from purchase_noparts where serial='$pn'";
+					$qry="select null,pr.price,description,request_no,vat from purchase_noparts np , purchase_received pr where   request_no=$req and  np.serial='$pn' and pr.no_part_serial='$pn' and  pr.delnote=$dn";
+				ora_parse($cursor,$qry);
+				//echo "$qry<BR>";
+				ora_exec($cursor);
+				if (!ora_fetch($cursor)) {
+					echo "ERROR: $qry<bR>";
+					ora_rollback($conn);
+					exit;
+				}
+				
+			
+				$q=  $invoices[$o][0];  // was abs // ora_getcolumn($cursor, 0); 
+				$p= ora_getcolumn($cursor, 1);
+				$d= ora_getcolumn($cursor, 2);
+				$r= ora_getcolumn($cursor, 3);
+				$v= ora_getcolumn($cursor, 4); // new
+
+				$d=str_replace("'","",$d);
+				
+				$theday= date("Ymd");
+									
+				if ($autogrn)
+						$grnnum=1;
+				else
+						unset($grnnum);
+				
+				if ($dn>0) {
+					ora_parse($cursor, "select grn from purchase_received A,purchase_deliveries B  where A.delnote=$dn and A.no_part_serial=$pn and A.delnote=B.delnote");
+					ora_exec($cursor);
+					if (ora_fetch($cursor))
+						$grnnum= ora_getcolumn($cursor, 0); 
+				}  
+				
+				if (!isset($grnnum)) {
+					
+						echo "Cannot find RFP Number for Q$r $d<bR>(dn is $dn, select grn from purchase_received A,purchase_deliveries B  where A.delnote=$dn and A.no_part_serial=$pn and A.delnote=B.delnote<Br>";
+						$grnnum=-1;			
+					
+				}
+				if (is_numeric($dn))
+				{
+					ora_parse($cursor,"select row_id  from move_invoices where serial='$pk' and nopart_serial=$pn and del_note='$dn'");
+//					echo "select row_id  from move_invoices where serial='$pk' and nopart_serial=$pn and del_note='$dn'<br>";
+				}
+				else
+				{
+					ora_parse($cursor,"select row_id  from move_invoices where serial='$pk' and nopart_serial=$pn");
+//					echo "select row_id  from move_invoices where serial='$pk' and nopart_serial=$pn<br>";
+				}
+				ora_exec($cursor);
+				if (ora_fetch($cursor)) {
+					$rowid=getdata($cursor,0);
+					$q1= "update move_invoices set amount_cents=$p, due_date= TO_DATE('$theday', 'YYYYMMDD'), grn_serial='$grnnum', quantity=$q, capturedby='".getenv('REMOTE_USER')."', used='Y',request_no=$req, vat=$v where row_id=$rowid";
+				}
+				else {
+					if (!is_numeric($dn))
+							$dn=-1;
+					$q1= "insert into move_invoices values ('$pk',  '$credserial',   '$p',  'R',  TO_DATE('$theday', 'YYYYMMDD'), '$grnnum',  '$q', $pn, '".getenv('REMOTE_USER')."', '$d', '', MOVE_INVOICE_ROWID.nextval, '$dn', 'Y',$req, null, $v)";
+				}
+				
+			} // noparts
+			if ($q1!="") {
+				  if (getenv("REMOTE_USER")=="Keeith")
+  					echo $q1."<br>";
+				  ora_parse($cursor,$q1);
+		
+	   	        if (!ora_exec($cursor)) {
+					echo "There was an error!<Br>";
+					echo "<a onClick=\"window.history.go(-1);\">GO BACK</a><p>$q1";
+					exit;
+			} // error
+			if ($updatecheck) {
+					if (ora_numrows($cursor)!=1)
+							echo "<font color=red>ERROR UPDATING!!</font><br>";
+				
+			}
+			
+			} // q1
+
+		
+	} // invoice != 0
+		/*
+		else
+		{
+			//select relevant info from purchase_noparts
+			ora_parse($cursor, "select pi.INVOICE_AMOUNT ,  reason_required, pr.request_no
+								from 
+								purchase_requests pr join purchase_invoices pi
+								on pr.REQUEST_NO=pi.REQUEST_NO 
+								where pi.INVOICE_NO='$invoice'");
+			
+			ora_exec($cursor);
+			
+			$q= ora_getcolumn($cursor, 0); //amount
+			$p= ora_getcolumn($cursor, 1); //reason
+			$d= ora_getcolumn($cursor, 2); //req_no
+						
+			$theday= date("Ymd");
+			
+			ora_parse($cursor, "select grn from purchase_requests where request_no='$r'");
+			ora_exec($cursor);
+			$grnnum= ora_getcolumn($cursor, 0); 
+			
+			$q1= "insert into move_invoices values ('$pk',  '$credserial', '$q',  'R',  TO_DATE('$theday', 'YYYYMMDD'), '$grnnum',  '1', '0', '".getenv('REMOTE_USER')."', '$p', '', MOVE_INVOICE_ROWID.nextval, '', 'Y',$req,$ps)";
+			echo $q1."<br>";
+			ora_parse($cursor,$q1);
+			ora_exec($cursor);
+		}
+		*/
+
+	
+} // for
+	
+	?>
+	<script language=javascript>
+		//opener.focus();  
+		//opener.location.reload();
+		//window.focus(); // test!
+		//window.close(); 
+	</script>	
+	<?	
+} // stage
+
+
+// first look for dupes...
+$cursor2=ora_open($conn);
+ora_parse($cursor, "select distinct pi.invoice_no, mi.serial from purchase_invoices pi join purchase_requests pr on pi.request_no=pr.request_no  left join move_invoice_nums mins on pi.invoice_no=mins.invoice left join move_invoices mi on mins.invoice_serial=mi.serial and mi.request_no=pr.request_no and mi.quantity!=0 where pr.order_no='$ord' and pr.superceded_by=-1  order by 1");
+ora_exec($cursor);
+unset($ishown);
+while (ora_fetch($cursor)) {
+		$ino=getdata($cursor,0);
+		$isrl=getdata($cursor,1);
+		if (is_numeric($isrl)) {
+			if (is_numeric($ishown[$ino])) {
+				 echo "DUPLICATE FOUND!  Speak to Keith";
+		                ora_rollback($conn);
+		                exit;
+				ora_parse($cursor2,"update move_invoices set serial=$ishown[$ino] where serial=$isrl");
+				if (ora_exec($cursor2) ) {
+						ora_parse($cursor2,"delete from move_invoice_nums where invoice_serial=$isrl");
+						ora_exec($cursor2);
+					
+				}
+	
+			}
+			else $ishown[$ino]=$isrl;
+		}
+}
+ora_close($cursor2);
+
+//list invoices for order
+//echo "or is $ord<BR>";
+ora_parse($cursor, "select pi.invoice_no, pi.invoice_amount, count(mall.serial), mall.serial, sum(mall.quantity * mall.amount_cents * mall.vat), pi.currency, pi.local_amount
+from purchase_invoices pi join purchase_requests pr on pi.request_no=pr.request_no left join    move_inv_all  mall 
+on pi.invoice_no=mall.invoice and mall.quantity!=0  and mall.request_no=pr.request_no
+where pr.order_no='$ord' and (counter is null or mall.invoice is not null) group by pi.invoice_no, invoice_amount,mall.serial,pi.currency,pi.local_amount order by 3 desc");
+ 
+ora_exec($cursor);
+
+
+echo "<table BORDER=1><form method=POST action='move_manual_insert.phtml'><tr><Td>";
+
+$jscript3="";
+
+unset($todel);
+
+while(ora_fetch_into($cursor, $data))
+{
+
+	if ($data[6]!="" && $data[5]=="") 
+		$data[5]="<font color=red>NO CURRENCY SPECIFIED</font>";
+
+	if($inv==$data[0])
+		echo "<font color=red>";
+	echo "<input type=radio name=inv ";
+		$data[1]=sprintf("%0.2f",$data[1]);
+	if($inv==$data[0]) 
+			if (strlen($inv)==strlen($data[0])) {
+					echo " checked ";
+					$invtotal=$data[1];
+			}	
+				
+	$data[4]=sprintf("%.2f",$data[4]);
+	echo" value=\"$data[0]\" onclick=\"invtotal.innerHTML='<font color=blue>$data[1]'; var str=new String(); str=total.innerHTML; var spl=str.split('of'); total.innerHTML=spl[0]+' of $data[1]';\">".$data[0]." (R$data[1] <b>$data[5] $data[6]</b>) - $data[2] line item(s) totalling $data[4] ";
+	if ($data[2]>0) {
+			// set up inv[data[3]]
+			echo "<input type=button value='Show Qty' onclick=\" showqtys('$data[3]');\"> (Del: <input type=checkbox name=clear$data[3] value=Y>)";
+				 if (!isset($idone[$data[3]]) && $data[3]!="")  {
+				 		$jscript3.="var inv$data[3] = new Array();\n";
+				 		$idone[$data[3]]=true;
+				 }
+	}
+	if (getenv("REMOTE_USER")=="Keeith")
+			echo " - internal $data[3]<br>";
+	else
+			echo "<bR>";
+	$litems[$data[3]]=$data[2];
+	if($inv==$data[0])
+					echo "</font>";
+ 
+  $radiocnt++;
+	unset($data);
+}
+if ($radiocnt>1) {
+		echo "<input type=submit name=doprop value='Allocate everything'>";
+	
+}
+if (is_array($todel)) {
+	 reset($todel);
+	 while (list($invs,$rubbish)=each($todel)) {
+	 		// double check
+	 		ora_parse($cursor,"select count(*) from move_invoices where serial=$invs");
+	 		ora_Exec($cursor);
+	 		ora_Fetch($cursor);
+	 		if (getdata($cursor,0)==0) {
+					echo "DELETE OF INVOICE SUSPENDED - SPEAK TO KEITH<Br>";
+				/*	
+	 				ora_parse($cursor,"delete from move_invoice_nums where invoice_serial=$invs");
+	 				ora_exec($cursor);
+				*/
+	 		}
+	 		else echo "<font color=red><b>WARNING: There is a duplicated invoice ($invs)</b></font><br>";
+	 	
+	 }
+}
+echo "</td><td><input type=button onclick=\"mywin=window.open('move_change_invoice.phtml?creditor=$cred&order=$order','mywin','top=10,left=10,width=500,height=300,resizable=yes,scrollbars=auto'); mywin.focus();\" value='Change/Delete These'>";
+echo "</td></tr></table><p>";
+
+// get existing line items
+ora_parse($cursor,"select part_serial,nopart_serial,del_note,quantity,serial,grn_serial from move_invoices where request_no=$req");
+ora_exec($cursor);
+unset($data);
+unset($used);
+while (ora_fetch_into($cursor,$data)){ 
+		//echo "fetched ".implode("|",$data)."<br>";
+		if ($data[0]=="") { // nopart, use data[1]
+				 $used[$data[1]][$data[2]]+=$data[3];		
+				 //echo "Used $data[1] $data[2] += $data[3]<BR>";
+				 if (!isset($idone[$data[4]]))  {
+				 		$jscript3.="var inv$data[4] = new Array();\n";
+				 		$idone[$data[4]]=true;
+				 }
+ 									
+									//$jscript6[$data[5]].="document.getElementById('q$data[2]_$data[1]').value=setzero(document.getElementById('q$data[2]_$data[1]').value)+setzero($data[3]);\n";
+				 	
+				 $jscript3.="inv$data[4][\"$data[1]_$data[2]\"]=$data[3];\n";
+				 
+		} else { // part  - use data[0]
+				 $used["M$data[0]"][$data[2]]+=$data[3];			
+				 //echo "Used M$data[0] $data[2] += $data[3]<Br>";
+				 	if (!isset($idone[$data[4]]))  {
+				 		$jscript3.="var inv$data[4] = new Array();\n";
+				 		$idone[$data[4]]=true;	
+				 }				 	 
+				 $jscript3.="inv$data[4][\"M$data[0]_$data[2]\"]=$data[3];\n";
+				  
+		}
+		unset($data);
+} // while
+
+// pick account
+
+
+				
+			if (!isset($creda[$cred]) && !is_numeric($credserial) ) {
+					ora_parse($cursor,"select account_serial, account_number, name,active from move_creditor_accounts where creditor_serial=".$cred." order by active desc,name");
+					ora_exec($cursor);
+					while (ora_fetch($cursor)) {
+							$credcnt[$cred]++;
+							$creda[$cred][getdata($cursor,0)]=getdata($cursor,1)." - ".getdata($cursor,2)." (".getdata($cursor,3).")";
+							$credonly[$cred]=getdata($cursor,0);
+					}
+			}
+					
+		if (is_numeric($credserial))
+					echo "<input 1 type=hidden name=\"credserial\" value=".$credserial.">";
+		else {
+		
+			if ($credcnt[$cred]==1)  {
+				echo "<input 2 type=hidden name=\"credserial\" value=".$credonly[$cred].">";
+				$credserial=$credonly[$cred];
+			}
+			else
+			{
+					echo "<select style='font size=10' name=\"credserial\">";
+					reset($creda[$cred]);
+					while (list($crkey,$crval)=each($creda[$cred])) {
+							echo "<option value=$crkey>$crval";
+					}
+					echo "</select><b>*****</b><br>";
+			}
+		}
+		
+
+
+//display all items for order
+
+$grandtotal=0;
+
+$qry= "select distinct null, pn.description, pr.REQUEST_NO, pn.serial, pn.vat, pn.price_each, pn.quantity, D.received, D.price, nvl(D.delnote,-1) dnote,C.grn, nvl(sum(mi.quantity),0) from purchase_noparts pn  left join purchase_requests pr on pn.REQUEST_NO=pr.REQUEST_NO left join purchase_deliveries C on C.request_no=pr.request_no left join purchase_received D on C.delnote=D.delnote and D.no_part_serial=pn.serial left join move_invoices mi on pn.serial=mi.nopart_serial
+					where order_no='$ord' and superceded_by=-1 and (C.delnote=D.delnote or C.delnote is null) 
+					   group by pn.description, pr.REQUEST_NO, pn.serial, pn.vat, pn.price_each, pn.quantity, D.received, D.price, nvl(D.delnote,-1) ,C.grn 
+					    order by dnote desc,pn.serial"; // and serial not in (select part_serial from move_invoices where account_number='$credserial' ) order by C.grn,dnote ";
+if (getenV("REMOTE_USER")=="Keeith")
+	echo "$qry<bR>";
+ora_parse($cursor,$qry);
+
+ora_exec($cursor);
+$jscript="";
+unset($jfunctions);
+$jscript2="";
+
+echo "<table border=1>";
+echo "<tr><th>This Inv Qty<th>Order Qty<th>Inv Qty<th>Price Each<th>Total<th>Description<th>Internal Serial<th>Del / Ret Note<th>RFP</tr>";
+while(ora_fetch_into($cursor, $data))
+  {  	
+  	//$mydebug++;
+  	if ($data[8]!="")  // use delivered price
+  			$data[5]=$data[8];
+  	
+		if ($data[9]==-1) {
+				$data[10]="";
+				$data[9]="None";
+				$prefix="";
+				$data[7]=$data[6]-$ptotals[$data[3]];
+		} else {
+				if ($data[7]<0)	
+						$prefix="T";
+				else
+						$prefix="D";
+					
+				$ptotals[$data[3]]+=$data[7];			
+		}
+	
+	$data[0]=$data[7];
+	  if ($data[0]!=0) {
+	  	// delnote 9, part 3
+	  		$jscript5[$data[9]].="val=parseFloat(setzero(document.getElementById('q$data[9]_$data[3]').value))+setzero($data[0]); document.getElementById('q$data[9]_$data[3]').value=val;  updateit('$data[9]','$data[3]');\n";
+				//echo "D$data[9] G$data[10] nopart $data[3]<bR>";
+				if ($data[10]>1)
+										$jscript6[$data[10]].="val=parseFloat(setzero(document.getElementById('q$data[9]_$data[3]').value))+setzero($data[0]); document.getElementById('q$data[9]_$data[3]').value=val;  updateit('$data[9]','$data[3]');\n";
+										
+				if (!isset($used))
+					$mycalc= $data[0]*$data[5];
+				else
+					$mycalc=0;			
+			
+			$grandtotal+=$mycalc;
+			$grandtotalv+=$mycalc*$data[4];
+			$dntotal[$data[9]]+=$data[0]*$data[5];
+			$dntotalv[$data[9]]+=$data[0]*$data[5]*$data[4];
+			if ($data[10]>1) {
+				$gntotal[$data[10]]+=$data[0]*$data[5];
+				$gntotalv[$data[10]]+=$data[0]*$data[5]*$data[4];
+			}
+			
+			$mycalc=sprintf("%.2f",$mycalc);
+			
+				echo "<tr><td><input name=q$data[9]_$data[3] ";
+				if (!isset($used)) {
+							echo "value=$data[0]";
+							$used["$data[3]"][$data[9]]="0";
+				}
+				else
+					if (!isset($used[$data[3]][$data[9]]))
+							$used[$data[3]][$data[9]]="0";
+				echo " size=3 onchange=\"updateit('$data[9]','$data[3]');\"><td align=right>\n<a onclick=\" if (q$data[9]_$data[3].value=='')  q$data[9]_$data[3].value='$data[0]'; else q$data[9]_$data[3].value='';  updateit('$data[9]','$data[3]'); \">$data[0]</a>\n<td align=right>".$used[$data[3]][$data[9]]."<td align=right>$data[5]<td align=right><div id=subttl$data[9]_$data[3]>".$mycalc."</div><input type=hidden name=mby$data[9]_$data[3] value='$data[5]'><td><font size=2>".$data[1]."<td>".$data[3]."<td>$prefix$data[9]<td>G$data[10]\n";
+				$jscript.="+parseFloat(document.getElementById('subttl$data[9]_$data[3]').innerHTML)";
+				$jscriptv.="+parseFloat(document.getElementById('subttl$data[9]_$data[3]').innerHTML)*$data[4]";
+				$jscript2.="document.getElementById('q$data[9]_$data[3]').value=0; document.getElementById('subttl$data[9]_$data[3]').innerHTML='0'; \n";
+								$jscript4.="eval('document.getElementById(\'q$data[9]_$data[3]\').value=isnum(inv'+inv+'[\"$data[3]_$data[9]\"]);');\nupdateit('$data[9]','$data[3]')\n";
+				//$jscript4.="document.getElementById('q$data[9]_$data[3]').value=eval('inv'+inv+'["$data[3]_$data[9]"]');\n";
+		}
+	unset($data);
+	$findparts=TRUE;
+}
+
+$qry= "select distinct null, pa.description, pr.REQUEST_NO, pn.part_serial, pn.vat, pn.price_each, pn.quantity, D.received, D.price, nvl(D.delnote,-1) dnote,C.grn from purchase_details pn join stk_parts pa on pn.part_serial=pa.serial left join purchase_requests pr on pn.REQUEST_NO=pr.REQUEST_NO left join purchase_deliveries C on C.request_no=pr.request_no left join purchase_received D on C.delnote=D.delnote and D.part_serial=pn.part_serial
+					where order_no='$ord' and superceded_by=-1  and (C.delnote=D.delnote or C.delnote is null) order by dnote desc,pn.part_serial"; // and serial not in (select part_serial from move_invoices where account_number='$credserial' ) order by C.grn,dnote ";
+if (getenV("REMOTE_USER")=="Keeith")
+	echo "<tr><td colspan=10>$qry</tr>";
+ora_parse($cursor,$qry);
+
+ora_exec($cursor);
+
+//echo "<table border=1>";
+echo "<tr><th>This Inv Qty<th>Order Qty<th>Inv Qty<th>Price Each<th>Total<th>Description<th>Part No<th>Del / Ret Note<th>RFP</tr>";
+while(ora_fetch_into($cursor, $data))
+  {
+  	//echo "Got $data[5] / $data[8]<BR>";
+  	if ($data[8]!="") // use delivered price
+  			$data[5]=$data[8];
+  	
+		if ($data[9]==-1) {
+				$data[10]="";
+				$data[9]="None";
+				$prefix="";
+				$data[7]=$data[6]-$ptotals[$data[3]];
+		} else {
+				if ($data[7]<0)	
+						$prefix="T";
+				else
+						$prefix="D";
+					
+				$ptotals[$data[3]]+=$data[7];			
+		}
+	
+	$data[0]=$data[7];
+	  if ($data[0]!=0) {
+	  		$jscript5[$data[9]].="val=parseFloat(setzero(document.getElementById('q$data[9]_M$data[3]').value))+setzero($data[0]); document.getElementById('q$data[9]_M$data[3]').value=val;  updateit('$data[9]','M$data[3]');\n";
+				//echo "D$data[9] G$data[10] part M$data[3]<bR>";
+				if ($data[10]>1)
+										$jscript6[$data[10]].="val=parseFloat(setzero(document.getElementById('q$data[9]_M$data[3]').value))+setzero($data[0]); document.getElementById('q$data[9]_M$data[3]').value=val;  updateit('$data[9]','M$data[3]');\n";
+	  	
+	  	
+	  if (!isset($used)) {
+				$mycalc=$data[0]*$data[5];
+			}
+			else
+				$Mycalc=0;
+				
+			$grandtotal+=$mycalc;
+			$grandtotalv+=$mycalc*$data[4];
+			$dntotal[$data[9]]+=$data[0]*$data[5];
+			$dntotalv[$data[9]]+=$data[0]*$data[5]*$data[4];
+			if ($data[10]>1) {
+				$gntotal[$data[10]]+=$data[0]*$data[5];
+				$gntotalv[$data[10]]+=$data[0]*$data[5]*$data[4];
+			}
+			$mycalc=sprintf("%.2f",$mycalc);
+			
+			//$data[5]=sprintf("%.2f",$data[5]);
+
+				echo "<tr><td><input name=q$data[9]_M$data[3] ";
+			if (!isset($used)) {
+					echo "value=$data[0]";
+								$used["M$data[3]"][$data[9]]="0";
+				}
+				else
+					if (!isset($used["M$data[3]"][$data[9]]))
+							$used["M$data[3]"][$data[9]]="0";
+				echo " size=3 onchange=\"updateit('$data[9]','M$data[3]');\"><td align=right>\n<a onclick=\" if (q$data[9]_M$data[3].value=='' || q$data[9]_M$data[3].value=='0')  q$data[9]_M$data[3].value='$data[0]'; else q$data[9]_M$data[3].value=''; updateit('$data[9]','M$data[3]'); \">$data[0]</a>\n<td align=right>".$used["M$data[3]"][$data[9]]."<td align=right>$data[5]<td align=right><div id=subttl$data[9]_M$data[3]>".$mycalc."</div><input type=hidden name=mby$data[9]_M$data[3] value='$data[5]'><td><font size=2>".$data[1]."<td>M".$data[3]."<td>$prefix$data[9]<td>G$data[10]\n";
+				$jscript.="+parseFloat(document.getElementById('subttl$data[9]_M$data[3]').innerHTML)";
+				$jscriptv.="+parseFloat(document.getElementById('subttl$data[9]_M$data[3]').innerHTML)*$data[4]";
+				$jscript2.="document.getElementById('q$data[9]_M$data[3]').value=0; document.getElementById('subttl$data[9]_M$data[3]').innerHTML='0'; \n";
+				$jscript4.="eval('document.getElementById(\'q$data[9]_M$data[3]\').value=isnum(inv'+inv+'[\"M$data[3]_$data[9]\"]);');\nupdateit('$data[9]','M$data[3]')\n";
+		}
+	unset($data);
+	$findparts=TRUE;
+}
+
+//echo "</table>";
+$grandtotal=sprintf("%.2f",$grandtotal);
+$grandtotalv=sprintf("%.2f",$grandtotalv);
+
+echo "\n<tr><td colspan=2>Grand Total:<td align=right colspan=2><div  id=grandtotal1><font color=blue>$grandtotal<br>$grandtotalv</div></td><td colspan=2>Inv Total:</td><td colspan=2 align=right><div id=invtotal><font color=blue>$invtotal</td></tr></table>\n<script>\ndocument.getElementById('total').innerHTML='$grandtotal / $grandtotalv of '+document.getElementById('invtotal').innerHTML;\n</script>\n";
+$contents=ob_get_contents();
+ob_end_clean();
+echo "<input type=button onclick=\"$jscript2 document.getElementById('total').innerHTML='0'; document.getElementById('grandtotal1').innerHTML='0'; \" value='Uncheck all'>";
+
+?>
+<script>
+	
+			
+function isnum(num) {
+	//alert(num);
+	if (isNaN(num) || num==null || num=='')
+			return '';
+	else
+			return num;
+	
+}
+
+function setzero(num) {
+	//alert(num);
+	if (isNaN(num) || num==null || num=='')
+			return 0;
+	else
+			return num;
+	
+}
+
+
+function updateit(delnote,partno) {
+   //alert('thanks');
+	  //alert(document.getElementById('q'+delnote+'_'+partno).value);
+	  //alert(document.getElementById('mby'+delnote+'_'+partno).value);
+	 var qty=document.getElementById('q'+delnote+'_'+partno).value;
+	 if (isNaN(qty) || qty=='')
+	 		qty=0;
+	 	
+	  //alert(qty)
+	  //alert(document.getElementById('mby'+delnote+'_'+partno).value);
+	  
+		var calc=parseFloat(qty)*parseFloat(document.getElementById('mby'+delnote+'_'+partno).value);
+		//alert(calc);
+		
+		calc=Math.round(calc*100)/100;
+		//alert(calc);
+		if (parseFloat(calc)==parseFloat(calc.toFixed(1)) && calc!=0)
+			if (parseFloat(calc)!=Math.round(parseFloat(calc)))
+				calc=calc+'0';
+		//alert(calc);
+		document.getElementById('subttl'+delnote+'_'+partno).innerHTML=calc;
+		var gtotal=0<?=$jscript?>;
+		var gtotalv=0<?=$jscriptv?>;
+		//alert(gtotal);
+		gtotal=Math.round(gtotal*100)/100;
+		gtotalv=Math.round(gtotalv*100)/100;
+		if (parseFloat(gtotal)==parseFloat(gtotal.toFixed(1)) && gtotal!=0)
+			if (parseFloat(gtotal)!=Math.round(parseFloat(gtotal)))
+				gtotal=gtotal+'0';
+			if (parseFloat(gtotalv)==parseFloat(gtotalv.toFixed(1)) && gtotalv!=0)
+				if (parseFloat(gtotalv)!=Math.round(parseFloat(gtotalv)))
+					gtotalv=gtotalv+'0';
+		document.getElementById('grandtotal1').innerHTML='<font color=blue>'+gtotal+'<br>'+gtotalv;
+		window.status='Total: '+gtotal+' With VAT: '+gtotalv;
+		//alert('test');
+    other=document.getElementById('invtotal').innerHTML;
+		document.getElementById('total').innerHTML='<font color=blue>'+gtotal+' / '+gtotalv+' of '+other;
+		// todo - turn it into green if the two figures match
+ 	  //alert('test');
+}
+
+function showqtys(inv) {
+	 
+	 //alert('1');
+<?=$jscript3; ?>
+//alert('2');
+<?=$jscript4; ?>
+
+//	alert('3');
+
+	
+	
+}
+
+<?
+	if (is_array($jscript5)) {
+		
+			reset($jscript5);
+			while (list($key,$val)=each($jscript5)) {
+				   echo "\nfunction showqtyd$key() {  \n $val \n }\n\n";
+				
+			}
+	}
+	echo "\n";
+		if (is_array($jscript6)) {
+		
+			reset($jscript6);
+			while (list($key,$val)=each($jscript6)) {
+				   echo "\nfunction showqtyg$key() {  \n $val \n }\n\n";
+				
+			}
+	}
+
+
+
+
+
+echo "\n</script>\n";
+
+	if (is_array($jscript5)) {
+		
+			reset($jscript5);
+			while (list($key,$val)=each($jscript5)) {
+						$d1=sprintf("%.2f",$dntotal[$key]);
+						$d2=sprintf("%.2f",$dntotalv[$key]);
+						if ($d1>0)
+								$prefix="D";
+						else
+								$prefix="T";
+				   echo "<input type=button style='font size=10' value='$prefix$key ($d1/$d2)' onclick=\"showqtyd$key();\">\n";
+				
+			}
+	}
+	echo "\n";
+		if (is_array($jscript6)) {
+		
+			reset($jscript6);
+			while (list($key,$val)=each($jscript6)) {
+						$g1=sprintf("%.2f",$gntotal[$key]);
+						$g2=sprintf("%.2f",$gntotalv[$key]);
+				     echo "<input type=button style='font size=10'  value='G$key ($g1/$g2)' onclick=\"showqtyg$key();\">\n";
+				
+			}
+	}
+
+echo "<input type=button value='View RFP'  onclick=\"vw=window.open('requestorder.phtml?stage=14&ser=$req&showgrn=Y','','width=790, height=500, scrollbars=1, resizable=1'); vw.focus();\">";
+
+echo "<input type=button value='View Order'  onclick=\"vw=window.open('requestorder.phtml?stage=4&ser=$req','','width=790, height=500, scrollbars=1, resizable=1'); vw.focus();\">";
+
+
+echo $contents;
+
+if (!$findparts)
+		echo "STRANGE!  I could not find anytyhing on Q$req / B$order<bR>";
+		
+
+
+echo "</table>	<p>	<input type=hidden name=cred value=$cred>	<input type=hidden name=stage value=10>	<input type=hidden name=order value=$ord>";
+	//<input type=hidden name=inv value=$inv>
+	//echo "<input type=hidden name=cred value=$cred>
+	$inve=urlencode($inv);
+	echo "<input type=submit value='Update line items on invoice'></form> &nbsp; <a href=move_manual_insert.phtml?cred=$cred&order=$order&inv=$inve&dosage=Y>Upload to SAGE</a>";
+
+close_oracle()
+?>
