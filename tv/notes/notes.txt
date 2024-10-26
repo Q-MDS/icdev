@@ -3,8 +3,8 @@
 - Arrival boards: url has digits at the end which is the stop (Brllvile in the pic).
 - Create table: DEPARTURE_TVS - Static data - Holds list of TV's and location
   - SCREEN_ID - NUMBER - UNIQUE/PRIMARY KEY
-  - NAME - VC2(10) - eg ct1 / ct2 / jhb1 – the name used in the URL the TV calls
-  - BRANCH - VC(20) eg JNB Station – from select branch_name from branch_info where is_dealer='N' order by 1; 
+  - NAME - VC2(10) - eg ct1 / ct2 / jhb1 ï¿½ the name used in the URL the TV calls
+  - BRANCH - VC(20) eg JNB Station ï¿½ from select branch_name from branch_info where is_dealer='N' order by 1; 
   - STOP_SERIAL - NUMBER eg 219 for JNB Station
 
 - Create table: DEPARTURE_TV_SETTINGS
@@ -21,7 +21,7 @@ Arrival/departure also has a refresh every 30 seconds so I'm guessing if it find
 
 Office Management Tool
 - Mobile friendly
-- User logs in and are returned the list of TV's for their branch (looked up via in db on login - select branch from user_Details where is_current=’Y’ and username=’$user’)
+- User logs in and are returned the list of TV's for their branch (looked up via in db on login - select branch from user_Details where is_current=ï¿½Yï¿½ and username=ï¿½$userï¿½)
 - User select TV and sees the following form:
   - TV Name eg. JHB1
   - Input field/search/dropdown of routes
@@ -43,3 +43,7 @@ Process
 Need info/questions/unknowns
 1. Where do I get the arrival data
 2. Must I create the arrival screen?
+
+POA
+- add 30 second timer
+- do function to do api call

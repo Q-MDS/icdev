@@ -1,6 +1,12 @@
-const CACHE_NAME = 'offline-cache-v7';
+const CACHE_NAME = 'offline-cache-v11';
+// const urlsToCache = [
+//   '/',
+//   '/icdev/tv/index.html',
+//   '/icdev/tv/ic_logo.svg',
+//   '/icdev/tv/bs_logo.svg',
+//   // Add other assets you want to cache
+// ];
 const urlsToCache = [
-  '/',
   '/icdev/tv/index.html',
   '/icdev/tv/ic_logo.svg',
   '/icdev/tv/bs_logo.svg',

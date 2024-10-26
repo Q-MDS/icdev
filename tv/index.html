@@ -59,9 +59,9 @@
 				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
 			</div>
 			<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
-				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold" onclick="isOffline()">1154</div>
+				<div id="ic_route_number" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold" onclick="isOffline()">1154</div>
 				<div style="display: flex; flex-direction: row; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
-				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">Express Mthatha to Cape Town Via Queenstown</div>
+				<div id="ic_route_desc" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">Express Mthatha to Cape Town Via Queenstown</div>
 			</div>
 		</div>
 	</div>
@@ -76,9 +76,9 @@
 				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
 			</div>
 			<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
-				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold">1154</div>
+				<div id="bs_route_number" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold">1154</div>
 				<div style="display: flex; flex-direction: row; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
-				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">Express Mthatha to Cape Town Via Queenstown</div>
+				<div id="bs_route_desc" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">Express Mthatha to Cape Town Via Queenstown</div>
 			</div>
 		</div>
 	</div>
@@ -106,6 +106,7 @@ if ('serviceWorker' in navigator) {
 function init()
 {
 	console.log('You are 2: ' + navigator.onLine);
+	setInterval(fetchData, 5000);
 }
 
 function isOffline()
@@ -127,6 +128,50 @@ function isOffline()
 	}
 }
 
-// Initialize
+function fetchData() 
+{
+	if (navigator.onLine) 
+	{
+		document.getElementById('offline').style.display = 'none';
+		
+    	console.log('Fetching board daa');
+		
+		fetch('http://localhost/icdev/tv/api//g.php?217')
+		.then(response => response.json())
+		.then(data => 
+		{
+			console.log('Data fetched:', data);
+			
+			if (data.brand == 'IC')
+			{
+				document.getElementById('bs').style.display = 'none';
+				document.getElementById('ic').style.display = 'block';
+				document.getElementById('ic_route_number').innerText = data.route;
+				document.getElementById('ic_route_desc').innerText = data.description;
+
+			}
+			else
+			{
+				document.getElementById('ic').style.display = 'none';
+				document.getElementById('bs').style.display = 'block';
+				document.getElementById('bs_route_number').innerText = data.route;
+				document.getElementById('bs_route_desc').innerText = data.description;
+			}
+		})
+		.catch(error => 
+		{
+			console.error('Error fetching data:', error);
+		});
+	} 
+	else 
+	{
+		console.log('Cannot fetch data, you are offline');
+		
+		document.getElementById('ic').style.display = 'none';
+		document.getElementById('bs').style.display = 'none';
+		document.getElementById('offline').style.display = 'block';
+	}
+}
+
 init();
 </script>

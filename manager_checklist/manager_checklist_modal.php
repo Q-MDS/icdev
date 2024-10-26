@@ -78,7 +78,6 @@ function no_issues($vc_id)
 		oci_execute($cursor);
 		oci_free_statement($cursor);
 		
-		
 		$result = '1';
 	} 
 	catch (Exception $e) 
