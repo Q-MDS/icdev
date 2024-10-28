@@ -32,7 +32,8 @@ switch ($action)
 		$fault_description = $json_data->fault_description;
 		$fault = $json_data->fault;
 		$fault_picture = $json_data->fault_picture;
-		save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture);
+		$more = $json_data->more;
+		save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more);
 	break;
 }
 
@@ -126,7 +127,7 @@ function fetch_faults()
 	echo json_encode($fetch_faults);
 }
 
-function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture)
+function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more)
 {
 	global $conn;
 
@@ -169,7 +170,14 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	// tfc_id from technical_faults_category 
 
 	// Update vehicle_checklist: work_date + 30
-	no_issues($vc_id);
+	if ($more == 0)
+	{
+		no_issues($vc_id);
+	} 
+	else 
+	{
+		echo '1';
+	}
 
 	oci_close($conn);
 }

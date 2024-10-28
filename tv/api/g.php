@@ -5,7 +5,7 @@
  * - Return route # & description or 0 records
  */
 echo '{
-	"brand": "IC",
+	"brand": "BS",
 	"route": "2151",
-	"description": "Bokke!!!!!"
+	"description": "Bloemfontein via Colesberg via Beaufort West"
 }';

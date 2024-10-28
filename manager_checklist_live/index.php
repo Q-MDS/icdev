@@ -7,7 +7,14 @@ require_once ("../php3/sec.inc");
 if (!open_oracle()) { Exit; };
 if (!AllowedAccess("")) { Exit; };
 
-$depot = 'CA';
+if (isset($_POST['set_depot']))
+{
+	$the_depot = $_POST['set_depot'];
+}
+else
+{
+	$the_depot = '';
+}
 
 function init()
 {
@@ -28,7 +35,7 @@ function init()
 	while (ora_fetch_into($cursor, $row, ORA_FETCHINTO_ASSOC)) 
 	{
 		$id = $row['ID'];
-		$serial = $row['SERIAL'];
+		$serial = $row['VEHICLESERIAL'];
 		$vehicle_checklist_id[] = $id;
 		$vehicle_checklist_serial[] = $serial;
 	}
@@ -73,8 +80,8 @@ function add_checklist_vehicle($serial, $depot, $class)
 	$cursor = ora_open($conn);
 
 	// Add with today as the work_date and add_date, checked is false, depot and class
-	// $today = strtotime(date('Y-m-d'));
-	$today = strtotime("now");
+	$today = strtotime(date('Y-m-d'));
+	// $today = strtotime("now");
 	$sql = "INSERT INTO vehicle_checklist (id, vehicleserial, add_date, work_date, checked, depot, class) VALUES (VEHICLE_CHECKLIST_ID_SEQ.NEXTVAL,'" . $serial . "', '" . $today . "', '" . $today . "',0, '" . $depot . "', '" . $class . "')";
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
@@ -89,8 +96,8 @@ function update_checklist_vehicle($id, $depot, $class)
 	$cursor = ora_open($conn);
 
 	// Update if found
-	// $today = strtotime(date('Y-m-d'));
-	$today = strtotime('2024-10-22');
+	$today = strtotime(date('Y-m-d'));
+	// $today = strtotime('2024-10-22');
 	$sql = "UPDATE vehicle_checklist SET work_date = '" . $today . "', depot = '" . $depot . "', class = '" . $class . "' WHERE id = '" . $id . "' AND work_date < '" . $today . "' AND checked = 0";
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
@@ -100,13 +107,13 @@ function update_checklist_vehicle($id, $depot, $class)
 
 function get_vehicles()
 {
-	global $conn, $depot;
+	global $conn, $the_depot;
 
 	$cursor = ora_open($conn);
 	
-	$today = strtotime("now");
+	$today = strtotime(date('Y-m-d'));
 
-	$sql = "SELECT vc.VEHICLESERIAL, vc.CLASS, vc.ID, v.CODE, v.REG_NO, v.MAKE, v.MODEL FROM vehicle_checklist vc JOIN vehicles v ON vc.VEHICLESERIAL = v.SERIAL WHERE vc.DEPOT = '" . $depot . "' AND vc.WORK_DATE = " . $today . " ORDER BY vc.VEHICLESERIAL";
+	$sql = "SELECT vc.VEHICLESERIAL, vc.CLASS, vc.ID, v.CODE, v.REG_NO, v.MAKE, v.MODEL FROM vehicle_checklist vc JOIN vehicles v ON vc.VEHICLESERIAL = v.SERIAL WHERE vc.DEPOT = '" . $the_depot . "' AND vc.WORK_DATE = " . $today . " ORDER BY vc.VEHICLESERIAL";
 	
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
@@ -132,11 +139,51 @@ get_vehicles();
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Management Checklist</title>
+	<title>Manager Checklist</title>
+	<style>
+	/* Modal styles */
+	.modal {
+		display: none; /* Hidden by default */
+		position: fixed; /* Stay in place */
+		z-index: 1; /* Sit on top */
+		left: 0;
+		top: 0;
+		width: 100%; /* Full width */
+		height: 100%; /* Full height */
+		overflow: auto; /* Enable scroll if needed */
+		background-color: rgb(0,0,0); /* Fallback color */
+		background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+	}
+
+	/* Modal content */
+	.modal-content {
+		background-color: #fefefe;
+		margin: 15% auto; /* 15% from the top and centered */
+		padding: 20px;
+		border: 1px solid #888;
+		width: 80%; /* Could be more or less, depending on screen size */
+		max-width: 400px;
+	}
+
+	/* Buttons */
+	.modal-button {
+		padding: 10px 20px;
+		margin: 10px;
+		cursor: pointer;
+	}
+
+	.modal-button.yes {
+		background-color: green;
+		color: white;
+	}
+
+	.modal-button.no {
+		background-color: red;
+		color: white;
+	}
+	</style>
 </head>
 <body onload="fetchFaults();">
-	
-
 <div>
 	<!-- Mock tablet menu -->
 	<div style="display: flex; flex-direction: 'row'; align-items: center; border: 1px solid #000; padding: 8px 10px;">
@@ -144,13 +191,46 @@ get_vehicles();
 		<div style="flex: 1; cursor: pointer;">Vehicle Checklist</div>
 	</div>
 
-	<div style="margin-top: 20px; margin-bottom: 20px;">Vehicle List</div>
+	<form action="index.php" method="post">
+		<div style="display: flex; flex-direction: row; align-items: center; margin-top: 20px; margin-bottom: 10px; column-gap: 10px">
+			<div>Select Depot:</div>
+			<div>
+			<select id="set_depot" name="set_depot">
+				<option value="">Select depot</option>
+				<option value="BLM" <?php echo ($GLOBALS['the_depot'] == 'BLM') ? 'selected' : ''; ?>> BLM</option> 
+				<option value="CA" <?php echo ($GLOBALS['the_depot'] == 'CA') ? 'selected' : ''; ?>>CA</option> 
+				<option value="CBS" <?php echo ($GLOBALS['the_depot'] == 'CBS') ? 'selected' : ''; ?>>CBS</option> 
+				<option value="DBN" <?php echo ($GLOBALS['the_depot'] == 'DBN') ? 'selected' : ''; ?>>DBN</option> 
+				<option value="DEA" <?php echo ($GLOBALS['the_depot'] == 'DEA') ? 'selected' : ''; ?>>DEA</option> 
+				<option value="ESL" <?php echo ($GLOBALS['the_depot'] == 'ESL') ? 'selected' : ''; ?>>ESL</option> 
+				<option value="GAB" <?php echo ($GLOBALS['the_depot'] == 'GAB') ? 'selected' : ''; ?>>GAB</option>
+				<option value="JHB" <?php echo ($GLOBALS['the_depot'] == 'JHB') ? 'selected' : ''; ?>>JHB</option>  
+				<option value="MAL" <?php echo ($GLOBALS['the_depot'] == 'MAL') ? 'selected' : ''; ?>>MAL</option> 
+				<option value="MAP" <?php echo ($GLOBALS['the_depot'] == 'MAP') ? 'selected' : ''; ?>>MAP</option> 
+				<option value="MAR" <?php echo ($GLOBALS['the_depot'] == 'MAR') ? 'selected' : ''; ?>>MAR</option> 
+				<option value="MTH" <?php echo ($GLOBALS['the_depot'] == 'MTH') ? 'selected' : ''; ?>>MTH</option> 
+				<option value="OSH" <?php echo ($GLOBALS['the_depot'] == 'OSH') ? 'selected' : ''; ?>>OSH</option> 
+				<option value="PE" <?php echo ($GLOBALS['the_depot'] == 'PE') ? 'selected' : ''; ?>>PE</option> 
+				<option value="POL" <?php echo ($GLOBALS['the_depot'] == 'POL') ? 'selected' : ''; ?>>POL</option> 
+				<option value="PTA" <?php echo ($GLOBALS['the_depot'] == 'PTA') ? 'selected' : ''; ?>>PTA</option> 
+				<option value="QTN" <?php echo ($GLOBALS['the_depot'] == 'QTN') ? 'selected' : ''; ?>>QTN</option> 
+				<option value="UPT" <?php echo ($GLOBALS['the_depot'] == 'UPT') ? 'selected' : ''; ?>>UPT</option> 
+				<option value="VIC" <?php echo ($GLOBALS['the_depot'] == 'VIC') ? 'selected' : ''; ?>>VIC</option> 
+				<option value="WHK" <?php echo ($GLOBALS['the_depot'] == 'WHK') ? 'selected' : ''; ?>>WHK</option> 
+
+			</select>
+			</div>
+			<div><input type="submit" value="View"></div>
+		</div>
+	</form>
+
+	<div style="margin-top: 20px; margin-bottom: 10px; font-size: 18px;">Vehicle List</div>
 
 	<!-- Grid for matching vehicles -->
 	<!-- 
 	Serial, Code, Reg No, Make, Model
 	-->
-	<div style="display: grid; grid-template-columns: repeat(8, auto); column-gap: 10px; row-gap: 5px; border: 1px solid #000; padding: 8px 10px;">
+	<div style="display: grid; grid-template-columns: repeat(8, auto); column-gap: 10px; row-gap: 5px; border: 1px solid #000; padding: 8px 10px; max-height: 335px; overflow: hidden; overflow-y: auto">
 		<div>Serial</div>
 		<div>Code</div>
 		<div>Reg No</div>
@@ -159,6 +239,9 @@ get_vehicles();
 		<div>Class</div>
 		<div>Inspection Result</div>
 		<div>&nbsp;</div>
+
+		<div style="grid-column: span 8; height: 1px; background-color: #000;"></div>
+
 		<?php
 		$results = get_vehicles();
 
@@ -205,8 +288,17 @@ get_vehicles();
 			<div><input type="file" id="fault_picture" accept="image/*" /></div>
 			<div id="upload_status"></div>
 		</div>
-		<div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="saveIssue()">Save Button</div>
+		<div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="showCustomConfirm()">Save</div>
 	</div>
+</div>
+
+<!-- Confirm modal -->
+<div id="customConfirmModal" class="modal">
+    <div class="modal-content">
+		<p>Do you want to add another fault?</p>
+		<button class="modal-button yes" onclick="handleYes()">Yes</button>
+		<button class="modal-button no" onclick="handleNo()">No</button>
+    </div>
 </div>
 </body>
 </html>
@@ -384,7 +476,7 @@ function hasIssues(id)
 	
 }
 
-function saveIssue()
+function saveIssue(more)
 {
 	const vcId = document.getElementById('vc_id').value;
 	const vehicleSerial = document.getElementById('vehicle_serial').value;
@@ -406,7 +498,7 @@ function saveIssue()
 
 	console.log('Save issue: ', faultPicture + ' >>> ' + vehicleSerial, ' >>> ', faultDesc, ' >>> ', selectedFault);
 
-	const formData = { "action": 3, "vc_id": vcId, "vehicle_serial": vehicleSerial, "fault_description": faultDesc, "fault": selectedFault, "fault_picture": faultPicture };
+	const formData = { "action": 3, "vc_id": vcId, "vehicle_serial": vehicleSerial, "fault_description": faultDesc, "fault": selectedFault, "fault_picture": faultPicture, "more": more };
 
 	sendData(formData)
 	.then(result => 
@@ -428,6 +520,34 @@ function closeFaultPicker()
 	const fault_picker = document.getElementById('fault_picker');
 	fault_picker.style.display = 'none';
 }	
+
+// Confirm modal functions
+function showCustomConfirm() 
+{
+	document.getElementById('customConfirmModal').style.display = 'block';
+}
+
+function handleYes() 
+{
+	console.log('MORE');
+	document.getElementById('customConfirmModal').style.display = 'none';
+	saveIssue(1);
+}
+
+function handleNo() 
+{
+	console.log('NO MORE');
+	document.getElementById('customConfirmModal').style.display = 'none';
+	saveIssue(0);
+}
+
+// Close the modal when clicking outside of it
+window.onclick = function(event) {
+	const modal = document.getElementById('customConfirmModal');
+	if (event.target == modal) {
+	modal.style.display = 'none';
+	}
+}
 
 async function uploadPicture() 
 {

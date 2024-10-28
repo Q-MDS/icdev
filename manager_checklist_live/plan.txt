@@ -1,3 +1,5 @@
+SELECT COUNT(ID) FROM vehicle_checklist
+
 Questions
 
 1. How is manger linked to vechiles? Is the manager linked to a depot and vechile is matched via depot?

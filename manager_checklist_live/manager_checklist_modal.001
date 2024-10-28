@@ -32,8 +32,7 @@ switch ($action)
 		$fault_description = $json_data->fault_description;
 		$fault = $json_data->fault;
 		$fault_picture = $json_data->fault_picture;
-		$more = $json_data->more;
-		save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more);
+		save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture);
 	break;
 }
 
@@ -75,7 +74,10 @@ function no_issues($vc_id)
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
 
-	ora_close($cursor);*/
+	ora_close($cursor);
+	
+	3487232
+	*/
 }
 
 function fetch_faults()
@@ -101,7 +103,7 @@ function fetch_faults()
 	echo json_encode($fetch_faults);
 }
 
-function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more)
+function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture)
 {
 	global $conn;
 
@@ -132,12 +134,5 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	ora_exec($cursor);
 	ora_close($cursor);
 
-	if ($more == 0)
-	{
-		no_issues($vc_id);
-	} 
-	else 
-	{
-		echo '1';
-	}
+	no_issues($vc_id);
 }
