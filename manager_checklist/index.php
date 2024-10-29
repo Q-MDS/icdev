@@ -8,7 +8,7 @@ else
 {
 	$the_depot = 'PTA';
 }
-
+$num_rows = 0;
 
 function init()
 {
@@ -38,7 +38,7 @@ function init()
 
 
 	// Read vehicles and compare
-	$sql = "SELECT SERIAL, DEPOT, CLASS FROM vehicles WHERE is_current='Y' AND schedule = 'Y' AND class in ('o','c')";
+	$sql = "SELECT SERIAL, DEPOT_AT, CLASS FROM vehicles WHERE is_current='Y' AND schedule = 'Y' AND class in ('o','c')";
 	//  AND schedule = 'Y' AND class in ('o','c')
 	
 	$cursor = oci_parse($conn, $sql);
@@ -47,7 +47,7 @@ function init()
 	while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
 	{
 		$serial = $row['SERIAL'];
-		$depot = $row['DEPOT'];
+		$depot = $row['DEPOT_AT'];
 		$class = $row['CLASS'];
 		
 		// Check if serial exists in vehicle_checklist
@@ -120,14 +120,21 @@ function oci_conn()
 
 function get_vehicles()
 {
-	global $the_depot;
+	global $the_depot, $num_rows;
 	$today = strtotime(date('Y-m-d'));
 	// $today = strtotime('2024-10-23');
 
 	// OCI
 	$conn = oci_conn();
 
-	$sql = "SELECT vc.SERIAL, vc.CLASS, vc.ID, v.CODE, v.REG_NO, v.MAKE, v.MODEL FROM vehicle_checklist vc JOIN vehicles v ON vc.SERIAL = v.SERIAL WHERE vc.DEPOT = '" . $the_depot . "' AND vc.WORK_DATE = " . $today . " ORDER BY vc.SERIAL";
+	if ($the_depot == 0)
+	{
+		$sql = "SELECT vc.SERIAL, vc.CLASS, vc.ID, v.CODE, v.REG_NO, v.MAKE, v.MODEL FROM vehicle_checklist vc JOIN vehicles v ON vc.SERIAL = v.SERIAL WHERE vc.DEPOT IS NULL AND vc.WORK_DATE = " . $today . " ORDER BY vc.SERIAL";
+	}
+	else 
+	{
+		$sql = "SELECT vc.SERIAL, vc.CLASS, vc.ID, v.CODE, v.REG_NO, v.MAKE, v.MODEL FROM vehicle_checklist vc JOIN vehicles v ON vc.SERIAL = v.SERIAL WHERE vc.DEPOT = '" . $the_depot . "' AND vc.WORK_DATE = " . $today . " ORDER BY vc.SERIAL";
+	}
 	
 	$cursor = oci_parse($conn, $sql);
 	oci_execute($cursor);
@@ -137,6 +144,8 @@ function get_vehicles()
 	{
 		$results[] = $row;
 	}
+
+	$num_rows = count($results);
 	
 	oci_close($conn);
 	
@@ -194,6 +203,13 @@ get_vehicles();
 		background-color: red;
 		color: white;
 	}
+
+	.data_row {
+    display: contents;
+	}
+	.data_row:hover div {
+		background-color: #d5d5d5;
+	}
 	</style>
 </head>
 <body onload="fetchFaults();">
@@ -215,6 +231,7 @@ get_vehicles();
 			<div>
 			<select id="set_depot" name="set_depot">
 				<option value="">Select depot</option>
+				<option value="0" <?php echo ($GLOBALS['the_depot'] == '0') ? 'selected' : ''; ?>>Not at depot yet</option>
 				<option value="BLM" <?php echo ($GLOBALS['the_depot'] == 'BLM') ? 'selected' : ''; ?>> BLM</option> 
 				<option value="CA" <?php echo ($GLOBALS['the_depot'] == 'CA') ? 'selected' : ''; ?>>CA</option> 
 				<option value="CBS" <?php echo ($GLOBALS['the_depot'] == 'CBS') ? 'selected' : ''; ?>>CBS</option> 
@@ -242,13 +259,13 @@ get_vehicles();
 		</div>
 	</form>
 
-	<div style="margin-top: 20px; margin-bottom: 10px; font-size: 18px;">Vehicle List</div>
+	<div style="margin-top: 20px; margin-bottom: 10px; font-size: 18px;">Vehicle List (Records found: <?php echo $num_rows; ?>)</div>
 
 	<!-- Grid for matching vehicles -->
 	<!-- 
 	Serial, Code, Reg No, Make, Model
 	-->
-	<div style="display: grid; grid-template-columns: repeat(8, auto); column-gap: 10px; row-gap: 5px; border: 1px solid #000; padding: 8px 10px; max-height: 335px; overflow: hidden; overflow-y: auto">
+	<div style="display: grid; grid-template-columns: repeat(8, auto); column-gap: 0px; row-gap: 5px; border: 1px solid #000; padding: 8px 10px; max-height: 335px; overflow: hidden; overflow-y: auto">
 		<div>Serial</div>
 		<div>Code</div>
 		<div>Reg No</div>
@@ -275,14 +292,16 @@ get_vehicles();
 			// $link_vehicle = $row['LINK_TO_VEHICLE'];
 			// $link_docs = $row['LINK_TO_DOCUMENTS'];
 			
-			echo '<div style="display: flex; align-items: center;">' . $serial . '</div>';
-			echo '<div style="display: flex; align-items: center;">' . $code . '</div>';
-			echo '<div style="display: flex; align-items: center;">' . $reg_no . '</div>';
-			echo '<div style="display: flex; align-items: center;">' . $make . '</div>';
-			echo '<div style="display: flex; align-items: center;">' . $model . '</div>';
-			echo '<div style="display: flex; align-items: center;">' . $vehicle_class . '</div>';
-			echo '<div id="y_' . $id . '_' . $serial . '" style="display: flex; align-items: center; justify-content: center; background: red; color: white; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; cursor: pointer;" onclick="hasIssues(this.id);">Issues found</div>';
-			echo '<div id="n_' . $id . '" style="display: flex; align-items: center; justify-content: center; background: green; color: white; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; cursor: pointer;" onclick="noIssues(this.id);">No issues</div>';
+			echo "<div class='data_row'>";
+				echo '<div style="display: flex; align-items: center;">' . $serial . '</div>';
+				echo '<div style="display: flex; align-items: center;">' . $code . '</div>';
+				echo '<div style="display: flex; align-items: center;">' . $reg_no . '</div>';
+				echo '<div style="display: flex; align-items: center;">' . $make . '</div>';
+				echo '<div style="display: flex; align-items: center;">' . $model . '</div>';
+				echo '<div style="display: flex; align-items: center;">' . $vehicle_class . '</div>';
+				echo '<div id="y_' . $id . '_' . $serial . '" style="display: flex; align-items: center; justify-content: center; background: red; color: white; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; cursor: pointer;" onclick="hasIssues(this.id);">Issues found</div>';
+				echo '<div id="n_' . $id . '" style="display: flex; align-items: center; justify-content: center; background: green; color: white; border-radius: 5px; border: 1px solid #000; margin-left: 10px; padding: 5px 20px; cursor: pointer;" onclick="noIssues(this.id);">No issues</div>';
+			echo "</div>";
 		}
 		?>
 	</div>

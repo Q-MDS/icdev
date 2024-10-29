@@ -1,4 +1,4 @@
-const CACHE_NAME = 'offline-cache-v11';
+const CACHE_NAME = 'offline-cache-v12';
 // const urlsToCache = [
 //   '/',
 //   '/icdev/tv/index.html',

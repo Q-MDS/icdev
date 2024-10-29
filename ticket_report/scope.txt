@@ -1,0 +1,13 @@
+A quick report that asks for a start date and end date, then runs this query and shows the output as a table  (note the dates in bold – UNIX timestamp)
+
+select affiliate_code,affiliate_name, PP.currency,sum(PP.total) total_rand, count(PP.ticketno) tickets from affiliates A, purchaser_info PU, passenger_info PI, price_paid PP
+where PU.paiddate>=1709244000 and PU.paiddate<=1730102398 and PU.commission_agent=affiliate_code and PU.ticket_Serial=PI.ticket_serial
+and PI.paid='Y'  and PI.ticket_no=PP.ticketno group by PP.currency, affiliate_code, affiliate_name;
+
+TABLES
+- affiliates
+- purchaser_info
+- passenger_info
+- price_paid
+
+select serial, code from vehicles where depot_at='PTA' and is_current='Y';
