@@ -1,16 +1,8 @@
-const CACHE_NAME = 'offline-cache-v12';
-// const urlsToCache = [
-//   '/',
-//   '/icdev/tv/index.html',
-//   '/icdev/tv/ic_logo.svg',
-//   '/icdev/tv/bs_logo.svg',
-//   // Add other assets you want to cache
-// ];
+const CACHE_NAME = 'offline-cache-v16';
 const urlsToCache = [
-  '/icdev/tv/index.html',
+  '/icdev/tv/index.php',
   '/icdev/tv/ic_logo.svg',
   '/icdev/tv/bs_logo.svg',
-  // Add other assets you want to cache
 ];
 
 self.addEventListener('install', event => {

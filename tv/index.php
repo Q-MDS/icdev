@@ -109,9 +109,9 @@ get_screen_id();
 				</div>
 			</div>
 			<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
-				<div id="ic_route_number" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; color: white; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold" onclick="fetchData()">1154</div>
+				<div id="ic_route_number" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; color: white; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold" onclick="fetchData()">----</div>
 				<div style="display: flex; flex-direction: row; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
-				<div id="ic_route_desc" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; color: white; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">Express Mthatha to Cape Town Via Queenstown</div>
+				<div id="ic_route_desc" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; color: white; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">.... .... .... ....</div>
 			</div>
 		</div>
 	</div>
@@ -126,9 +126,9 @@ get_screen_id();
 				<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
 			</div>
 			<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
-				<div id="bs_route_number" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; color: white; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold">1154</div>
+				<div id="bs_route_number" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40%; color: white; background-color: #3A3A3B; font-size: 5.5vw; font-weight: bold">----</div>
 				<div style="display: flex; flex-direction: row; width: 100%; height: 20%; background-color: #ffffff;">&nbsp;</div>
-				<div id="bs_route_desc" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40; color: white; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">Express Mthatha to Cape Town Via Queenstown</div>
+				<div id="bs_route_desc" style="display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 40; color: white; background-color: #3A3A3B; font-size: 4.0vw; font-weight: bold">.... .... .... ....</div>
 			</div>
 		</div>
 	</div>
@@ -149,9 +149,11 @@ get_screen_id();
 </body>
 </html>
 <script>
+baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/";
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/icdev/tv/service-worker.js').then(function(registration) {
+    navigator.serviceWorker.register(baseUrl + '/tv/service-worker.js').then(function(registration) {
       console.log('ServiceWorker registration successful with scope: ', registration.scope);
     }, function(err) {
       console.log('ServiceWorker registration failed: ', err);
@@ -196,7 +198,7 @@ function fetchDataOld()
 		
     	console.log('Fetching board daa');
 		
-		fetch('http://localhost/icdev/tv/api//g.php?217')
+		fetch(baseUrl + '/tv/api//g.php?217')
 		.then(response => response.json())
 		.then(data => 
 		{
@@ -237,47 +239,58 @@ async function fetchData()
 {
 	const screenId = document.getElementById('screen_id').value;
 
-	const phpUrl = 'http://localhost/icdev/tv/api/g.php';
-
-	const formData = { "screen_id": screenId };
-	
-	const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
-	const result = await response.text()
-	.then(result => 
+	if (navigator.onLine) 
 	{
-		if (result == 0)
-		{
-			// No data: show arrival screen
-			document.getElementById('ic').style.display = 'none';
-			document.getElementById('bs').style.display = 'none';
-			document.getElementById('arrivals').style.display = 'block';
-		}
-		else 
-		{
-			const data = JSON.parse(result);
-			console.log('Data fetched 1:', result);
-			console.log('Data fetched:', data.route_no);
-			
-			if (data.brand == 'IC')
-			{
-				document.getElementById('bs').style.display = 'none';
-				document.getElementById('ic').style.display = 'block';
-				document.getElementById('arrivals').style.display = 'none';
-				document.getElementById('ic_route_number').innerText = data.route_no;
-				document.getElementById('ic_route_desc').innerText = data.route_desc;
+		const phpUrl = baseUrl + 'tv/api/g.php';
 
-			}
-			else
-			{
-				document.getElementById('ic').style.display = 'none';
-				document.getElementById('bs').style.display = 'block';
-				document.getElementById('arrivals').style.display = 'none';
-				document.getElementById('bs_route_number').innerText = data.route_no;
-				document.getElementById('bs_route_desc').innerText = data.route_desc;
-			}
-		}
+		const formData = { "screen_id": screenId };
 		
-	});
+		const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
+		const result = await response.text()
+		.then(result => 
+		{
+			if (result == 0)
+			{
+				// No data: show arrival screen
+				document.getElementById('ic').style.display = 'none';
+				document.getElementById('bs').style.display = 'none';
+				document.getElementById('arrivals').style.display = 'block';
+				document.getElementById('offline').style.display = 'none';
+			}
+			else 
+			{
+				const data = JSON.parse(result);
+				console.log('Data fetched 1:', result);
+				console.log('Data fetched:', data.route_no);
+				
+				if (data.brand == 'IC')
+				{
+					document.getElementById('bs').style.display = 'none';
+					document.getElementById('ic').style.display = 'block';
+					document.getElementById('arrivals').style.display = 'none';
+					document.getElementById('ic_route_number').innerText = data.route_no;
+					document.getElementById('ic_route_desc').innerText = data.route_desc;
+
+				}
+				else
+				{
+					document.getElementById('ic').style.display = 'none';
+					document.getElementById('bs').style.display = 'block';
+					document.getElementById('arrivals').style.display = 'none';
+					document.getElementById('bs_route_number').innerText = data.route_no;
+					document.getElementById('bs_route_desc').innerText = data.route_desc;
+				}
+			}
+		});
+	}
+	else 
+	{
+		console.log('Cannot fetch data, you are offline');
+		
+		document.getElementById('ic').style.display = 'none';
+		document.getElementById('bs').style.display = 'none';
+		document.getElementById('offline').style.display = 'block';
+	}
 }
 
 init();
