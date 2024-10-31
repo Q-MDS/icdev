@@ -1,0 +1,16 @@
+TV App
+/departure_boards/tv_app/index.php?s=217
+-- timer has been set to 5 seconds for testing - set to 
+-- set baseurl
+/service_worker.js
+-- set urlsToCache
+
+TV Route Manager
+/departure_boards/tv_route/
+-- set baseurl
+√
+
+TV Manager
+/departure_boards/tv_admin/
+-- set baseurl
+√
