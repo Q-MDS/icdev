@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index Page</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background: url('https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/BSI-pattern.jpg') no-repeat center center;
+            background-size: cover; /* Cover the entire area */
+            overflow: hidden; /* Prevent scrolling */
+        }
+
+        .pattern {
+            width: 100%;
+            position: relative;
+            z-index: 1; /* Ensure it is above the gradient */
+            display: flex;
+            padding-top:10vh;
+            flex-direction: column;
+            justify-content: center; /* Center vertically */
+            align-items: center; /* Center horizontally */
+        }
+
+        h1, h2, h3 {
+            text-transform: uppercase;
+            margin: 0px 0px 6px 0px;
+            z-index: 3; /* Ensure text is above the overlay */
+            
+        }
+
+        h1 {
+            font-size: 3.6em;
+             line-height:1em;
+            align-items: center;
+            text-shadow: 3px 3px 3px rgba(0, 0, 0, 0.75);
+            font-style: italic;
+            font-weight: 900;
+            padding-bottom: 20px;
+            color: #F7DB2B;
+
+        }
+
+        h2 {
+            font-size: 7em;
+             line-height:1em;
+            align-items: center; 
+            color:#fff;
+            font-weight: 900;
+        }
+        
+        h3 {
+            font-size: 7em;
+            line-height:1em;
+            align-items: center; 
+            color:#fff;
+            font-weight: 900;
+        
+        }
+
+        .logo-bar {
+            min-height: 12vh;
+            position: absolute;
+            bottom: 0;
+            background: white;
+            text-align: center;
+            padding: 2vh 0;
+            z-index: 1000;
+            box-shadow: 3px -3px 5px rgba(0, 0, 0, 0.75); /* Drop shadow */
+            border-radius: 8vh 8vh 0px 0px;
+            width: 60%;
+            margin-left: 20%;
+        }
+
+        .logo-bar img {
+            width: 40vw; /* 60% width */
+            max-width: 40vw; /* Optional max width */
+            height: auto;
+        }
+
+        .header{
+            position: sticky;
+            text-align:center;
+            width: 60%;
+            margin-left: 20%;
+            border-radius: 0px 0px 8vh 8vh;
+            padding: 2vh 0;
+            z-index: 1000;
+            box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.75); 
+            background:#fff;
+            min-height: 16vh;
+        }
+
+        .header img {
+            width: 40vw; /* 60% width */
+            max-width: 40vw; /* Optional max width */
+            height: auto;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/bsi-mailer-logo-Artboard-5.svg" alt="Logo" class="logo">
+    </div>
+    <div class="pattern">
+        <h1>Are you on the right coach?</h1>
+        <h2>Cape Town</h2>
+        <h3>0327</h3>
+    </div>
+</body>
+</html>
