@@ -1,0 +1,131 @@
+<html>
+	<head><link type="text/css" rel="stylesheet" href="style.css"><title>Manage Manufacturers</title><head>
+	
+	<body>
+	<? require_once ( "menu.inc" ); ?>
+	<?
+	echo "Not used any more";
+	exit;
+    require_once("error.inc");
+	require_once("../php3/oracle.inc");
+    //require_once("../php3/logs.inc");
+    //require_once("../php3/misc.inc");
+    require_once("../php3/sec.inc");
+
+    if( !open_oracle() )
+    	exit;
+    	
+    if( !AllowedFlag("MOVE_ALL" ) )
+    	access( __FILE__ );
+	?>
+	<div class="choices">
+    <table class="choices">
+    	<tr bgcolor=white>
+    		<td width=200><a href="partsmfr.phtml?stage=0">View/Edit/Delete Manufacturers</a></td>
+    		<td width=200><a href="partsmfr.phtml?stage=1">Add A Manufacturer</a></td>
+    		<td width=200><a href="captureparts.phtml?stage=0">Capture Parts</a></td>
+    	</tr>
+    </table>
+    </div>
+    <br>
+	<?
+    if( $stage==0 ) {	//Start
+    	?>
+    	<table width=90%>
+    	<tr class="title">
+    		<td>Manufacturer</td>
+    		<td colspan=2</td>
+    	</tr>
+    	<?
+    		array( $results );
+    		ora_parse( $cursor, "SELECT A.mfrserial, A.name FROM PARTS_MANUFACTURER A ORDER BY A.name" );
+    		ora_exec( $cursor );
+    		
+    		while( ora_fetch_into( $cursor, $results ) ) {
+    			?>
+    			<tr class="cell">
+    			<td><?=$results[1]?></td>
+				<form method="post" action="partsmfr.phtml"><input type="hidden" name="stage" value="1"><input type="hidden" name="mfrserial" value="<?=$results[0]?>"><td width=60><input type="submit" value="Edit"></td></form>
+				<form method="post" action="partsmfr.phtml"><input type="hidden" name="stage" value="5"><input type="hidden" name="mfrserial" value="<?=$results[0]?>"><td width=60><input type="submit" value="Delete"></td></form>
+				<?
+				print "</tr>";
+    			$results = array();
+    		}
+    	?>
+	   	</table>
+    	<?
+    }
+    elseif( $stage==1 ) {	//Add & Edit Form
+    	?>
+    	<form method="post">
+    	<input type="hidden" name="stage" value="2">
+    	<?
+    	if( isset( $mfrserial ) ) {
+    		print "<input type=hidden name=mfrserial value=$mfrserial><input type=hidden name=action value=edit>";
+	    	print "<table width=90%><tr class=\"title\"><td colspan=2>Edit Mnaufacturer Information</td></tr>";
+	    	
+	    	ora_parse( $cursor, "SELECT name FROM PARTS_MANUFACTURER WHERE mfrserial=$mfrserial" );
+	    	ora_exec( $cursor );
+	    	$mfr = ora_getColumn( $cursor, 0 );
+    	} else {
+    		print "<input type=hidden name=action value=add>";
+	    	print "<table width=90%><tr class=\"title\"><td colspan=2>Add Manufacturer Information</td></tr>";
+	    	$mfr = "";
+    	}
+    	?>
+	    	<tr class="cell">
+	    		<td width=150>Manufacturer Name</td>
+	    		<td><input type="text" name="name" value="<?=$mfr?>" size=60 maxlength=50></td>
+	    	</tr>
+	  	</table>
+    	<br>
+    	<?
+    	if( isset(  $mfrserial ) )
+    		print "<input type=\"submit\" value=\"Edit Manufacturer\"></form>";
+    	else print "<input type=\"submit\" value=\"Add Manufacturer\"></form>";
+    }
+    elseif( $stage==2 ) {	//Do add | edit
+    	$name = str_replace( "\'", "''", $name );
+    	
+    	if( $action=="add" ) {
+	    	ora_parse( $cursor, "SELECT MOVE_GENERAL.nextval FROM dual" );
+    		ora_exec( $cursor );
+    		$mfrserial = ora_getColumn( $cursor, 0 );
+    		$statement = "INSERT INTO PARTS_MANUFACTURER VALUES( $mfrserial, '$name' )";
+    	
+	    	ora_parse( $cursor, $statement );
+    		if( !ora_exec( $cursor ) )
+    			showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not insert manufacturer information" );
+    	} else {
+    		$statement = "UPDATE PARTS_MANUFACTURER SET name='$name' WHERE mfrserial=$mfrserial";
+    		ora_parse( $cursor, $statement );
+    	
+    		if( !ora_exec( $cursor ) )
+    			showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not update supplier information" );
+
+    	}
+    	?> <form name="temp" method="post" action="partsmfr.phtml"><input type="hidden" name="stage" value="1"></form> <script language="JavaScript"> temp.submit() </script> <?
+    }
+    elseif( $stage==5 ) {	//Do delete
+    	ora_parse( $cursor, "SELECT COUNT(*) FROM STK_MFRPARTS WHERE mfr=$mfrserial" );
+    	ora_exec( $cursor );
+    	if( ora_getColumn( $cursor, 0 )==0 ) {
+	   		ora_parse( $cursor, "DELETE FROM PARTS_MANUFACTURER WHERE mfrserial=$mfrserial" );
+   			if( !ora_exec( $cursor ) )
+   				showError( __FILE__, __LINE__, "$stage", "$statement<br><br>Could not delete supplier" );
+   		} else {
+   			print "Can't delete. need to delete parts first";
+   			exit;
+   		}
+
+    	?>
+    	<form name="temp" method="post" action="partsmfr.phtml"><input type="hidden" name="stage" value="0"></form>
+    	<script language="JavaScript"> temp.submit() </script>
+    	<?
+    }
+    else {					//Show error
+    	showError( __FILE__, __LINE__, "$stage", "This should not be possible ;)" );
+    }
+	?>
+	</body>
+</html>

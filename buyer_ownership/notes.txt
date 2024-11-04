@@ -1,0 +1,33 @@
+1. Storeman page needs new button: BUYER ACTION REQUIRED - PR added to buyers inbox
+2. Buyer page: ADD buyer inbox
+
+Questions
+1. Which exact screen does the BUYER ACTION REQUIRED button go on ?
+2. Which page is the Accept/Take Ownership (Buyer)’ button on ?
+3. Where are BUYER_OWNER and BUYER_OWNER_DATE -  what table
+4. What screen does the buyer use?
+
+- MOVE_JOBS_PART_REQUESTS.BUYER_OWNER 
+
+- Buyer action required button on ..... page
+  - update BUYER_REQUESTED_DATE and BUYER_REQUESTED_BY (who requested)
+  - this adds a record to the buyers inbox table
+- Buyer inbox screen: list of orders created by the buyer
+
+PR_SERIAL
+JOBCARDSERIAL
+REQUEST_TEXT
+CAPTURED_BY
+CAPTURE_DATE
+RECEIVED_DATE
+APPROVED
+APPROVED_BY
+APPROVED_DATE
+APPROVED_COMMENTS
+FINAL_TEXT
+DELETED
+ACCEPTED_BY
+ACCEPTED_DATE
+ON_ORDER_FLAG
+HANGING
+PICK_SLIP_VALUE
