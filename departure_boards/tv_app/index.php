@@ -160,36 +160,11 @@ get_stop_serial();
 	}
 </style>
 </head>
-<body>
-	<!-- IC -->
-	<div id="ic" style="display: none;">
-		<div class="header">
-			<img src="https://www.intercape.co.za/wp-content/uploads/2024/11/intercape-logo.svg" alt="Logo" class="logo">
-		</div>
-		<div class="pattern">
-			<h1>Are you on the right coach?</h1>
-			<h2><div id="ic_route_desc">...</div></h2>
-			<h3><div id="ic_route_number">...</div></h3>
-		</div>
-		<div class="logo-bar">
-			<a href="https://www.intercape.co.za/intercape-app/" target="_blank">
-				<img src="https://www.intercape.co.za/wp-content/uploads/2024/11/IC_mailer_logos.png" alt="Logo Bar" class="logo">
-			</a>
-		</div>
-	</div>
+<body onload="init();">
+	<!-- Placeholder for IC/BI content -->
+    <div id="ic-container"></div>
+    <div id="bi-container"></div>
 
-	<!-- BIG SKY -->
-	<div id="bi" style="display: none;">
-		<div class="header">
-			<img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/bsi-mailer-logo-Artboard-5.svg" alt="Logo" class="logo">
-		</div>
-		<div class="pattern">
-			<h1 style="color: #F7DB2B;">Are you on the right coach?</h1>
-			<h2><div id="bi_route_desc" style="color: #FFF;">Cape Town</h2>
-			<h3 id="bi_route_number" style="color: #FFF;">0327</h3>
-		</div>
-	</div>
-	
 	<div id="offline" style="display: none; align-items: center; justify-content: center; height: 100%;">
 		<div>
 			<div style="font-size: 7em; font-style: italic; font-weight: 900; color: #FFF; text-shadow: 3px 3px 3px rgba(0, 0, 0, 0.75);">Please check back later</div>
@@ -221,6 +196,32 @@ function init()
 {
 	console.log('You are: ' + navigator.onLine);
 	setInterval(fetchData, 5000);
+	loadICContent();
+	loadBIContent();
+}
+
+function loadICContent() 
+{
+	fetch('inc_ic.html')
+	.then(response => response.text())
+	.then(data => 
+	{
+		console.log('IC content loaded:', data);
+		document.getElementById('ic-container').innerHTML = data;
+	})
+	.catch(error => console.error('Error loading IC content:', error));
+}
+
+function loadBIContent() 
+{
+	fetch('inc_bi.html')
+	.then(response => response.text())
+	.then(data => 
+	{
+		console.log('BI content loaded:', data);
+		document.getElementById('bi-container').innerHTML = data;
+	})
+	.catch(error => console.error('Error loading IC content:', error));
 }
 
 function isOffline()
@@ -239,55 +240,6 @@ function isOffline()
 		document.getElementById('ic').style.display = 'block';
 		document.getElementById('bs').style.display = 'none';
 		document.getElementById('offline').style.display = 'none';
-	}
-}
-
-function fetchDataOld() 
-{
-	const screenId = document.getElementById('screen_id').value;
-
-	console.log('Fetching board data for screen ID:', screenId);
-
-	if (navigator.onLine) 
-	{
-		document.getElementById('offline').style.display = 'none';
-		
-    	console.log('Fetching board daa');
-		
-		fetch(baseUrl + '/tv/api//g.php?217')
-		.then(response => response.json())
-		.then(data => 
-		{
-			console.log('Data fetched:', data);
-			
-			if (data.brand == 'IC')
-			{
-				document.getElementById('bs').style.display = 'none';
-				document.getElementById('ic').style.display = 'block';
-				document.getElementById('ic_route_number').innerText = data.route;
-				document.getElementById('ic_route_desc').innerText = data.description;
-
-			}
-			else
-			{
-				document.getElementById('ic').style.display = 'none';
-				document.getElementById('bs').style.display = 'block';
-				document.getElementById('bs_route_number').innerText = data.route;
-				document.getElementById('bs_route_desc').innerText = data.description;
-			}
-		})
-		.catch(error => 
-		{
-			console.error('Error fetching data:', error);
-		});
-	} 
-	else 
-	{
-		console.log('Cannot fetch data, you are offline');
-		
-		document.getElementById('ic').style.display = 'none';
-		document.getElementById('bs').style.display = 'none';
-		document.getElementById('offline').style.display = 'block';
 	}
 }
 
@@ -395,5 +347,5 @@ async function fetchData()
 	}
 }
 
-init();
+// init();
 </script>

@@ -1,5 +1,5 @@
 const CACHE_NAME = 'offline-cache-v18';
-const baseUrl = window.location.protocol + "//" + window.location.hostname + "/move/";
+const baseUrl = window.location.protocol + "//" + window.location.hostname + "/noauth/";
 const urlsToCache = [
   baseUrl + 'departure_boards/tv_app/index.php',
   baseUrl + 'departure_boards/tv_app/ic_logo.svg',

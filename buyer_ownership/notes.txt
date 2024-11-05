@@ -1,3 +1,5 @@
+TEST URL: 
+
 1. Storeman page needs new button: BUYER ACTION REQUIRED - PR added to buyers inbox
 2. Buyer page: ADD buyer inbox
 
@@ -31,3 +33,30 @@ ACCEPTED_DATE
 ON_ORDER_FLAG
 HANGING
 PICK_SLIP_VALUE
+
+NEXT 05-11-2024
+- build into existing page
+  - if buyer_request_date is null then show the button: BUYER ACTION REQUIRED
+  - put BUYER INBOX under buyer action required button or put as item on top menu
+- What does the receive do?
+  - add a note into MOVE_JOBS_PARTS_REQUEST_NOTES
+
+NOTE_SERIAL
+PR_SERIAL
+DATE_LOGGED
+LOGGED_BY
+NOTES
+---
+NUMBER
+NUMBER
+DATE
+NUMBER
+VARCHAR2(4000 BYTE)
+
+6	168	03/MAR/16	2147469097	revoke please
+7	166	03/MAR/16	2147469097	revoke please duplication
+17	56	03/MAR/16	2147471430	Waiting Sweden back order
+40	440	07/MAR/16	2147476035	RE PAIR TRAILER
+47	514	09/MAR/16	2147470322	2 X BRAKE BOOSTERS EX JHB AND 2 X SOLENOIDS 9520836 EX SWEDEN
+51	581	09/MAR/16	2147469097	please revoke request incorrect part requested
+56	656	10/MAR/16	2147470322	Called at 10h10 techncian on his way

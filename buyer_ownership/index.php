@@ -2,16 +2,17 @@
 // Add on line 433: // echo '<input type="button" value="BUYER ACTION REQUIRED" style="padding: 5px 10px; margin-bottom: 10px;">';
 
 $stores = 111;
-$user_type = 'b'; // s->store, b->buyer
+$user_type = 's'; // s->store, b->buyer
 $buyer_id = 222;
-$pr_serial = 123456789;
+$pr_serial = 44445555;
 $buyer_records = array();
+$action = 0;
 
-if (isset($_GET['buyer'])) 
+if (isset($_GET['action'])) 
 {
-	$buyer = $_GET['buyer'];
+	$action = $_GET['action'];
 	
-	switch($buyer)
+	switch($action)
 	{
 		case 1:
 			echo 'Add buyer action here';
@@ -97,7 +98,7 @@ function take_ownership()
 
 	$conn = oci_conn();
 
-	$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_OWNER = $buyer_id, BUYER_OWNER_DATE = $now WHERE PR_SERIAL = 987654321";
+	$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_OWNER = $buyer_id, BUYER_OWNER_DATE = $now WHERE PR_SERIAL = $pr_serial";
 		
 	$cursor = oci_parse($conn, $sql);
 	oci_execute($cursor);
@@ -117,18 +118,20 @@ function take_ownership()
 	<?php
 	if ($user_type == 's')
 	{
-		echo '<a href="index.php?buyer=1" style="text-decoration: none">';
-		echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 230px; ">';
-		echo 'BUYER ACTION REQUIRED';
+		echo '<div style="margin-top: 5px; margin-bottom: 5px;">';
+			echo '<a href="index.php?action=1" style="text-decoration: none;">';
+			echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 230px; ">';
+			echo 'BUYER ACTION REQUIRED';
+			echo '</div>';
+			echo '</a>';
 		echo '</div>';
-		echo '</a>';
 	}
 	?>
 	<p>
 	<?php
 	if ($user_type == 'b')
 	{
-		echo '<a href="index.php?buyer=2" style="text-decoration: none">';
+		echo '<a href="index.php?action=2" style="text-decoration: none">';
 		echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 230px; ">';
 		echo 'BUYER INBOX';
 		echo '</div>';
@@ -138,19 +141,19 @@ function take_ownership()
 	<hr/>
 
 	<?php
-	if ($buyer == 2)
+	if ($action == 2)
 	{
-		echo '<div style="display: grid; grid-template-columns: 100px 100px 1fr 120px 120px 80px 180px">';
-		echo '<div style="grid-column: span 7;"><h3>Waiting buyer requests</h3></div>';
-			echo '<div>Jobcard</div>';
+		echo '<div style="display: grid; grid-template-columns: 120px 100px 1fr 120px 120px 120px 80px 180px; row-gap: 5px">';
+		echo '<div style="grid-column: span 8;"><h3>Buyer action required</h3></div>';
+			echo '<div>Jobcard Serial</div>';
 			echo '<div>PR Number</div>';
-			echo '<div>Part</div>';
+			echo '<div style="grid-column: span 2;">Part</div>';
 			echo '<div>Requested Date</div>';
 			echo '<div>Requested By</div>';
 			echo '<div>Days Open</div>';
 			echo '<div>Action</div>';
 
-			echo '<div style="grid-column: span 7;"><hr/></div>';
+			echo '<div style="grid-column: span 8;"><hr/></div>';
 
 			foreach($buyer_records as $row)
 			{
@@ -162,12 +165,12 @@ function take_ownership()
 
 					echo '<div>' . $row['JOBCARDSERIAL'] . '</div>';
 					echo '<div>' . $row['PR_SERIAL'] . '</div>';
-					echo '<div>' . $row['REQUEST_TEXT'] . '</div>';
+					echo '<div style="grid-column: span 2">' . $row['REQUEST_TEXT'] . '</div>';
 					echo '<div>' . date("Y-m-d", $row['BUYER_REQUESTED_DATE']) . '</div>';
 					echo '<div>' . $row['BUYER_REQUESTED_BY'] . '</div>';
 					echo '<div>' . number_format($days_open, 0) . '</div>';
 					echo '<div>';
-						echo '<a href="index.php?buyer=3" style="text-decoration: none">';
+						echo '<a href="index.php?action=3" style="text-decoration: none">';
 							echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 150px; ">';
 								echo 'TAKE OWNERSHIP';
 							echo '</div>';
@@ -176,18 +179,19 @@ function take_ownership()
 				}
 			}
 
-			echo '<div style="grid-column: span 7; font-weight: bold;"><hr/></div>';
-			echo '<div style="grid-column: span 7; font-weight: bold;"><h2>My buyer requests</h2></div>';
+			echo '<div style="grid-column: span 8; font-weight: bold;"><hr/></div>';
+			echo '<div style="grid-column: span 8; font-weight: bold;"><h3>My buyer requests</h3></div>';
 
-			echo '<div>Jobcard</div>';
+			echo '<div>Jobcard Serial</div>';
 			echo '<div>PR Number</div>';
 			echo '<div>Part</div>';
 			echo '<div>Owenership Date</div>';
+			echo '<div>Requested Date</div>';
 			echo '<div>Requested By</div>';
 			echo '<div>Days Open</div>';
 			echo '<div>Action</div>';
 
-			echo '<div style="grid-column: span 7; font-weight: bold;"><hr/></div>';
+			echo '<div style="grid-column: span 8; font-weight: bold;"><hr/></div>';
 
 			foreach($buyer_records as $row)
 			{
@@ -200,10 +204,11 @@ function take_ownership()
 					echo '<div>' . $row['PR_SERIAL'] . '</div>';
 					echo '<div>' . $row['REQUEST_TEXT'] . '</div>';
 					echo '<div>' . date("Y-m-d", $row['BUYER_OWNER_DATE']) . '</div>';
+					echo '<div>' . date("Y-m-d", $row['BUYER_REQUESTED_DATE']) . '</div>';
 					echo '<div>' . $row['BUYER_REQUESTED_BY'] . '</div>';
 					echo '<div>' . number_format($days_open, 0) . '</div>';
 					echo '<div>';
-						echo '<a href="index.php?buyer=4" style="text-decoration: none">';
+						echo '<a href="index.php?action=4" style="text-decoration: none">';
 							echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 150px; ">';
 								echo 'RECEIVED';
 							echo '</div>';
