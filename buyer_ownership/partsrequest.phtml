@@ -9,6 +9,7 @@
 	$newadded = false;
 	$check_empty = false;
 	$line = 0;
+	
     require_once("../php3/oracle.inc");
 	VV("req");
 
@@ -18,7 +19,6 @@
 	$wildcard_depots = array();
 	
     VV("shownotes");
-
 
     if (!isset($_GET['printslip']) && $shownotes!="Y")
 		require_once ( "menu.inc" ); ?>
@@ -46,11 +46,14 @@
 	$rights["STOREMAN"]=AllowedFlag("MOVE_STOCK");
 	$rights["SUPERVISOR"]=AllowedFlag("PARTS_REQ_AUTH");
 	$rights["REVOKE"]=AllowedFlag("STK_CREATE_I");
+	$rights["BUYER"]=AllowedFlag("BUYER");
+	$rights["DEVELOPERS"]=AllowedFlag("DEVELOPERS");
+
 //	if ($rights["SUPERVISOR"])
 //		echo "OK!!";
 	VV("jobcardserial");
 	$jobcardserial=trim($jobcardserial);
-
+	
 	$depot=$cookiedepot;
 	if ($depot=="")
 	{
@@ -109,8 +112,6 @@
 
 	}
 
-
-
 	if (isset($req) && is_numeric($req) && isset($newjc) && is_numeric($newjc) && isset($unhang)) {
 		ora_parse($cursor,"update move_jobs_part_requests set jobcardserial=$newjc where jobcardserial<0 and pr_serial=$req");
 		if (ora_exec($cursor))
@@ -123,6 +124,7 @@
 				$jobcardserial=$newjc;
 			}
 	}
+	
 	if (isset($req) && is_numeric($req) && isset($doremove) && is_numeric($jobcardserial) && $jobcardserial>0 && $rights["STOREMAN"]) {
 		ora_parse($cursor,"update move_jobs_part_requests set jobcardserial=-$jobcardserial where jobcardserial=$jobcardserial and pr_serial=$req");
                 if (ora_exec($cursor))
@@ -197,7 +199,6 @@
 		exit;
 
 	} // show notes
-
 ///////////////////////////////
 
 	function current_location($track) {
@@ -434,7 +435,6 @@
 		 * 
 		 */
 
-
 		/**
 		* Date: 05-11-2024
 		* Desc: Buyer action reqired button
@@ -447,11 +447,11 @@
 		// $user_type = 's'; // s->store, b->buyer
 
 		// $user_type = $rights["STOREMAN"];
-		$bo_user_serial = getuserserial();
+		
 
 		if ($rights["STOREMAN"])
 		{
-			echo "I'm the storemand";
+			echo "I'm the storemand ";
 		}
 		else 
 		{
@@ -459,8 +459,7 @@
 		}
 
 		$bo_pr_serial = $req;
-		$buyer_records = array();
-		// $action = 0;
+		
 
 		function buyer_action_required($bo_user_serial, $bo_pr_serial)
 		{
@@ -471,7 +470,54 @@
 			// $conn = oci_conn();
 
 			// $sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_REQUESTED_BY = $bo_user_serial, BUYER_REQUESTED_DATE = $now WHERE PR_SERIAL = $bo_pr_serial";
-			$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_REQUESTED_BY = 212263887, BUYER_REQUESTED_DATE = $now WHERE PR_SERIAL = 114459";
+			$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_REQUESTED_BY = $bo_user_serial, BUYER_REQUESTED_DATE = $now WHERE PR_SERIAL = $bo_pr_serial";
+				
+			$cursor = oci_parse($conn, $sql);
+			oci_execute($cursor);
+
+			oci_close($conn);
+		}
+
+		function get_buyer_records()
+		{
+			global $conn, $buyer_records;
+
+			$sql = "SELECT * FROM MOVE_JOBS_PART_REQUESTS WHERE BUYER_REQUESTED_DATE IS NOT NULL ORDER BY BUYER_REQUESTED_DATE DESC";
+				
+			$cursor = oci_parse($conn, $sql);
+			oci_execute($cursor);
+
+			while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
+			{
+				$buyer_records[] = $row;
+			}
+
+			oci_close($conn);
+
+			return $buyer_records;
+		}
+
+		function take_ownership($bo_user_serial, $bo_pr_serial)
+		{
+			global $conn;
+
+			$now = strtotime(date("Y-m-d H:i:s"));
+
+			$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_OWNER = $bo_user_serial, BUYER_OWNER_DATE = $now, BUYER_FINISHED = 'N' WHERE PR_SERIAL = $bo_pr_serial";
+				
+			$cursor = oci_parse($conn, $sql);
+			oci_execute($cursor);
+
+			oci_close($conn);
+		}
+
+		function buyer_finished($bo_pr_serial)
+		{
+			global $conn;
+
+			$now = strtotime(date("Y-m-d H:i:s"));
+
+			$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_FINISHED = 'Y' WHERE PR_SERIAL = $bo_pr_serial";
 				
 			$cursor = oci_parse($conn, $sql);
 			oci_execute($cursor);
@@ -479,46 +525,161 @@
 			oci_close($conn);
 		}
 		
+		$action = 0;
+		$buyer_records = array();
+
 		if (isset($_GET['action'])) 
 		{
 			$action = $_GET['action'];
 			// 1730812862 
 			// 114459
-			echo "Boo: " . $action;
 			
 			switch($action)
 			{
 				case 1:
 					echo 'Add buyer action here 1';
+					$bo_user_serial = getuserserial();
+					$bo_pr_serial = $req;
 					buyer_action_required($bo_user_serial, $bo_pr_serial);
-					echo 'Add buyer action here 2';
 				break;
 				case 2:
 					echo 'Show buyer inbox';
-					get_buyer_records();
+					$bo_user_serial = getuserserial();
+					echo "Boo US: " . $test . "<br>";
+					$buyer_records = get_buyer_records();
 				break;
 				case 3:
-					echo 'Take ownership';
-					take_ownership();
+					$bo_user_serial = getuserserial();
+					$bo_pr_serial = $req;
+					echo 'Take ownership ' . $bo_user_serial . ' > ' . $bo_pr_serial;
+					take_ownership($bo_user_serial, $bo_pr_serial);
 				break;
-				case 3:
-					echo 'Parts received';
+				case 4:
+					echo 'Buyer finished';
+					$bo_pr_serial = $req;
+					buyer_finished($bo_pr_serial);
 				break;
 			}
 		}
 		
+		// May have used ! (not) as my login is not a storeman
 		if (!$rights["STOREMAN"] && $entry["BUYER_REQUESTED_DATE"] == "")
 		{
+			$us = getuserserial();
 			echo '<div style="margin-top: 5px; margin-bottom: 5px;">';
-				echo '<a href="partsrequest.phtml?action=1" style="text-decoration: none;">';
+				echo '<a href="partsrequest.phtml?jobcardserial=' . $jobcardserial . '&req=' . $req . '&action=1" style="text-decoration: none;">';
 				echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 230px; ">';
-				echo 'BUYER ACTION REQUIRED > ' . $bo_user_serial . ' > ' . $bo_pr_serial;
+				echo 'BUYER ACTION REQUIRED';
 				echo '</div>';
 				echo '</a>';
 			echo '</div>';
 		}
-		
+		// 07-11-2024
+		// May have used ! (not) as my login is not a buyer
+		// http://192.168.10.239/move/partsrequest.phtml?jobcardserial=16214510&req=114459
+		if ($rights["BUYER"] || $rights["DEVELOPERS"])
+		{
+			echo '<div style="margin-top: 5px; margin-bottom: 5px;">';
+				// echo '<a href="partsrequest.phtml?action=2" style="text-decoration: none">';
+				echo '<a href="partsrequest.phtml?jobcardserial=' . $jobcardserial . '&req=' . $req . '&action=2" style="text-decoration: none">';
+				echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 230px; ">';
+				echo 'BUYER INBOX';
+				echo '</div>';
+				echo '</a>';
+			echo '</div>';
+		}
+
+		// BUYER INBOX TABLES
+		if ($action == 2)
+		{
+			$bo_user_serial = getuserserial();
+
+			echo '<div style="display: grid; grid-template-columns: 120px 100px 1fr 120px 120px 120px 80px 180px; row-gap: 5px">';
+			echo '<div style="grid-column: span 8;"><h3>Buyer action required</h3></div>';
+				echo '<div>Jobcard Serial</div>';
+				echo '<div>PR Number</div>';
+				echo '<div style="grid-column: span 2;">Part</div>';
+				echo '<div>Requested Date</div>';
+				echo '<div>Requested By</div>';
+				echo '<div>Days Open</div>';
+				echo '<div>Action</div>';
+
+				echo '<div style="grid-column: span 8;"><hr/></div>';
+
+				foreach($buyer_records as $row)
+				{
+					if ($row['BUYER_REQUESTED_DATE'] != NULL && $row['BUYER_OWNER'] == NULL)
+					{
+						$now = strtotime(date("Y-m-d H:i:s"));
+						// $days_open = date_diff(date_create($row['BUYER_REQUESTED_DATE']), date_create(date('Y-m-d')))->format('%a');
+						$days_open = ($now - $row['BUYER_REQUESTED_DATE']) / 86400;
+
+						echo '<div>' . $row['JOBCARDSERIAL'] . '</div>';
+						echo '<div>' . $row['PR_SERIAL'] . '</div>';
+						echo '<div style="grid-column: span 2">' . $row['REQUEST_TEXT'] . '</div>';
+						echo '<div>' . date("Y-m-d", $row['BUYER_REQUESTED_DATE']) . '</div>';
+						echo '<div>' . $row['BUYER_REQUESTED_BY'] . '</div>';
+						echo '<div>' . number_format($days_open, 0) . '</div>';
+						echo '<div>';
+							echo '<a href="partsrequest.phtml?jobcardserial=' . $jobcardserial . '&req=' . $req . '&action=3" style="text-decoration: none">';
+								echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 150px; ">';
+									echo 'TAKE OWNERSHIP';
+								echo '</div>';
+							echo '</a>';
+						echo '</div>';
+					}
+				}
+
+				echo '<div style="grid-column: span 8; font-weight: bold;"><hr/></div>';
+				echo '<div style="grid-column: span 8; font-weight: bold;"><h3>My buyer requests</h3></div>';
+
+				echo '<div>Jobcard Serial</div>';
+				echo '<div>PR Number</div>';
+				echo '<div>Part</div>';
+				echo '<div>Owenership Date</div>';
+				echo '<div>Requested Date</div>';
+				echo '<div>Requested By</div>';
+				echo '<div>Days Open</div>';
+				echo '<div>Action</div>';
+
+				echo '<div style="grid-column: span 8; font-weight: bold;"><hr/></div>';
+				
+				foreach($buyer_records as $row)
+				{
+					if ($row['BUYER_REQUESTED_DATE'] != NULL && $row['BUYER_OWNER'] == $bo_user_serial)
+					{
+						$now = strtotime(date("Y-m-d H:i:s"));
+						$days_open = ($now - $row['BUYER_REQUESTED_DATE']) / 86400;
+
+						echo '<div>' . $row['JOBCARDSERIAL'] . '</div>';
+						echo '<div>' . $row['PR_SERIAL'] . '</div>';
+						echo '<div>' . $row['REQUEST_TEXT'] . '</div>';
+						echo '<div>' . date("Y-m-d", $row['BUYER_OWNER_DATE']) . '</div>';
+						echo '<div>' . date("Y-m-d", $row['BUYER_REQUESTED_DATE']) . '</div>';
+						echo '<div>' . $row['BUYER_REQUESTED_BY'] . '</div>';
+						echo '<div>' . number_format($days_open, 0) . '</div>';
+						if ($row['BUYER_FINISHED'] == 'N')
+						{
+							echo '<div>';
+								echo '<a href="partsrequest.phtml?jobcardserial=' . $jobcardserial . '&req=' . $req . '&action=4" style="text-decoration: none">';
+									echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 150px; ">';
+										echo 'BUYER FINISHED';
+									echo '</div>';
+								echo '</a>';
+							echo '</div>';
+						} 
+						else 
+						{
+							echo '<div>Complete</div>';
+						}
+					}
+				}
+			echo '</div>';
+
+			echo '<div style="grid-column: span 8; font-weight: bold;"><hr/></div>';
+		}
 		/** END */
+		
 		echo "<table border=1><tr class=cell><td valign=top><u><b>Request as typed in:</b></u><br>".str_replace("\n","<br>",$entry["REQUEST_TEXT"])."</td>";
 
 		echo "<td valign=top><u><b>Last parts added to ".$job["CODE"]."</b></u><bR>";
