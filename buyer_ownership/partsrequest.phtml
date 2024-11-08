@@ -156,7 +156,7 @@
 	}
 	
 	if (!isset($_GET["printslip"]) && $shownotes!="Y")
-		echo "<b>".str_replace("'","",$depot_list)."</b> | <a href=partsrequest.phtml?mode=U>Approve</a> | <a href=partsrequest.phtml?mode=I>Issue Stock</a> | <a href=partsrequest.phtml?mode=O>On Order</a> | <a href=partsrequest.phtml?mode=R>Receive</a> | <a href=partsrequest.phtml?mode=H>Hanging</a> | <a href=partsrequest.phtml?mode=L>Show All</a> | <a target=parent href='https://secure.intercape.co.za/ignite/index.php?c=reports&m=vmechanic_report&page_id=701&depot=$cookiedepot'>Dashboard</a><BR>";
+		echo "<b>".str_replace("'","",$depot_list)."</b> | <a href=partsrequest.phtml?mode=U>Approve</a> | <a href=partsrequest.phtml?mode=I>Issue Stock</a> | <a href=partsrequest.phtml?mode=B>Buyer Inbox</a> | <a href=partsrequest.phtml?mode=O>On Order</a> | <a href=partsrequest.phtml?mode=R>Receive</a> | <a href=partsrequest.phtml?mode=H>Hanging</a> | <a href=partsrequest.phtml?mode=L>Show All</a> | <a target=parent href='https://secure.intercape.co.za/ignite/index.php?c=reports&m=vmechanic_report&page_id=701&depot=$cookiedepot'>Dashboard</a><BR>";
 
 	ora_parse($cursor,"alter session set nls_date_format='hh24:mi Dy dd Mon YYYY'");
 	ora_exec($cursor);
@@ -432,138 +432,15 @@
 		}
 		else
 		/**
-		 * 
-		 */
-
-		/**
 		* Date: 05-11-2024
 		* Desc: Buyer action reqired button
 		* Requirements: BUYER_REQUESTED_DATE is null and user type = STOREMAN
 		* 
 		* START
 		*/
-		// $stores = 111;
-		// $buyer_id = 222;
-		// $user_type = 's'; // s->store, b->buyer
-
-		// $user_type = $rights["STOREMAN"];
-		
-
-		if ($rights["STOREMAN"])
-		{
-			echo "I'm the storemand ";
-		}
-		else 
-		{
-			echo "I'm not the storeman";
-		}
-
-		$bo_pr_serial = $req;
-		
-
-		function buyer_action_required($bo_user_serial, $bo_pr_serial)
-		{
-			echo "Got to: buyer_action_required";
-			global $conn;
-			$now = strtotime(date("Y-m-d H:i:s"));
-
-			// $conn = oci_conn();
-
-			// $sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_REQUESTED_BY = $bo_user_serial, BUYER_REQUESTED_DATE = $now WHERE PR_SERIAL = $bo_pr_serial";
-			$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_REQUESTED_BY = $bo_user_serial, BUYER_REQUESTED_DATE = $now WHERE PR_SERIAL = $bo_pr_serial";
-				
-			$cursor = oci_parse($conn, $sql);
-			oci_execute($cursor);
-
-			oci_close($conn);
-		}
-
-		function get_buyer_records()
-		{
-			global $conn, $buyer_records;
-
-			$sql = "SELECT * FROM MOVE_JOBS_PART_REQUESTS WHERE BUYER_REQUESTED_DATE IS NOT NULL ORDER BY BUYER_REQUESTED_DATE DESC";
-				
-			$cursor = oci_parse($conn, $sql);
-			oci_execute($cursor);
-
-			while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
-			{
-				$buyer_records[] = $row;
-			}
-
-			oci_close($conn);
-
-			return $buyer_records;
-		}
-
-		function take_ownership($bo_user_serial, $bo_pr_serial)
-		{
-			global $conn;
-
-			$now = strtotime(date("Y-m-d H:i:s"));
-
-			$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_OWNER = $bo_user_serial, BUYER_OWNER_DATE = $now, BUYER_FINISHED = 'N' WHERE PR_SERIAL = $bo_pr_serial";
-				
-			$cursor = oci_parse($conn, $sql);
-			oci_execute($cursor);
-
-			oci_close($conn);
-		}
-
-		function buyer_finished($bo_pr_serial)
-		{
-			global $conn;
-
-			$now = strtotime(date("Y-m-d H:i:s"));
-
-			$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_FINISHED = 'Y' WHERE PR_SERIAL = $bo_pr_serial";
-				
-			$cursor = oci_parse($conn, $sql);
-			oci_execute($cursor);
-
-			oci_close($conn);
-		}
-		
-		$action = 0;
-		$buyer_records = array();
-
-		if (isset($_GET['action'])) 
-		{
-			$action = $_GET['action'];
-			// 1730812862 
-			// 114459
-			
-			switch($action)
-			{
-				case 1:
-					echo 'Add buyer action here 1';
-					$bo_user_serial = getuserserial();
-					$bo_pr_serial = $req;
-					buyer_action_required($bo_user_serial, $bo_pr_serial);
-				break;
-				case 2:
-					echo 'Show buyer inbox';
-					$bo_user_serial = getuserserial();
-					echo "Boo US: " . $test . "<br>";
-					$buyer_records = get_buyer_records();
-				break;
-				case 3:
-					$bo_user_serial = getuserserial();
-					$bo_pr_serial = $req;
-					echo 'Take ownership ' . $bo_user_serial . ' > ' . $bo_pr_serial;
-					take_ownership($bo_user_serial, $bo_pr_serial);
-				break;
-				case 4:
-					echo 'Buyer finished';
-					$bo_pr_serial = $req;
-					buyer_finished($bo_pr_serial);
-				break;
-			}
-		}
-		
+		// This is the buyer action required button: STOREMAN type users only
 		// May have used ! (not) as my login is not a storeman
-		if (!$rights["STOREMAN"] && $entry["BUYER_REQUESTED_DATE"] == "")
+		if (($rights["STOREMAN"] || $rights["DEVELOPERS"]) && $entry["BUYER_REQUESTED_DATE"] == "")
 		{
 			$us = getuserserial();
 			echo '<div style="margin-top: 5px; margin-bottom: 5px;">';
@@ -574,10 +451,134 @@
 				echo '</a>';
 			echo '</div>';
 		}
+
+
+
+		// $stores = 111;
+		// $buyer_id = 222;
+		// $user_type = 's'; // s->store, b->buyer
+
+		// $user_type = $rights["STOREMAN"];
+		
+
+		// if ($rights["STOREMAN"])
+		// {
+		// 	echo "I'm the storemand ";
+		// }
+		// else 
+		// {
+		// 	echo "I'm not the storeman";
+		// }
+
+		// $bo_pr_serial = $req;
+		
+
+		// function buyer_action_required($bo_user_serial, $bo_pr_serial)
+		// {
+		// 	echo "Got to: buyer_action_required";
+		// 	global $conn;
+		// 	$now = strtotime(date("Y-m-d H:i:s"));
+
+		// 	// $conn = oci_conn();
+
+		// 	// $sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_REQUESTED_BY = $bo_user_serial, BUYER_REQUESTED_DATE = $now WHERE PR_SERIAL = $bo_pr_serial";
+		// 	$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_REQUESTED_BY = $bo_user_serial, BUYER_REQUESTED_DATE = $now WHERE PR_SERIAL = $bo_pr_serial";
+				
+		// 	$cursor = oci_parse($conn, $sql);
+		// 	oci_execute($cursor);
+
+		// 	oci_close($conn);
+		// }
+
+		// function get_buyer_records()
+		// {
+		// 	global $conn, $buyer_records;
+
+		// 	$sql = "SELECT * FROM MOVE_JOBS_PART_REQUESTS WHERE BUYER_REQUESTED_DATE IS NOT NULL ORDER BY BUYER_REQUESTED_DATE DESC";
+				
+		// 	$cursor = oci_parse($conn, $sql);
+		// 	oci_execute($cursor);
+
+		// 	while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
+		// 	{
+		// 		$buyer_records[] = $row;
+		// 	}
+
+		// 	oci_close($conn);
+
+		// 	return $buyer_records;
+		// }
+
+		// function take_ownership($bo_user_serial, $bo_pr_serial)
+		// {
+		// 	global $conn;
+
+		// 	$now = strtotime(date("Y-m-d H:i:s"));
+
+		// 	$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_OWNER = $bo_user_serial, BUYER_OWNER_DATE = $now, BUYER_FINISHED = 'N' WHERE PR_SERIAL = $bo_pr_serial";
+				
+		// 	$cursor = oci_parse($conn, $sql);
+		// 	oci_execute($cursor);
+
+		// 	oci_close($conn);
+		// }
+
+		// function buyer_finished($bo_pr_serial)
+		// {
+		// 	global $conn;
+
+		// 	$now = strtotime(date("Y-m-d H:i:s"));
+
+		// 	$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_FINISHED = 'Y' WHERE PR_SERIAL = $bo_pr_serial";
+				
+		// 	$cursor = oci_parse($conn, $sql);
+		// 	oci_execute($cursor);
+
+		// 	oci_close($conn);
+		// }
+		
+		// $action = 0;
+		// $buyer_records = array();
+
+		// if (isset($_GET['action'])) 
+		// {
+		// 	$action = $_GET['action'];
+		// 	// 1730812862 
+		// 	// 114459
+			
+		// 	switch($action)
+		// 	{
+		// 		case 1:
+		// 			echo 'Add buyer action here 1';
+		// 			$bo_user_serial = getuserserial();
+		// 			$bo_pr_serial = $req;
+		// 			buyer_action_required($bo_user_serial, $bo_pr_serial);
+		// 		break;
+		// 		case 2:
+		// 			echo 'Show buyer inbox';
+		// 			$bo_user_serial = getuserserial();
+		// 			echo "Boo US: " . $test . "<br>";
+		// 			$buyer_records = get_buyer_records();
+		// 		break;
+		// 		case 3:
+		// 			$bo_user_serial = getuserserial();
+		// 			$bo_pr_serial = $req;
+		// 			echo 'Take ownership ' . $bo_user_serial . ' > ' . $bo_pr_serial;
+		// 			take_ownership($bo_user_serial, $bo_pr_serial);
+		// 		break;
+		// 		case 4:
+		// 			echo 'Buyer finished';
+		// 			$bo_pr_serial = $req;
+		// 			buyer_finished($bo_pr_serial);
+		// 		break;
+		// 	}
+		// }
+		
+		
 		// 07-11-2024
 		// May have used ! (not) as my login is not a buyer
 		// http://192.168.10.239/move/partsrequest.phtml?jobcardserial=16214510&req=114459
-		if ($rights["BUYER"] || $rights["DEVELOPERS"])
+		/*if ($rights["BUYER"] || $rights["DEVELOPERS"])
 		{
 			echo '<div style="margin-top: 5px; margin-bottom: 5px;">';
 				// echo '<a href="partsrequest.phtml?action=2" style="text-decoration: none">';
@@ -587,9 +588,10 @@
 				echo '</div>';
 				echo '</a>';
 			echo '</div>';
-		}
+		}*/
 
-		// BUYER INBOX TABLES
+		// BUYER INBOX TABLES: Delete this when own screen is done
+		/*
 		if ($action == 2)
 		{
 			$bo_user_serial = getuserserial();
@@ -599,10 +601,10 @@
 				echo '<div>Jobcard Serial</div>';
 				echo '<div>PR Number</div>';
 				echo '<div style="grid-column: span 2;">Part</div>';
-				echo '<div>Requested Date</div>';
-				echo '<div>Requested By</div>';
-				echo '<div>Days Open</div>';
-				echo '<div>Action</div>';
+				echo '<div>Requested Date</div>'; // 1
+				echo '<div>Requested By</div>'; // 1
+				echo '<div>Days Open</div>'; // 2
+				echo '<div>Action</div>'; // 3
 
 				echo '<div style="grid-column: span 8;"><hr/></div>';
 
@@ -636,7 +638,7 @@
 				echo '<div>Jobcard Serial</div>';
 				echo '<div>PR Number</div>';
 				echo '<div>Part</div>';
-				echo '<div>Owenership Date</div>';
+				echo '<div>Ownership Date</div>';
 				echo '<div>Requested Date</div>';
 				echo '<div>Requested By</div>';
 				echo '<div>Days Open</div>';
@@ -678,6 +680,7 @@
 
 			echo '<div style="grid-column: span 8; font-weight: bold;"><hr/></div>';
 		}
+		*/
 		/** END */
 		
 		echo "<table border=1><tr class=cell><td valign=top><u><b>Request as typed in:</b></u><br>".str_replace("\n","<br>",$entry["REQUEST_TEXT"])."</td>";
@@ -2560,6 +2563,455 @@ where  c.PERSON_SERIAL=a.USER_SERIAL and C.person_serial=T.person_serial  and A.
 
 //////////////////
 
+/**
+* Date: 08-11-2024
+* Desc: Buyer ownership of parts requests
+* Author: Quintin
+* START
+*/
+
+// Logic and code functions
+function buyer_action_required($bo_user_serial, $bo_pr_serial)
+{
+	echo "Got to: buyer_action_required";
+	global $conn;
+	$now = strtotime(date("Y-m-d H:i:s"));
+
+	// $conn = oci_conn();
+
+	// $sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_REQUESTED_BY = $bo_user_serial, BUYER_REQUESTED_DATE = $now WHERE PR_SERIAL = $bo_pr_serial";
+	$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_REQUESTED_BY = $bo_user_serial, BUYER_REQUESTED_DATE = $now WHERE PR_SERIAL = $bo_pr_serial";
+		
+	$cursor = oci_parse($conn, $sql);
+	oci_execute($cursor);
+
+	oci_close($conn);
+}
+
+function get_buyer_records()
+{
+	global $conn, $buyer_records;
+
+	$sql = "SELECT * FROM MOVE_JOBS_PART_REQUESTS WHERE BUYER_REQUESTED_DATE IS NOT NULL ORDER BY BUYER_REQUESTED_DATE DESC";
+		
+	$cursor = oci_parse($conn, $sql);
+	oci_execute($cursor);
+
+	while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
+	{
+		$buyer_records[] = $row;
+	}
+
+	oci_close($conn);
+
+	return $buyer_records;
+}
+
+function take_ownership($bo_user_serial, $bo_pr_serial)
+{
+	global $conn;
+
+	$now = strtotime(date("Y-m-d H:i:s"));
+
+	$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_OWNER = $bo_user_serial, BUYER_OWNER_DATE = $now, BUYER_FINISHED = 'N' WHERE PR_SERIAL = $bo_pr_serial";
+		
+	$cursor = oci_parse($conn, $sql);
+	oci_execute($cursor);
+
+	oci_close($conn);
+}
+
+function buyer_finished($bo_pr_serial)
+{
+	global $conn;
+
+	$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_FINISHED = 'Y', BUYER_FINISHED_DATE = CURRENT_TIMESTAMP WHERE PR_SERIAL = $bo_pr_serial";
+		
+	$cursor = oci_parse($conn, $sql);
+	oci_execute($cursor);
+
+	oci_close($conn);
+}
+
+$action = 0;
+$buyer_records = array();
+
+if (isset($_GET['action'])) 
+{
+	$action = $_GET['action'];
+	// 1730812862 
+	// 114459
+	
+	switch($action)
+	{
+		case 1:
+			echo 'Add buyer action here 1';
+			$bo_user_serial = getuserserial();
+			$bo_pr_serial = $req;
+			buyer_action_required($bo_user_serial, $bo_pr_serial);
+		break;
+		case 2:
+			echo 'Show buyer inbox';
+			$bo_user_serial = getuserserial();
+			echo "Boo US: " . $test . "<br>";
+			$buyer_records = get_buyer_records();
+		break;
+		case 3:
+			$bo_user_serial = getuserserial();
+			$bo_pr_serial = $req;
+			echo 'Take ownership ' . $bo_user_serial . ' > ' . $bo_pr_serial;
+			take_ownership($bo_user_serial, $bo_pr_serial);
+		break;
+		case 4:
+			$bo_pr_serial = $req;
+			echo 'Buyer finished: ' . $bo_pr_serial;
+			buyer_finished($bo_pr_serial);
+		break;
+	}
+}
+
+// Buyer inbox render section
+function buyer_inbox($mode,$jobcardserial="") 
+{
+	global $cursor,$depot,$depot_list,$job,$cookiedepot;
+
+	$where="and A.buyer_requested_date is not null";
+	echo "<br/>";
+	echo "<table border=1>";
+	echo "<tr><td colspan='9'>Buyer action required</td></tr>";
+	echo "<tr class=title>";
+		echo "<td>Jobcard</td>";
+		echo "<td>PR#</td>";
+		echo "<td>Requestor</td>";
+		echo "<td>Parts Requested</td>";
+		echo "<td><font color=green>Approved</font> / <font color=red>Rejected</font> / <font color=magenta>Revoked</font></td>";
+		echo "<td>Owner</td>";
+		echo "<td>Requested By</td>";
+		echo "<td>Days Open</td>";
+		echo "<td>Action</td>";
+	echo "</tr>";
+	if ($jobcardserial=="") 
+	{
+		// $qry="select A.jobcardserial,E.code,B.username cap_user, U.username app_user, F.username accepted_user, A.*  from move_jobs_part_requests A join move_jobs D on  D.jobcardserial=abs(A.jobcardserial) left join user_details B on A.captured_by=B.user_serial left join user_details U on A.approved_by=U.user_serial left join vehicles E on E.serial=D.unitserial and D.type=1 left join user_details F on F.user_serial=A.accepted_by where D.depot in ($depot_list) $where order by A.pr_serial";
+		$qry="SELECT 
+		A.jobcardserial,
+		E.code,
+		B.username cap_user, 
+		U.username app_user, 
+		R.username req_by_user, 
+		O.username own_by_user, 
+		F.username accepted_user, 
+		A.*  
+		FROM move_jobs_part_requests A 
+		JOIN move_jobs D ON  D.jobcardserial=abs(A.jobcardserial) 
+		left join user_details B ON A.captured_by=B.user_serial 
+		left join user_details U ON A.approved_by=U.user_serial 
+		left join user_details R ON A.buyer_requested_by=R.user_serial 
+		left join user_details O ON A.buyer_owner=O.user_serial 
+		left join vehicles E ON E.serial=D.unitserial AND D.type=1 
+		left join user_details F ON F.user_serial=A.accepted_by 
+		where D.depot IN ($depot_list) $where 
+		order by A.BUYER_REQUESTED_DATE ASC";
+	}
+	else 
+	{
+		if (!is_numeric($jobcardserial)) 
+		{
+			echo "<font color=red>ERROR! No Job card serial</font>";
+			ora_rollback($conn);
+			exit;
+		}
+		ora_parse($cursor,"select B.code,A.unitserial from move_jobs A, vehicles B where A.unitserial=B.serial and A.type=1 and A.jobcardserial='$jobcardserial'");
+		ora_exec($cursor);
+		if (ora_fetch($cursor))
+		{
+			$code=getdata($cursor,0);
+			$unitserial=getdata($cursor,1);
+		}
+		else 
+		{
+			$code="";
+			$unitserial=-1;
+		}
+		$qry="select jobcardserial, '$code' code, B.username cap_user, U.username app_user, A.*  from move_jobs_part_requests A left join user_details B on A.captured_by=B.user_serial left join user_details U on A.approved_by=U.user_serial where jobcardserial in (select jobcardserial from move_jobs where auth_date is null and (auth='N' or auth is null) and type=1 and unitserial=$unitserial and depot='$cookiedepot' union select $jobcardserial from dual  ) union select jobcardserial, '$code' code, B.username cap_user, U.username app_user, A.*  from move_jobs_part_requests A left join user_details B on A.captured_by=B.user_serial left join user_details U on A.approved_by=U.user_serial where pr_serial in (select pr_number from stk_picking_slip where jobcardserial=$jobcardserial) or jobcardserial=$jobcardserial or jobcardserial=-$jobcardserial order by 5"; // NB: Tuned from 200k buffer gets to 600 buffer gets using the unions 
+		echo "<b>Showing ONLY Jobcard MOVE$jobcardserial (And open jobcards for $code):</b><BR>";
+	}
+
+	if (getenv("REMOTE_USER")=="Keith")
+	{
+		echo "EXEC: $qry<Br>";
+	}
+
+	ora_parse($cursor,$qry);
+	ora_Exec($cursor);
+	$buyer_accepted=array();
+	$lines=0;
+	while (ora_fetch_into($cursor,$data,ORA_FETCHINTO_ASSOC)) 
+	{	
+		$buyer_accepted[] = $data;
+		if ($data['BUYER_REQUESTED_DATE'] != NULL && $data['BUYER_OWNER'] == NULL)
+		{
+			$lines++;
+			if ($lines%2==0)
+			{
+				echo "<tr class=cell>";
+			}
+			else
+			{
+				echo "<tr class=altcell>";
+			}
+			// Jobcard
+			echo "<td><font size=2";
+			if ($jobcardserial!="")
+			{
+				if ( $jobcardserial*-1==$data["JOBCARDSERIAL"])
+				{
+					echo " style='background:#FF5555'";
+				}
+				elseif ( $jobcardserial!=$data["JOBCARDSERIAL"])
+				{
+					echo " style='background:lightpink'";	
+				}
+				else 
+				{
+					echo " style='background:yellow'";
+				}
+			}
+		
+			echo ">".$data["JOBCARDSERIAL"]." </font><b>".$data["CODE"]."</b></td>";
+			// PR_SERIAL
+			echo "<td align=right><a href=partsrequest.phtml?jobcardserial=".$data["JOBCARDSERIAL"]."&req=".$data["PR_SERIAL"].">PR".$data["PR_SERIAL"]."</a></td>";
+			// Requestor
+			echo "<td><B>".$data["CAP_USER"]."</b> <font size=2>".$data['CAPTURE_DATE']."</font></td>";
+			// Parts Requested
+			echo "<td><font size=2>".substr($data["REQUEST_TEXT"],0,30)."...</font></tD>";
+			// Approved/Rejected/Revoked
+			echo "<td>";
+			if ($data["APPROVED"]=="Y")
+			{
+				echo "<font color=green>";
+			}
+			elseif ($data["APPROVED"]=="N")
+			{
+				echo "<font color=red>";
+			}
+			elseif ($data["APPROVED"]=="R")
+			{
+				echo "<font color=magenta>";
+			}
+			echo "<B>".$data["APP_USER"]."</b> <font size=2>".$data["APPROVED_DATE"]."</font></td>";
+			if ($data["RECEIVED_DATE"]=="") 
+			{
+				if ($data["ON_ORDER_FLAG"]=="Y")
+				{			
+					$data["RECEIVED_DATE"]="Not yet, but <font color=green>PARTS ON ORDER</font>";
+				}
+			}
+			// Owner
+			echo "<td>";
+			if (isset($data["ACCEPTED_USER"]))
+			{
+				echo $data["ACCEPTED_USER"];
+				if (isset($data["DAYS_BACK"]))
+				{
+					if (!isset($accepted_count[$data["ACCEPTED_USER"]]))
+					{
+						$accepted_count[$data["ACCEPTED_USER"]] = 1;
+						$accepted_days[$data["ACCEPTED_USER"]] = 0;
+					}
+					else
+					{
+						$accepted_count[$data["ACCEPTED_USER"]]++;
+						$accepted_days[$data["ACCEPTED_USER"]]+= $data["DAYS_BACK"];
+					}
+
+					if ($data["DAYS_BACK"]>6)
+					{
+						echo "<font color=red>";
+						echo " - ".$data["DAYS_BACK"]." days ago";
+					}
+				}
+			}
+			elseif (($mode=="I" || $mode=="O" || $mode=="R") && $data["APPROVED"]=="Y")
+			{
+				echo "<font color=red>NOBODY!</font>";
+			}
+			echo "</td>";
+			// Requested by
+			$rbd = date("H:i D d M Y", $data["BUYER_REQUESTED_DATE"]);
+			$now = strtotime(date("Y-m-d H:i:s"));
+			echo "<td>" . $data["REQ_BY_USER"] . " <font size=2>" . $rbd . "</font></td>";
+			// Days open
+			$days_open = ($now - $data['BUYER_REQUESTED_DATE']) / 86400;
+			echo "<td style='text-align: center'>" . number_format($days_open, 0) . "</td>";
+			// Action: Take ownership button only
+			echo "<td>";
+				echo '<a href="partsrequest.phtml?mode=B&action=3&req=' . $data_["PR_SERIAL"] .'" style="text-decoration: none">';
+					echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 150px; ">';
+						echo 'TAKE OWNERSHIP';
+					echo '</div>';
+				echo '</a>';
+			echo "</td>"; // Dupped
+			echo "</tr>";	
+			unset($data);	
+		}
+	} // while
+
+	echo "</table>";
+	echo "<br/>";
+	echo "<table border=1>";
+	echo "<tr><td colspan='10'>Accepted buyer action requests</td></tr>";
+	echo "<tr class=title>";
+		echo "<td>Jobcard</td>";
+		echo "<td>PR#</td>";
+		echo "<td>Requestor</td>";
+		echo "<td>Parts Requested</td>";
+		echo "<td><font color=green>Approved</font> / <font color=red>Rejected</font> / <font color=magenta>Revoked</font></td>";
+		echo "<td>Owner</td>";
+		echo "<td>Ownership By</td>";
+		echo "<td>Requested By</td>";
+		echo "<td>Days Open</td>";
+		echo "<td>Action</td>";
+	echo "</tr>";
+
+	// List of PR that have been taken ownership by the buyer
+	$buyer_serial = getuserserial();
+	$lines=0;
+	// while (ora_fetch_into($cursor,$data_buyer,ORA_FETCHINTO_ASSOC)) 
+	foreach ($buyer_accepted as $data_buyer)
+	{	
+		if ($data_buyer['BUYER_REQUESTED_DATE'] != NULL && $data_buyer['BUYER_OWNER'] == $buyer_serial)
+		{
+			$lines++;
+			if ($lines%2==0)
+			{
+				echo "<tr class=cell>";
+			}
+			else
+			{
+				echo "<tr class=altcell>";
+			}
+			// Jobcard
+			echo "<td><font size=2";
+			if ($jobcardserial!="")
+			{
+				if ( $jobcardserial*-1==$data_buyer["JOBCARDSERIAL"])
+				{
+					echo " style='background:#FF5555'";
+				}
+				elseif ( $jobcardserial!=$data_buyer["JOBCARDSERIAL"])
+				{
+					echo " style='background:lightpink'";	
+				}
+				else 
+				{
+					echo " style='background:yellow'";
+				}
+			}
+		
+			echo ">".$data_buyer["JOBCARDSERIAL"]." </font><b>".$data_buyer["CODE"]."</b></td>";
+			// PR_SERIAL
+			echo "<td align=right><a href=partsrequest.phtml?jobcardserial=".$data_buyer["JOBCARDSERIAL"]."&req=".$data_buyer["PR_SERIAL"].">PR".$data_buyer["PR_SERIAL"]."</a></td>";
+			// Requestor
+			echo "<td><B>".$data_buyer["CAP_USER"]."</b> <font size=2>".$data_buyer['CAPTURE_DATE']."</font></td>";
+			// Parts Requested
+			echo "<td><font size=2>".substr($data_buyer["REQUEST_TEXT"],0,30)."...</font></tD>";
+			// Approved/Rejected/Revoked
+			echo "<td>";
+			if ($data_buyer["APPROVED"]=="Y")
+			{
+				echo "<font color=green>";
+			}
+			elseif ($data_buyer["APPROVED"]=="N")
+			{
+				echo "<font color=red>";
+			}
+			elseif ($data_buyer["APPROVED"]=="R")
+			{
+				echo "<font color=magenta>";
+			}
+			echo "<B>".$data_buyer["APP_USER"]."</b> <font size=2>".$data_buyer["APPROVED_DATE"]."</font></td>";
+			if ($data_buyer["RECEIVED_DATE"]=="") 
+			{
+				if ($data_buyer["ON_ORDER_FLAG"]=="Y")
+				{			
+					$data_buyer["RECEIVED_DATE"]="Not yet, but <font color=green>PARTS ON ORDER</font>";
+				}
+			}
+			// Owner
+			echo "<td>";
+			if (isset($data_buyer["ACCEPTED_USER"]))
+			{
+				echo $data_buyer["ACCEPTED_USER"];
+				if (isset($data_buyer["DAYS_BACK"]))
+				{
+					if (!isset($accepted_count[$data_buyer["ACCEPTED_USER"]]))
+					{
+						$accepted_count[$data_buyer["ACCEPTED_USER"]] = 1;
+						$accepted_days[$data_buyer["ACCEPTED_USER"]] = 0;
+					}
+					else
+					{
+						$accepted_count[$data_buyer["ACCEPTED_USER"]]++;
+						$accepted_days[$data_buyer["ACCEPTED_USER"]]+= $data_buyer["DAYS_BACK"];
+					}
+
+					if ($data_buyer["DAYS_BACK"]>6)
+					{
+						echo "<font color=red>";
+						echo " - ".$data_buyer["DAYS_BACK"]." days ago";
+					}
+				}
+			}
+			elseif (($mode=="I" || $mode=="O" || $mode=="R") && $data_buyer["APPROVED"]=="Y")
+			{
+				echo "<font color=red>NOBODY!</font>";
+			}
+			echo "</td>";
+			// Ownership by
+			$obd = date("H:i D d M Y", $data_buyer["BUYER_OWNER_DATE"]);
+			echo "<td>" . $data_buyer["OWN_BY_USER"] . " <font size=2>" . $obd . "</font></td>";
+			// Requested by
+			$rbd = date("H:i D d M Y", $data_buyer["BUYER_REQUESTED_DATE"]);
+			echo "<td>" . $data_buyer["REQ_BY_USER"] . " <font size=2>" . $rbd . "</font></td>";
+			// Days open
+			$now = strtotime(date("Y-m-d H:i:s"));
+			$days_open = ($now - $data_buyer['BUYER_REQUESTED_DATE']) / 86400;
+			echo "<td style='text-align: center'>" . number_format($days_open, 0) . "</td>";
+			// Action: Buyer finished or complated by/date
+			echo "<td>";
+			
+			if ($data_buyer['BUYER_FINISHED'] == 'N')
+			{
+				echo '<a href="partsrequest.phtml?mode=B&action=4&req=' . $data_buyer["PR_SERIAL"] .'" style="text-decoration: none">';
+					echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; width: 150px; ">';
+						echo 'BUYER FINISHED';
+					echo '</div>';
+				echo '</a>';
+			
+			}
+			else 
+			{
+				echo 'Complete: <font size=2>' . $data_buyer["BUYER_FINISHED_DATE"] . '</font>';
+			}
+
+		echo "</td>";	
+		echo "</tr>";	
+	}
+	} 
+	
+	echo "</table>";
+	if ($lines==0)
+	{
+		echo "<font color=red>None found! ($depot_list)</font>";
+	}
+} // Buyer inbox
+/**
+ * 
+ * END
+ * 
+ */
+
 function fetch_data($req) {
 	global $cursor,$entry;
 
@@ -2580,17 +3032,38 @@ function fetch_data($req) {
 $entry=array();
 VV("mode");
 
-if (!is_numeric($jobcardserial)) {
-	if ($mode=="") {
-		//figure out default mode
+if (!is_numeric($jobcardserial)) 
+{
+	if ($mode=="") 
+	{
+		// Figure out default mode
 		if (AllowedFlag("MOVE_STOCK"))
+		{
 			$mode="I";
+		}
 		elseif (AllowedFlag("PARTS_REQ_AUTH"))
+		{
 			$mode="U";
+		}
 		else
-			$mode="R";}
-	show_list($mode);
-	exit;
+		{
+			$mode="R";
+		}
+
+		show_list($mode);
+		exit;
+	} 
+	else if ($mode=="B")
+	{
+		buyer_inbox($mode);
+		exit;
+	}
+	else
+	{
+		show_list($mode);
+		exit;
+	}
+
 }
 elseif (is_numeric($req)) {
 	ora_parse($cursor,"select jobcardserial from move_jobs_part_requests  where pr_Serial=$req");
