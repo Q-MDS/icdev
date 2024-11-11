@@ -17,18 +17,18 @@ switch ($action)
 	case 0:
 		// Save
 		$tv_name = $json_data->tv_name;
-		// $tv_name = str_replace("'", "", $tv_name);
 		$tv_name = htmlspecialchars($tv_name, ENT_QUOTES, 'UTF-8');
 
 		$tv_branch = $json_data->tv_branch;
-		// $tv_branch = str_replace("'", "", $tv_branch);
 		$tv_branch = htmlspecialchars($tv_branch, ENT_QUOTES, 'UTF-8');
 		
 		$tv_stop_serial = $json_data->tv_stop_serial;
-		// $tv_stop_serial = str_replace("'", "", $tv_stop_serial);
 		$tv_stop_serial = htmlspecialchars($tv_stop_serial, ENT_QUOTES, 'UTF-8');
 
-		save($tv_name, $tv_branch, $tv_stop_serial);
+		$tv_layout = $json_data->tv_layout;
+		$tv_layout = htmlspecialchars($tv_layout, ENT_QUOTES, 'UTF-8');
+
+		save($tv_name, $tv_branch, $tv_stop_serial, $tv_layout);
 	break;
 	case 1:
 		$tv_id = $json_data->tv_id;
@@ -46,8 +46,10 @@ switch ($action)
 		$tv_branch = str_replace("'", "", $tv_branch);
 		$tv_stop_serial = $json_data->tv_stop_serial;
 		$tv_stop_serial = str_replace("'", "", $tv_stop_serial);
+		$tv_layout = $json_data->tv_layout;
+		$tv_layout = str_replace("'", "", $tv_layout);
 		
-		update($tv_id, $tv_name, $tv_branch, $tv_stop_serial);
+		update($tv_id, $tv_name, $tv_branch, $tv_stop_serial, $tv_layout);
 	break;
 	case 3:
 		// Remove
@@ -81,42 +83,28 @@ function oci_conn()
 	return $conn;
 }
 
-function save($tv_name, $tv_branch, $tv_stop_serial)
+function save($tv_name, $tv_branch, $tv_stop_serial, $tv_layout)
 {
 	$conn = oci_conn();
 
-	$sql = "INSERT INTO DEPARTURE_TVS (SCREEN_ID, NAME, BRANCH, STOP_SERIAL, IS_ACTIVE) VALUES (SCREEN_ID_SEQ.NEXTVAL, '$tv_name', '$tv_branch', $tv_stop_serial, '1')";
-	
-	$cursor = oci_parse($conn, $sql);
-	
-	oci_execute($cursor);
-
-	oci_free_statement($cursor);
-
-	oci_close($conn);
-
-	echo 1;
-
-	/*global $conn;
-
-	$cursor = ora_open($conn);
-
-	try 
+	if ($tv_name != '' && $tv_branch != '' && $tv_stop_serial != '')
 	{
-		$sql = "INSERT INTO DEPARTURE_TVS (SCREEN_ID, NAME, BRANCH, STOP_SERIAL, IS_ACTIVE) VALUES (SCREEN_ID_SEQ.NEXTVAL, '$tv_name', '$tv_branch', $tv_stop_serial, '1')";
-		ora_parse($cursor, $sql);
-		ora_exec($cursor);
+		$sql = "INSERT INTO DEPARTURE_TVS (SCREEN_ID, NAME, BRANCH, STOP_SERIAL, IS_ACTIVE, SCREEN_LAYOUT) VALUES (SCREEN_ID_SEQ.NEXTVAL, '$tv_name', '$tv_branch', $tv_stop_serial, '1', $tv_layout)";
 		
-		$result = '1';
-	} 
-	catch (Exception $e) 
-	{
-		$result = '0';
+		$cursor = oci_parse($conn, $sql);
+		
+		oci_execute($cursor);
+
+		oci_free_statement($cursor);
+
+		oci_close($conn);
+
+		echo 1;
 	}
-
-	ora_close($cursor);
-
-	echo $result;*/
+	else
+	{
+		echo 0;
+	}
 }
 
 function getRecord($tv_id)
@@ -139,34 +127,14 @@ function getRecord($tv_id)
 	oci_close($conn);
 
 	echo json_encode($record);
-
-	// ORA
-	/*global $conn;
-
-	$cursor = ora_open($conn);
-
-	$record = array();
-
-	$sql = "SELECT * FROM DEPARTURE_TVS WHERE SCREEN_ID = $tv_id)";
-	ora_parse($cursor, $sql);
-	ora_exec($cursor);
-
-	while (ora_fetch_into($cursor, $row, ORA_FETCHINTO_ASSOC))  
-	{
-		$record = $row;
-	}
-
-	ora_close($cursor);
-
-	echo json_encode($record);*/
 }
 
-function update($tv_id, $tv_name, $tv_branch, $tv_stop_serial)
+function update($tv_id, $tv_name, $tv_branch, $tv_stop_serial, $tv_layout)
 {
 	// OCI
 	$conn = oci_conn();
 
-	$sql = "UPDATE DEPARTURE_TVS SET NAME = '$tv_name', BRANCH = '$tv_branch', STOP_SERIAL = $tv_stop_serial WHERE SCREEN_ID = $tv_id";
+	$sql = "UPDATE DEPARTURE_TVS SET NAME = '$tv_name', BRANCH = '$tv_branch', STOP_SERIAL = $tv_stop_serial, SCREEN_LAYOUT = '$tv_layout' WHERE SCREEN_ID = $tv_id";
 	
 	$cursor = oci_parse($conn, $sql);
 	
@@ -177,28 +145,6 @@ function update($tv_id, $tv_name, $tv_branch, $tv_stop_serial)
 	oci_close($conn);
 
 	echo 1;
-
-	// ORA
-	/*global $conn;
-
-	$cursor = ora_open($conn);
-
-	try 
-	{
-		$sql = "UPDATE DEPARTURE_TVS SET NAME = '$tv_name', BRANCH = '$tv_branch', STOP_SERIAL = $tv_stop_serial WHERE SCREEN_ID = $tv_id";
-		ora_parse($cursor, $sql);
-		ora_exec($cursor);
-		
-		$result = '1';
-	} 
-	catch (Exception $e) 
-	{
-		$result = '0';
-	}
-
-	ora_close($cursor);
-
-	echo $result;*/
 }
 
 function remove($tv_id)

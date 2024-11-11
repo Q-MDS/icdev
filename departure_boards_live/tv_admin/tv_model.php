@@ -17,18 +17,18 @@ switch ($action)
 	case 0:
 		// Save
 		$tv_name = $json_data->tv_name;
-		// $tv_name = str_replace("'", "", $tv_name);
 		$tv_name = htmlspecialchars($tv_name, ENT_QUOTES, 'UTF-8');
 
 		$tv_branch = $json_data->tv_branch;
-		// $tv_branch = str_replace("'", "", $tv_branch);
 		$tv_branch = htmlspecialchars($tv_branch, ENT_QUOTES, 'UTF-8');
 		
 		$tv_stop_serial = $json_data->tv_stop_serial;
-		// $tv_stop_serial = str_replace("'", "", $tv_stop_serial);
 		$tv_stop_serial = htmlspecialchars($tv_stop_serial, ENT_QUOTES, 'UTF-8');
 
-		save($tv_name, $tv_branch, $tv_stop_serial);
+		$tv_layout = $json_data->tv_layout;
+		$tv_layout = htmlspecialchars($tv_layout, ENT_QUOTES, 'UTF-8');
+
+		save($tv_name, $tv_branch, $tv_stop_serial, $tv_layout);
 	break;
 	case 1:
 		$tv_id = $json_data->tv_id;
@@ -46,8 +46,10 @@ switch ($action)
 		$tv_branch = str_replace("'", "", $tv_branch);
 		$tv_stop_serial = $json_data->tv_stop_serial;
 		$tv_stop_serial = str_replace("'", "", $tv_stop_serial);
+		$tv_layout = $json_data->tv_layout;
+		$tv_layout = str_replace("'", "", $tv_layout);
 		
-		update($tv_id, $tv_name, $tv_branch, $tv_stop_serial);
+		update($tv_id, $tv_name, $tv_branch, $tv_stop_serial, $tv_layout);
 	break;
 	case 3:
 		// Remove
@@ -56,20 +58,30 @@ switch ($action)
 	break;
 }
 
-function save($tv_name, $tv_branch, $tv_stop_serial)
+function save($tv_name, $tv_branch, $tv_stop_serial, $tv_layout)
 {
 	global $conn;
+
+	echo "AAA: " . $tv_name."<>".$tv_branch."<>".$tv_stop_serial;
 	
-	$cursor = ora_open($conn);
+	if ($tv_name != '' && $tv_branch != '0' && $tv_stop_serial != '0')
+	{
+		$sql = "INSERT INTO DEPARTURE_TVS (SCREEN_ID, NAME, BRANCH, STOP_SERIAL, IS_ACTIVE, SCREEN_LAYOUT) VALUES (SCREEN_ID_SEQ.NEXTVAL, '$tv_name', '$tv_branch', $tv_stop_serial, '1', $tv_layout)";
+		
+		$cursor = oci_parse($conn, $sql);
+		
+		oci_execute($cursor);
 
-	$sql = "INSERT INTO DEPARTURE_TVS (SCREEN_ID, NAME, BRANCH, STOP_SERIAL, IS_ACTIVE) VALUES (SCREEN_ID_SEQ.NEXTVAL, '$tv_name', '$tv_branch', $tv_stop_serial, '1')";
-	
-	ora_parse($cursor, $sql);
-	ora_exec($cursor);
+		oci_free_statement($cursor);
 
-	ora_close($cursor);
+		oci_close($conn);
 
-	echo 1;
+		echo 1;
+	}
+	else
+	{
+		echo 0;
+	}
 }
 
 function getRecord($tv_id)
@@ -95,7 +107,7 @@ function getRecord($tv_id)
 	echo json_encode($record);
 }
 
-function update($tv_id, $tv_name, $tv_branch, $tv_stop_serial)
+function update($tv_id, $tv_name, $tv_branch, $tv_stop_serial, $tv_layout)
 {
 	// ORA
 	global $conn;
@@ -104,7 +116,7 @@ function update($tv_id, $tv_name, $tv_branch, $tv_stop_serial)
 
 	try 
 	{
-		$sql = "UPDATE DEPARTURE_TVS SET NAME = '$tv_name', BRANCH = '$tv_branch', STOP_SERIAL = $tv_stop_serial WHERE SCREEN_ID = $tv_id";
+		$sql = "UPDATE DEPARTURE_TVS SET NAME = '$tv_name', BRANCH = '$tv_branch', STOP_SERIAL = $tv_stop_serial, SCREEN_LAYOUT = '$tv_layout' WHERE SCREEN_ID = $tv_id";
 		ora_parse($cursor, $sql);
 		ora_exec($cursor);
 		

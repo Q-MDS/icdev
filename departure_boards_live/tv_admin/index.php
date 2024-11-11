@@ -9,6 +9,7 @@ if (!AllowedAccess("")) { Exit; };
 
 $records = array();
 $branch_list = array();
+$stop_list = array();
 
 function get_branch_list()
 {
@@ -17,7 +18,7 @@ function get_branch_list()
 	$cursor = ora_open($conn);
 
 	// $sql = "SELECT BRANCH FROM USER_DETAILS GROUP BY BRANCH ORDER BY BRANCH";
-	$sql = "SELECT branch_name FROM branch_info WHERE is_dealer='N' ORDER BY branch_name";
+	$sql = "SELECT BRANCH FROM USER_DETAILS GROUP BY BRANCH ORDER BY BRANCH";
 		
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
@@ -28,8 +29,26 @@ function get_branch_list()
 	}
 
 	ora_close($cursor);
+}
 
-	return $branch_list;
+function get_stop_list()
+{
+	global $conn, $stop_list;
+
+	// $conn = oci_conn();
+
+	$sql = "SELECT STOP_SERIAL, SHORTNAME FROM STOP_DETAILS2 ORDER BY SHORTNAME";
+		
+	$cursor = oci_parse($conn, $sql);
+	oci_execute($cursor);
+
+	while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS))
+	{
+		$stop_list[] = $row;
+	}
+
+	oci_free_statement($cursor);
+	oci_close($conn);
 }
 
 function get_records()
@@ -69,6 +88,7 @@ function get_records()
 }
 
 get_branch_list();
+get_stop_list();
 get_records();
 ?>
 <!DOCTYPE html>
@@ -86,58 +106,93 @@ get_records();
 <body>
 	
 <div>
-	<div style="display: grid; grid-template-columns: 150px 250px 90px 70px 70px; column-gap: 10px; align-items: center; row-gap: 5px">
+	<div style="display: grid; grid-template-columns: 150px 250px 200px 120px 70px 70px; column-gap: 10px; align-items: center; row-gap: 5px">
 		<!-- Column titles -->
-		<div style="grid-column: span 5;">
+		<div style="grid-column: span 6;">
 			<h2>Departure TVs</h2>
 		</div>
 		<div>Name</div>
 		<div>Branch</div>
 		<div>Stop Serial</div>
+		<div>Layout</div>
 		<div style="grid-column: span 2;">Actions</div>
 
-		<div style="grid-column: span 5; height: 2px; background-color: #000;"></div>
+		<div style="grid-column: span 6; height: 2px; background-color: #000;"></div>
 	
 		<!-- Row 2: Input form -->
 		<div style="display: flex; flex-direction: row; align-items: center; width: 150px; height: 40px;">
 			<input type="text" maxlength="10" name="tv_name" id="tv_name" value="" placeholder="Name" style="height: 26px; width: 100%;">
 		</div>
+
 		<div style="display: flex; flex-direction: row; align-items: center; width: 250px; height: 40px;">
-			<select name="tv_branch" id="tv_branch" style="width: 100%; height: 32px">
+			<select name="tv_branch" id="tv_branch" style="width: 250px; height: 32px">
 				<option value="0">Branch...</option>
 				<?php
 				foreach($branch_list as $row)
 				{
-					echo '<option value="' . $row['BRANCH_NAME'] . '">' . $row['BRANCH_NAME'] . '</option>';
+					echo '<option value="' . $row['BRANCH'] . '">' . $row['BRANCH'] . '</option>';
 				}
-
 				?>
 			</select>
 		</div>
-		<div style="display: flex; flex-direction: row; align-items: center; width: 90px; height: 40px;">
-			<input type="number" min="0" max="9" step="1" name="tv_stop_serial" id="tv_stop_serial" value="" placeholder="Stop Serial" style="width: 100%; height: 26px;" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+
+		<div style="display: flex; flex-direction: row; align-items: center; width: 200px; height: 40px;">
+			<select name="tv_stop_serial" id="tv_stop_serial" style="width: 100%; height: 32px">
+				<option value="0">Stop serial...</option>
+				<?php
+				foreach($stop_list as $row)
+				{
+					echo '<option value="' . $row['STOP_SERIAL'] . '">' . $row['SHORTNAME'] . '</option>';
+				}
+				?>
+			</select>
+			<!-- <input type="number" min="0" max="9" step="1" name="tv_stop_serial" id="tv_stop_serial" value="" placeholder="Stop Serial" style="width: 100%; height: 26px;" oninput="this.value = this.value.replace(/[^0-9]/g, '');"> -->
 		</div>
+
+		<div style="display: flex; flex-direction: row; align-items: center; width: 120px; height: 40px;">
+			<select name="tv_layout" id="tv_layout" style="width: 100%; height: 32px">
+				<?php
+				$options = array("0" => "████ Single", "1" => "██░░ Split");
+				foreach($options as $key=>$value)
+				{
+					echo '<option value="' . $key. '">' . $value . '</option>';
+				}
+				?>
+			</select>
+			<!-- <input type="number" min="0" max="9" step="1" name="tv_stop_serial" id="tv_stop_serial" value="" placeholder="Stop Serial" style="width: 100%; height: 26px;" oninput="this.value = this.value.replace(/[^0-9]/g, '');"> -->
+		</div>
+
 		<div style="grid-column: span 2; display: flex; flex-direction: row; align-items: center; width: 100%; height: 40px;">
 			<input type="text" id="tv_id" value="" style="display: none;">
 			<button id="add_button" style="width: 100%; height: 32px;" onclick="saveTv()">Add</button>
 			<button id="edit_button" style="width: 100%; height: 32px; display: none" onclick="updateTv()">Update</button>
 		</div>
 
-		<div style="grid-column: span 5; height: 2px; background-color: #000;"></div>
+		<div style="grid-column: span 6; height: 2px; background-color: #000;"></div>
 
 		<!-- Row 3: TV List -->
 		<?php
 			foreach($records as $row)
 			{
+				if ($row['SCREEN_LAYOUT'] == 0)
+				{
+					$row['SCREEN_LAYOUT'] = '████ Single';
+				}
+				else
+				{
+					$row['SCREEN_LAYOUT'] = '██░░ Split';
+				}
 				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 1px solid #000; padding-left: 5px; height: 26px">'.$row['NAME'].'</div>';
 				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 1px solid #000; padding-left: 5px; height: 26px">'.$row['BRANCH'].'</div>';
 				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 1px solid #000; padding-left: 5px; height: 26px">'.$row['STOP_SERIAL'].'</div>';
+				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 1px solid #000; padding-left: 5px; height: 26px">'.$row['SCREEN_LAYOUT'].'</div>';
 				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 0px solid #000; padding-left: 5px; height: 26px"><button id="' . $row['SCREEN_ID'] . '" style=" width: 100%; height: 28px;" onclick="edit(this.id)">Edit</button></div>';
 				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 0px solid #000; padding-left: 5px; height: 26px"><button id="d_' . $row['SCREEN_ID'] . '" style=" width: 100%; height: 28px;" onclick="removeTv(this.id)">Remove</button></div>';
 			}
 		?>
 	</div>
 </div>
+
 </body>
 </html>
 <script>
@@ -148,12 +203,14 @@ function saveTv()
 	const tv_name = document.getElementById('tv_name').value;
 	const tv_branch = document.getElementById('tv_branch').value;
 	const tv_stop_serial = document.getElementById('tv_stop_serial').value;
+	const tv_layout = document.getElementById('tv_layout').value;
 
 	const formData = {
 		action: 0,
 		tv_name: tv_name,
 		tv_branch: tv_branch,
-		tv_stop_serial: tv_stop_serial
+		tv_stop_serial: tv_stop_serial,
+		tv_layout: tv_layout
 	};
 
 	const result = sendData(formData)
@@ -187,6 +244,7 @@ function edit(tvId)
 			document.getElementById('tv_name').value = record.NAME;
 			document.getElementById('tv_branch').value = record.BRANCH;
 			document.getElementById('tv_stop_serial').value = record.STOP_SERIAL;
+			document.getElementById('tv_layout').value = record.SCREEN_LAYOUT;
 		}
 	});
 }
@@ -196,13 +254,15 @@ function updateTv()
 	const tv_name = document.getElementById('tv_name').value;
 	const tv_branch = document.getElementById('tv_branch').value;
 	const tv_stop_serial = document.getElementById('tv_stop_serial').value;
+	const tv_layout = document.getElementById('tv_layout').value;
 
 	const formData = {
 		action: 2,
 		tv_id: tv_id,
 		tv_name: tv_name,
 		tv_branch: tv_branch,
-		tv_stop_serial: tv_stop_serial
+		tv_stop_serial: tv_stop_serial,
+		tv_layout: tv_layout
 	};
 
 	const result = sendData(formData)

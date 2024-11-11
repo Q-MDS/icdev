@@ -64,3 +64,20 @@ VARCHAR2(4000 BYTE)
 
 
 approved_date=CURRENT_TIMESTAMP
+
+Fixes 11-11-2024
+√ 1. Clean up commented code
+√ 2. Take ownership not working - check_faults_fixed by removing underscore: $data_["PR_SERIAL"]
+√ 3. Instead of strtotime(date("Y-m-d H:i:s")); use time()
+√ 4. Remove else on line 433
+√ 5. Also would be nice to have 'take ownership' button to show to the buyers while viewing the PR as well - not just in the inbox.
+   - if (($rights["BUYER"] || $rights["DEVELOPERS"]) && ($entry["BUYER_REQUESTED_DATE"] != "" && $entry["BUYER_OWNER_DATE"] == ""))
+   - if storeman clicks on buyer action required it is added to the list 
+   - if the user is the buyer they will see the BUYER: TAKE OWNERSHIP button
+   - if they click on that the it moved to bottom list on buyer inbox and the button goes away
+√ 6. Add notes for buyer action requires and took ownership
+
+Hi - I'm clicking on 'take ownership' but nothing is happening
+strtotime(date("Y-m-d H:i:s"));    ->  rather just say time();
+the value of $req is missing
+Remove else on line 433
