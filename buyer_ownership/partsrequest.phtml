@@ -364,6 +364,7 @@
 		{
 			$printslip=$_GET["printslip"];
 			ora_parse($cursor,"select jobcardserial from stk_picking_slip where ps_number=$printslip");
+			
 			ora_exec($cursor);
 			ora_fetch($cursor);
 			$psjobcardserial=getdata($cursor,0);
@@ -450,6 +451,30 @@
 				echo '</a>';
 			echo '</div>';
 		}
+		if (($entry["BUYER_OWNER"] != "" && $entry['BUYER_FINISHED'] == 'N'))
+		{
+			$owner_user_id = $entry["BUYER_OWNER"];
+			ora_parse($cursor, "select username from user_details where user_serial = $owner_user_id");
+			ora_exec($cursor);
+			ora_fetch($cursor);
+			$owner_username = getdata($cursor, 0);
+			echo '<div style="margin-bottom: 10px; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc">';
+			echo '<div style="padding: 5px 0px">Buyer has taken ownership of this PR. Buyer: ' . $owner_username . '</div>';
+			echo '</div>';
+		}
+		/*
+		ora_parse($cursor,"select depot_code, physical_depot from depots where physical_depot='$depot' or physical_depot='***'");
+		ora_exec($cursor);
+		$depot_ok[$depot]=true;
+		while (ora_fetch($cursor))
+		{
+			$depots[]="'".getdata($cursor,0)."'";
+			$depot_ok[getdata($cursor,0)]=true;
+			if (getdata($cursor,1) == "***")
+				$wildcard_depots[getdata($cursor,0)] = true;
+		}
+		
+		*/
 
 		// Take ownership button
 		if (($rights["BUYER"] || $rights["DEVELOPERS"]) && ($entry["BUYER_REQUESTED_DATE"] != "" && $entry["BUYER_OWNER_DATE"] == ""))
@@ -598,11 +623,6 @@
 			}
                         // end notes
 			echo "</table>";
-
-			echo '<hr/>';
-			echo 'hello';
-			echo '<hr/>';
-
 
 			echo "<hr>Email this parts request to:<Br><Select name=mailto><option value=''>Please select somebody...";
 			ora_parse($cursor,"select nvl(email,username),null,name,lastname from user_Details A, user_pages B where A.is_current='Y' and A.staff_member='Y' and A.user_serial=B.user_serial and B.page_name in ('MOVE_STOCK','PARTS_REQ_AUTH','FOREMAN') and (B.expires is null or B.expires<CURRENT_TIMESTAMP) order by name,lastname");
@@ -2229,11 +2249,11 @@ where  c.PERSON_SERIAL=a.USER_SERIAL and C.person_serial=T.person_serial  and A.
 		} // switch
 
 		echo "<table border=1>";
-		echo "<tr class=title><td>Jobcard</td><td>PR#</td><td>Requestor</td><td>Parts Requested</td><td><font color=green>Approved</font> / <font color=red>Rejected</font> / <font color=magenta>Revoked</font></td><td>Owner</td><td>Final Close-Off</td><td>P/Slip Value</td></tr>";
+		echo "<tr class=title><td>Jobcard</td><td>PR#</td><td>Requestor</td><td>Parts Requested</td><td><font color=green>Approved</font> / <font color=red>Rejected</font> / <font color=magenta>Revoked</font></td><td>Owner</td><td>Buyer</td><td>Final Close-Off</td><td>P/Slip Value</td></tr>";
 		if ($jobcardserial=="") 
 		{
 			if ($mode=="I" || $mode=="O" || $mode=="R") {
-				$qry="select  case when accepted_by is null then 'Y' else 'N' end isit,extract(day from CURRENT_TIMESTAMP-accepted_date) days_back,A.jobcardserial,E.code,B.username cap_user, U.username app_user, F.username accepted_user, A.*  from move_jobs_part_requests A join move_jobs D on  D.jobcardserial=abs(A.jobcardserial) left join user_details B on A.captured_by=B.user_serial left join user_details U on A.approved_by=U.user_serial left join vehicles E on E.serial=D.unitserial and D.type=1 left join user_details F on F.user_serial=A.accepted_by where D.depot in ($depot_list) $where order by 1 desc,A.pr_serial";
+				$qry="select  case when accepted_by is null then 'Y' else 'N' end isit,extract(day from CURRENT_TIMESTAMP-accepted_date) days_back,A.jobcardserial,E.code,B.username cap_user, U.username app_user, O.username own_by_user, F.username accepted_user, A.*  from move_jobs_part_requests A join move_jobs D on  D.jobcardserial=abs(A.jobcardserial) left join user_details B on A.captured_by=B.user_serial left join user_details U on A.approved_by=U.user_serial left join user_details O ON A.buyer_owner=O.user_serial left join vehicles E on E.serial=D.unitserial and D.type=1 left join user_details F on F.user_serial=A.accepted_by where D.depot in ($depot_list) $where order by 1 desc,A.pr_serial";
 
 			} else {
 				$qry="select A.jobcardserial,E.code,B.username cap_user, U.username app_user, F.username accepted_user, A.*  from move_jobs_part_requests A join move_jobs D on  D.jobcardserial=abs(A.jobcardserial) left join user_details B on A.captured_by=B.user_serial left join user_details U on A.approved_by=U.user_serial left join vehicles E on E.serial=D.unitserial and D.type=1 left join user_details F on F.user_serial=A.accepted_by where D.depot in ($depot_list) $where order by A.pr_serial";
@@ -2318,7 +2338,7 @@ where  c.PERSON_SERIAL=a.USER_SERIAL and C.person_serial=T.person_serial  and A.
 			elseif (($mode=="I" || $mode=="O" || $mode=="R") && $data["APPROVED"]=="Y")
 				echo "<font color=red>NOBODY!</font>";
 			echo "</td>";
-
+			echo "<td>".$data["OWN_BY_USER"]."</td>";
 			echo "<td>".$data["RECEIVED_DATE"]."</td>";
 			echo "<Td align=right>".sprintf("%.2f",$data["PICK_SLIP_VALUE"])."</td>";
 			echo "</tr>";	
@@ -2657,6 +2677,7 @@ function buyer_inbox($mode,$jobcardserial="")
 		echo "<td><font color=green>Approved</font> / <font color=red>Rejected</font> / <font color=magenta>Revoked</font></td>";
 		echo "<td>Owner</td>";
 		echo "<td>Ownership By</td>";
+		echo "<td>Change Ownership</td>";
 		echo "<td>Requested By</td>";
 		echo "<td>Days Open</td>";
 		echo "<td>Action</td>";
@@ -2759,6 +2780,23 @@ function buyer_inbox($mode,$jobcardserial="")
 			// Ownership by
 			$obd = date("H:i D d M Y", $data_buyer["BUYER_OWNER_DATE"]);
 			echo "<td>" . $data_buyer["OWN_BY_USER"] . " <font size=2>" . $obd . "</font></td>";
+			// Change Onwership
+			echo "<td>";
+			if ($data_buyer['BUYER_FINISHED'] == 'N')
+			{
+				echo '<a href="partsrequest.phtml?mode=B&action=4&req=' . $data_buyer["PR_SERIAL"] .'" style="text-decoration: none;">';
+					echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; ">';
+						echo 'CHANGE';
+					echo '</div>';
+				echo '</a>';
+			}
+			else 
+			{
+				echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; color: #d5d5d5">';
+					echo 'CHANGE';
+				echo '</div>';
+			}
+			echo "</td>";
 			// Requested by
 			$rbd = date("H:i D d M Y", $data_buyer["BUYER_REQUESTED_DATE"]);
 			echo "<td>" . $data_buyer["REQ_BY_USER"] . " <font size=2>" . $rbd . "</font></td>";

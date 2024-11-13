@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Index Page</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body, html {
             margin: 0;
@@ -11,106 +12,181 @@
             height: 100%;
             font-family: Arial, sans-serif;
             background: url('https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/BSI-pattern.jpg') no-repeat center center;
-            background-size: cover; /* Cover the entire area */
-            overflow: hidden; /* Prevent scrolling */
+            background-size: cover;
+            overflow: hidden;
         }
 
         .pattern {
             width: 100%;
             position: relative;
-            z-index: 1; /* Ensure it is above the gradient */
+            z-index: 1;
             display: flex;
-            padding-top:10vh;
+            padding-top: 3vh;
             flex-direction: column;
-            justify-content: center; /* Center vertically */
-            align-items: center; /* Center horizontally */
+            justify-content: center;
+            align-items: center;
+            text-align: center;
         }
 
-        h1, h2, h3 {
+        h1, h2, h3, h4 {
+            color: #fff;
             text-transform: uppercase;
-            margin: 0px 0px 6px 0px;
-            z-index: 3; /* Ensure text is above the overlay */
-            
+            margin: 0;
+            z-index: 3;
         }
 
         h1 {
-            font-size: 3.6em;
-             line-height:1em;
-            align-items: center;
-            text-shadow: 3px 3px 3px rgba(0, 0, 0, 0.75);
+            font-size: 5em;
+            line-height: 1em;
+            font-weight: 800;
+             color: #F7DB2B;
             font-style: italic;
-            font-weight: 900;
-            padding-bottom: 20px;
-            color: #F7DB2B;
-
+            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.75);
+            margin-bottom:10px;
         }
 
-        h2 {
-            font-size: 7em;
-             line-height:1em;
-            align-items: center; 
-            color:#fff;
-            font-weight: 900;
+        h2, h3 {
+            font-size: 4.3em;
+            line-height: 1.25em;
+            color: #000;
+            font-weight: 700;
         }
-        
-        h3 {
-            font-size: 7em;
-            line-height:1em;
-            align-items: center; 
-            color:#fff;
+
+        h4 {
+            font-size: 5vw;
+            line-height: 0.6em;
             font-weight: 900;
-        
+            color: #ec7a31;
+            font-style: italic;
+            margin-bottom:15px;
         }
 
         .logo-bar {
-            min-height: 12vh;
             position: absolute;
             bottom: 0;
             background: white;
             text-align: center;
-            padding: 2vh 0;
-            z-index: 1000;
-            box-shadow: 3px -3px 5px rgba(0, 0, 0, 0.75); /* Drop shadow */
-            border-radius: 8vh 8vh 0px 0px;
-            width: 60%;
-            margin-left: 20%;
+            width: 100%;
+            padding: 3em 0 2em 0;
         }
 
-        .logo-bar img {
-            width: 40vw; /* 60% width */
-            max-width: 40vw; /* Optional max width */
-            height: auto;
+        /* Scrolling slider styles */
+        .scrolling-slider-container {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            margin-top: 1em;
         }
 
-        .header{
+         .scrolling-slider {
+            display: flex;
+            animation: scroll 60s linear infinite;
+        }
+
+        /* Duplicate items by adding after content */
+        .scrolling-slider::after {
+            content: attr(data-content); /* Use data attribute to repeat content */
+            display: inline-flex;
+        }
+
+
+        .scrolling-slider-item {
+            display: inline-block;
+            margin-right: 10vh;
+             font-size: 3vw;
+             line-height: 1.3em;
+            font-weight: 900;
+            color: #13a9e0;
+             white-space: nowrap;
+            text-transform: uppercase;
+        }
+
+        .header {
             position: sticky;
-            text-align:center;
-            width: 60%;
-            margin-left: 20%;
-            border-radius: 0px 0px 8vh 8vh;
-            padding: 2vh 0;
+            text-align: center;
+            width: 50%;
+            margin-left: 25%;
+            padding: 0px;
             z-index: 1000;
-            box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.75); 
-            background:#fff;
             min-height: 16vh;
         }
 
         .header img {
-            width: 40vw; /* 60% width */
-            max-width: 40vw; /* Optional max width */
+            width: 33vw;
+            max-width: 33vw;
             height: auto;
         }
         
+        @keyframes scroll {
+            from {
+                transform: translateX(0);
+            }
+            to {
+                transform: translateX(-50%);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/bsi-mailer-logo-Artboard-5.svg" alt="Logo" class="logo">
+        <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/Big-Sky-Logo.svg" alt="Intercape Logo">
     </div>
     <div class="pattern">
-        <h1>Are you on the right coach?</h1>
-        <h2>Cape Town</h2>
-        <h3>0327</h3>
+        <h1>BOARDING NOW</h1>
+        <h2 id="bi_route_desc">Beaufort West</h2>
+        <h3 id="bi_route_number">0327</h3>
     </div>
+    <div class="logo-bar">
+       <h4>POPULAR STOPS:</h4>
+       <div class="scrolling-slider-container">
+            <div class="scrolling-slider">
+                <div class="scrolling-slider-item">Gabarone</div>
+                <div class="scrolling-slider-item">Rustenburg</div>
+                <div class="scrolling-slider-item">Groot Marito</div>
+                <div class="scrolling-slider-item">Ceres</div>
+                <div class="scrolling-slider-item">Cape Town</div>
+                <div class="scrolling-slider-item">Kroonstad</div>
+                <div class="scrolling-slider-item">Bloemfontein</div>
+                <div class="scrolling-slider-item">Colsberg</div>
+                <div class="scrolling-slider-item">Laingsburg</div>
+                <div class="scrolling-slider-item">Beaufort West</div>
+                <div class="scrolling-slider-item">Worcester</div>
+                <div class="scrolling-slider-item">Paarl</div>
+            </div>
+       </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Duplicate slider items for a continuous effect
+            const $slider = $('.scrolling-slider');
+            $slider.append($slider.html());
+
+            // Function to animate the slider
+            function animateSlider() {
+                $slider.animate({ left: '-100%' }, 15000, 'linear', function() {
+                    // Reset position and repeat animation
+                    $slider.css('left', '0');
+                    animateSlider();
+                });
+            }
+
+            animateSlider();
+        });
+
+		window.addEventListener('message', function(event) 
+		{
+			console.log('BBB');
+            // Check the origin of the message for security
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+            document.getElementById('content').innerText = event.data.rd;
+            document.getElementById('route_number').innerText = event.data.rn;
+        });
+    </script>
 </body>
 </html>

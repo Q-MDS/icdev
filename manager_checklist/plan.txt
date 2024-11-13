@@ -97,7 +97,11 @@ if there is a picture, set faultpicture to “Y” and upload the file to
 tfc_id from technical_faults_category 
 */
 
-
+1. Rebooking
+2. Use layout on index to decide the layout
+3. do an initial fetch - ie prevent 30 seconds delay
+4. Keith query to get ticker tape at bottom of destinations
+5. do double layout
 
 
 

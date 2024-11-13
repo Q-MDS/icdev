@@ -1,4 +1,4 @@
-const CACHE_NAME = 'offline-cache-v19';
+const CACHE_NAME = 'offline-cache-v20';
 const urlsToCache = [
   '/icdev/departure_boards/tv_app/index.php',
   '/icdev/departure_boards/tv_app/ic_logo.svg',
