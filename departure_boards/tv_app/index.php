@@ -1,7 +1,12 @@
 <?php
+@header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
+@header("Cache-Control: no-cache, must-revalidate");
+@header("Pragma: no-cache");
+
 // Must be passed in as parameter
 $stop_serial = 0;
 $screen_id = 0;
+$screen_layout = 0; // 0 = fullscreen, 1 = split screen
 
 if (isset($_GET['s']))
 {
@@ -33,11 +38,11 @@ function oci_conn()
 
 function get_stop_serial()
 {
-	global $stop_serial, $screen_id;
+	global $stop_serial, $screen_id, $screen_layout;
 
 	$conn = oci_conn();
 	
-	$sql = "SELECT STOP_SERIAL FROM DEPARTURE_TVS WHERE SCREEN_ID = :screen_id";
+	$sql = "SELECT STOP_SERIAL, SCREEN_LAYOUT FROM DEPARTURE_TVS WHERE SCREEN_ID = :screen_id";
 
 	$stid = oci_parse($conn, $sql);
 
@@ -48,6 +53,7 @@ function get_stop_serial()
 	$row = oci_fetch_array($stid, OCI_ASSOC);
 
 	$stop_serial = $row['STOP_SERIAL'];
+	$screen_layout = $row['SCREEN_LAYOUT'];
 
 	oci_free_statement($stid);
 
@@ -63,114 +69,74 @@ get_stop_serial();
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Boarding Board</title>
 <style>
-		html, body {
-			margin: 0;
-            padding: 0;
-			width: 100vw;
-            height: 100%;
-            font-family: Arial, sans-serif;
-			overflow: hidden;
-			box-sizing: border-box;
-		}
-	</style>
+	html, body {
+		margin: 0;
+		padding: 0;
+		width: 100vw;
+		height: 100%;
+		font-family: Arial, sans-serif;
+		overflow: hidden;
+		box-sizing: border-box;
+	}
+</style>
 </head>
 <body onload="init();">
-	<!-- Placeholder for IC/BI content -->
-    <!-- <div id="ic-container" style="display: none"></div>
-    <div id="bi-container" style="display: none"></div> -->
-	<div style="width: 100%; height: 100%; padding: 0px; margin: 0px; border: 0px;">
+	<?php
+	if ($screen_layout == 0)
+	{
+	?>
+	<div id="fullscreen" style="display: block; width: 100%; height: 100%; padding: 0px; margin: 0px; border: 0px;">
 		<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; height: 100%;">
 			<div style="display: flex; align-items: center; justify-content: center; flex: 1; height: 100%; box-sizing: border-box;">
-				<iframe id="board_main" src="ic.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
+				<!-- IC Board -->
+				<iframe id="ic_board" src="ic.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
+				<!-- BI Board -->
+				<iframe id="bi_board" src="bi.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
+				<!-- Arrivals -->
 				<iframe id="arrivals" src="https://secure.intercape.co.za/ignite/index.php?c=no_auth&m=vdeparture_boards&type=1&stop=<?php echo $stop_serial; ?>"  style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
+				<!-- Offline -->
+				<div id="offline" style="display: none; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f17d32">
+					<div>
+						<div style="font-size: 3rem; font-style: italic; font-weight: 900; color: #fff; text-shadow: 3px 3px 3px rgba(0, 0, 0, 0.75);">Please check back later</div>
+						<input type="text" id="screen_id" value="<?php echo $screen_id; ?>" style="display: none">
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
-	
-
-	<div id="offline" style="display: none; align-items: center; justify-content: center; height: 100%;">
-		<div>
-			<div style="font-size: 7em; font-style: italic; font-weight: 900; color: #FFF; text-shadow: 3px 3px 3px rgba(0, 0, 0, 0.75);">Please check back later</div>
-			<input type="text" id="screen_id" value="<?php echo $screen_id; ?>" style="display: none">
+	<?php
+	}
+	else if ($screen_layout == 1)
+	{
+	?>
+	<div id="splitscreen" style="display: block; width: 100%; height: 100%; padding: 0px; margin: 0px; border: 0px;">
+		<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; height: 100%;">
+			<div style="display: flex; align-items: center; justify-content: center; flex: 1; height: 100%; box-sizing: border-box;">
+				<iframe id="board_left" src="ic.html" style="width: 100%; height: 100%; border: 0px;"></iframe>
+			</div>
+			<div style="display: flex; align-items: center; justify-content: center; flex: 1; height: 100%; box-sizing: border-box;">
+				<iframe id="board_right" src="bi.html" style="width: 100%; height: 100%; border: 0px;"></iframe>
+			</div>
 		</div>
 	</div>
-
-	<!-- <div id="arrivals" style="display: block; height: 100%; width: 100%; z-index:999">
-		<div style="width: 100%">
-			
-		</div>
-	</div> -->
+	<?php
+	}
+	?>
 </body>
 </html>
 <script>
 baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/";
 
-//if ('serviceWorker' in navigator) {
-//  window.addEventListener('load', function() {
-//    navigator.serviceWorker.register(baseUrl + 'departure_boards/tv_app/service-worker.js').then(function(registration) {
-//      console.log('ServiceWorker registration successful with scope: ', registration.scope);
-//    }, function(err) {
-//      console.log('ServiceWorker registration failed: ', err);
-//    });
-//  });
-//}
-
 function init()
 {
 	console.log('You are: ' + navigator.onLine);
-	// setInterval(fetchData, 5000);
-	// loadICContent();
-	// loadBIContent();
 	fetchData();
 	refresh();
 }
 
 function refresh()
 {
-	setInterval(fetchData, 30000);
-}
-
-function loadICContent() 
-{
-	fetch('ic.html')
-	.then(response => response.text())
-	.then(data => 
-	{
-		// console.log('IC content loaded:', data);
-		document.getElementById('ic-container').innerHTML = data;
-	})
-	.catch(error => console.error('Error loading IC content:', error));
-}
-
-function loadBIContent() 
-{
-	fetch('bi.html')
-	.then(response => response.text())
-	.then(data => 
-	{
-		// console.log('BI content loaded:', data);
-		document.getElementById('bi-container').innerHTML = data;
-	})
-	.catch(error => console.error('Error loading BI content:', error));
-}
-
-function isOffline()
-{
-	console.log('Offline check...');
-	if (!navigator.onLine)
-	{
-		console.log('You are offline');
-		document.getElementById('ic-container').style.display = 'none';
-		document.getElementById('bi-container').style.display = 'none';
-		document.getElementById('offline').style.display = 'block';
-	}
-	else 
-	{
-		console.log('You are online');
-		document.getElementById('ic-container').style.display = 'block';
-		document.getElementById('bi-container').style.display = 'none';
-		document.getElementById('offline').style.display = 'none';
-	}
+	setInterval(fetchData, 5000);
 }
 
 async function fetchData() 
@@ -186,18 +152,20 @@ async function fetchData()
 		const result = await response.text()
 		.then(result => 
 		{
-			console.log('Result:', result);
+			// console.log('Result:', result);
 			const arrivals = document.getElementById('arrivals');
 			const offline = document.getElementById('offline');
-			const board_main = document.getElementById('board_main');
+			const icBoard = document.getElementById('ic_board');
+			const biBoard = document.getElementById('bi_board');
 
 			if (result == 0)
 			{
 				// No data: show arrival screen
-				console.log('No data found aaa');
+				console.log('No data found');
 				document.body.style.backgroundColor = "#333";
 				
-				board_main.style.display = 'none';
+				icBoard.style.display = 'none';
+				biBoard.style.display = 'none';
 				arrivals.style.display = 'block';
 				offline.style.display = 'none';
 			}
@@ -217,55 +185,52 @@ async function fetchData()
 					case 'IB':
 					case 'AR':
 					case 'ZZ':
-						board_main.style.display = 'block';
-						if (board_main.src != baseUrl + 'departure_boards/tv_app/ic.html')
-						{
-							board_main.src = 'ic.html';
-						}
-						sendMessageToIframe(data);
+						biBoard.style.display = 'none';
+						icBoard.style.display = 'block';
+						
+						sendMessageToIc(data);
 					break;
 					case 'BI':
-						board_main.style.display = 'block';
-						if (board_main.src != baseUrl + 'departure_boards/tv_app/bi.html')
-						{
-							board_main.src = 'bi.html';
-						}
+						icBoard.style.display = 'none';
+						biBoard.style.display = 'block';
+						
+						sendMessageToBi(data);
 					break;
-					default:
-						board_main.style.display = 'block';
-						if (board_main.src != baseUrl + 'departure_boards/tv_app/ic.html')
-						{
-							board_main.src = 'ic.html';
-						}
+					biBoard.style.display = 'none';
+					icBoard.style.display = 'block';
+					
+					sendMessageToIc(data);
 				}
 			}
 		});
 	}
 	else 
 	{
+		// System is offline
 		console.log('Cannot fetch data, you are offline');
 		
-		document.getElementById('ic-container').style.display = 'none';
-		document.getElementById('bi-container').style.display = 'none';
+		document.getElementById('ic_board').style.display = 'none';
+		document.getElementById('bi_board').style.display = 'none';
 		document.getElementById('arrivals').style.display = 'none';
 		document.getElementById('offline').style.display = 'flex';
 	}
 }
 
-function sendMessageToIframe(result) 
+function sendMessageToIc(result) 
 {
 	console.log('Sending message to iframe...');
-	const iframe = document.getElementById('board_main');
-	// const title = "Hello, iframe!";
-	// const title = result;
-	// const routeNumber = "7230";
-	// const message = {
-	// 	title: title,
-	// 	route_number: routeNumber
-	// };
+	const iframe = document.getElementById('ic_board');
+	
 	const message = result;
 	iframe.contentWindow.postMessage(message, '*');
 }
 
-// init();
+function sendMessageToBi(result) 
+{
+	console.log('Sending message to iframe...');
+	const iframe = document.getElementById('bi_board');
+	
+	const message = result;
+	iframe.contentWindow.postMessage(message, '*');
+}
 </script>

@@ -53,6 +53,8 @@
 //		echo "OK!!";
 	VV("jobcardserial");
 	$jobcardserial=trim($jobcardserial);
+
+	$_check_gets_return = true;
 	
 	$depot=$cookiedepot;
 	if ($depot=="")
@@ -156,7 +158,15 @@
 	}
 	
 	if (!isset($_GET["printslip"]) && $shownotes!="Y")
+
+	if ($rights["BUYER"] || $rights["DEVELOPERS"])
+	{
 		echo "<b>".str_replace("'","",$depot_list)."</b> | <a href=partsrequest.phtml?mode=U>Approve</a> | <a href=partsrequest.phtml?mode=I>Issue Stock</a> | <a href=partsrequest.phtml?mode=B>Buyer Inbox</a> | <a href=partsrequest.phtml?mode=O>On Order</a> | <a href=partsrequest.phtml?mode=R>Receive</a> | <a href=partsrequest.phtml?mode=H>Hanging</a> | <a href=partsrequest.phtml?mode=L>Show All</a> | <a target=parent href='https://secure.intercape.co.za/ignite/index.php?c=reports&m=vmechanic_report&page_id=701&depot=$cookiedepot'>Dashboard</a><BR>";
+	} 
+	else 
+	{
+		echo "<b>".str_replace("'","",$depot_list)."</b> | <a href=partsrequest.phtml?mode=U>Approve</a> | <a href=partsrequest.phtml?mode=I>Issue Stock</a> | <a href=partsrequest.phtml?mode=O>On Order</a> | <a href=partsrequest.phtml?mode=R>Receive</a> | <a href=partsrequest.phtml?mode=H>Hanging</a> | <a href=partsrequest.phtml?mode=L>Show All</a> | <a target=parent href='https://secure.intercape.co.za/ignite/index.php?c=reports&m=vmechanic_report&page_id=701&depot=$cookiedepot'>Dashboard</a><BR>";
+	}
 
 	ora_parse($cursor,"alter session set nls_date_format='hh24:mi Dy dd Mon YYYY'");
 	ora_exec($cursor);
@@ -2442,6 +2452,20 @@ function buyer_finished($bo_pr_serial)
 	oci_close($conn);
 }
 
+function take_over($bo_user_serial, $bo_pr_serial)
+{
+	global $conn;
+
+	// $bo_user_serial = 2122632888;
+
+	$sql = "UPDATE MOVE_JOBS_PART_REQUESTS SET BUYER_OWNER = $bo_user_serial WHERE PR_SERIAL = $bo_pr_serial";
+		
+	$cursor = oci_parse($conn, $sql);
+	oci_execute($cursor);
+
+	oci_close($conn);
+}
+
 $action = 0;
 $buyer_records = array();
 
@@ -2475,6 +2499,12 @@ if (isset($_GET['action']))
 			echo 'Buyer finished: ' . $bo_pr_serial;
 			buyer_finished($bo_pr_serial);
 		break;
+		case 5:
+			$bo_user_serial = getuserserial();
+			$bo_pr_serial = $req;
+			echo 'Take over: ' . $bo_pr_serial;
+			take_over($bo_user_serial, $bo_pr_serial);
+		break;
 	}
 }
 
@@ -2484,6 +2514,7 @@ function buyer_inbox($mode,$jobcardserial="")
 	global $cursor,$depot,$depot_list,$job,$cookiedepot;
 
 	$where="and A.buyer_requested_date is not null";
+	
 	echo "<br/>";
 	echo "<table border=1>";
 	echo "<tr><td colspan='9'>Buyer action required</td></tr>";
@@ -2501,7 +2532,7 @@ function buyer_inbox($mode,$jobcardserial="")
 	if ($jobcardserial=="") 
 	{
 		// $qry="select A.jobcardserial,E.code,B.username cap_user, U.username app_user, F.username accepted_user, A.*  from move_jobs_part_requests A join move_jobs D on  D.jobcardserial=abs(A.jobcardserial) left join user_details B on A.captured_by=B.user_serial left join user_details U on A.approved_by=U.user_serial left join vehicles E on E.serial=D.unitserial and D.type=1 left join user_details F on F.user_serial=A.accepted_by where D.depot in ($depot_list) $where order by A.pr_serial";
-		$qry="SELECT 
+		$qry="SELECT DISTINCT 
 		A.jobcardserial,
 		E.code,
 		B.username cap_user, 
@@ -2554,6 +2585,7 @@ function buyer_inbox($mode,$jobcardserial="")
 	ora_Exec($cursor);
 	$buyer_accepted=array();
 	$lines=0;
+	$i = 0;
 	while (ora_fetch_into($cursor,$data,ORA_FETCHINTO_ASSOC)) 
 	{	
 		$buyer_accepted[] = $data;
@@ -2663,7 +2695,10 @@ function buyer_inbox($mode,$jobcardserial="")
 			echo "</tr>";	
 			unset($data);	
 		}
+		$i++;
 	} // while
+
+	echo "TOT ORA FOUND: " . $i;
 
 	echo "</table>";
 	echo "<br/>";
@@ -2687,9 +2722,11 @@ function buyer_inbox($mode,$jobcardserial="")
 	$buyer_serial = getuserserial();
 	$lines=0;
 	// while (ora_fetch_into($cursor,$data_buyer,ORA_FETCHINTO_ASSOC)) 
+	echo "TOT: " . count($buyer_accepted);
 	foreach ($buyer_accepted as $data_buyer)
 	{	
-		if ($data_buyer['BUYER_REQUESTED_DATE'] != NULL && $data_buyer['BUYER_OWNER'] == $buyer_serial)
+		// if ($data_buyer['BUYER_REQUESTED_DATE'] != NULL)
+		if ($data_buyer['BUYER_REQUESTED_DATE'] != NULL && $data_buyer['BUYER_OWNER_DATE'] != NULL)
 		{
 			$lines++;
 			if ($lines%2==0)
@@ -2784,16 +2821,16 @@ function buyer_inbox($mode,$jobcardserial="")
 			echo "<td>";
 			if ($data_buyer['BUYER_FINISHED'] == 'N')
 			{
-				echo '<a href="partsrequest.phtml?mode=B&action=4&req=' . $data_buyer["PR_SERIAL"] .'" style="text-decoration: none;">';
+				echo '<a href="partsrequest.phtml?mode=B&action=5&req=' . $data_buyer["PR_SERIAL"] .'" style="text-decoration: none;">';
 					echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; ">';
-						echo 'CHANGE';
+						echo 'TAKE OVER';
 					echo '</div>';
 				echo '</a>';
 			}
 			else 
 			{
 				echo '<div style="display: flex; align-items: center; justify-content: center; border-radius: 4px; background-color: #eaeaea; border: 1px solid #000; padding: 5px 10px; color: #d5d5d5">';
-					echo 'CHANGE';
+					echo 'TAKE OVER';
 				echo '</div>';
 			}
 			echo "</td>";
@@ -2821,9 +2858,9 @@ function buyer_inbox($mode,$jobcardserial="")
 				echo 'Complete: <font size=2>' . $data_buyer["BUYER_FINISHED_DATE"] . '</font>';
 			}
 
-		echo "</td>";	
-		echo "</tr>";	
-	}
+			echo "</td>";	
+			echo "</tr>";	
+		}
 	} 
 	
 	echo "</table>";

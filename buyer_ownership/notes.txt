@@ -81,3 +81,9 @@ Hi - I'm clicking on 'take ownership' but nothing is happening
 strtotime(date("Y-m-d H:i:s"));    ->  rather just say time();
 the value of $req is missing
 Remove else on line 433
+
+14-11-2024
+- buyer ownership: 
+  > Buyer inbox only shown to buyers ? - Check Keith answer - Y
+  > Change - must be Take Over
+  > Why so many records?
