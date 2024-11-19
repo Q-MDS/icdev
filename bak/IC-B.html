@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Screen</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            display: flex;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .split {
+            width: 50%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .right {
+            background: url('https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/BSI-pattern.jpg') no-repeat center center;
+            background-size: cover;
+            border-left: 10px solid #000000;
+        }
+
+        .left {
+            background: url('https://www.intercape.co.za/wp-content/uploads/2024/11/Background-Image.jpg') no-repeat center center;
+            background-size: cover;
+            
+        }
+
+        h1, h2, h3, h4 {
+            color: #fff;
+            text-transform: uppercase;
+            margin: 0;
+            text-align: center;
+        }
+
+        .right h1, .left h1 {
+            font-size: 2.5em;
+            font-weight: 800;
+            font-style: italic;
+            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.75);
+            margin-bottom: 30px;
+        }
+        .right h1{
+            color: #F7DB2B;
+        }
+
+        .right h2, .left h2 {
+            font-size: 4.3vw;
+            line-height: 1em;
+            font-weight: 700;
+        }
+
+        .right h2 {
+            color: #fff;
+        }
+
+        .left h2 {
+            color: #000;
+        }
+        .left h3, .right h3 {
+            font-size: 7.5em;
+            font-weight: 800;
+        }
+        .left h3 {
+            color: #000000; 
+        }
+
+        .logo-bar {
+            position: absolute;
+            bottom: 0;
+            background: white;
+            text-align: center;
+            width: 100%;
+            padding: 3em 0 2em 0;
+        }
+        h4{
+            color: #000000;
+            font-size: 2.5em;
+            font-style: italic;
+            font-weight: 900;
+        }
+        .right h4.pop-stop{
+            color: #1978B9;
+            font-size: 2.5em;
+            font-style: italic;
+            font-weight: 900;
+        }
+        .left h4.pop-stop{
+            color: #F57723;
+            font-size: 2.5em;
+            font-style: italic;
+            font-weight: 900;
+        }
+
+        .scrolling-slider-container {
+            overflow: hidden;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            margin-top: 1em;
+        }
+
+        .scrolling-slider {
+            display: flex;
+            animation: scroll 60s linear infinite;
+        }
+
+        .left .scrolling-slider-item {
+            display: inline-block;
+            margin-right: 10vh;
+            font-size: 3vw;
+            font-weight: 900;
+            color: #000000;
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+        .right .scrolling-slider-item {
+            display: inline-block;
+            margin-right: 10vh;
+            font-size: 3vw;
+            font-weight: 900;
+            color: #13a9e0;
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+        .header {
+            position: absolute;
+            text-align: center;
+            top: 0px;
+            left: 50%;
+            width: 100%;
+            transform: translateX(-50%);
+            padding: 0px;
+            z-index: 1000;
+            min-height: 16vh;
+        }
+
+        .header img {
+            width: 33vw;
+            height: auto;
+        }
+        
+        @keyframes scroll {
+            from {
+                transform: translateX(0);
+            }
+            to {
+                transform: translateX(-50%);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="split left">
+        <div class="header">
+            <img src="https://www.intercape.co.za/wp-content/uploads/2024/11/Intercape-Logo.svg" alt="Intercape Logo">
+        </div>
+        <div class="pattern">
+            <h1>NOW DEPARTING</h1>
+            <h2>Beaufort West</h2>
+            <h3>0327</h3>
+        </div>
+        <div class="logo-bar">
+            <h4 class="pop-stop">POPULAR STOPS:</h4>
+            <div class="scrolling-slider-container">
+                <div class="scrolling-slider">
+                    <div class="scrolling-slider-item">Gabarone</div>
+                    <div class="scrolling-slider-item">Rustenburg</div>
+                    <div class="scrolling-slider-item">Groot Marito</div>
+                    <div class="scrolling-slider-item">Ceres</div>
+                    <div class="scrolling-slider-item">Cape Town</div>
+                    <div class="scrolling-slider-item">Kroonstad</div>
+                    <div class="scrolling-slider-item">Bloemfontein</div>
+                    <div class="scrolling-slider-item">Colsberg</div>
+                    <div class="scrolling-slider-item">Laingsburg</div>
+                    <div class="scrolling-slider-item">Beaufort West</div>
+                    <div class="scrolling-slider-item">Worcester</div>
+                    <div class="scrolling-slider-item">Paarl</div>
+                    <!-- Add more items as needed -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="split right">
+        <div class="header">
+            <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/Big-Sky-Logo.svg" alt="Big Sky Logo">
+        </div>
+        <div class="pattern">
+            <h1>NOW DEPARTING</h1>
+            <h2>Beaufort West</h2>
+            <h3>0327</h3>
+        </div>
+        <div class="logo-bar">
+            <h4 class="pop-stop">POPULAR STOPS:</h4>
+            <div class="scrolling-slider-container">
+                <div class="scrolling-slider">
+                    <div class="scrolling-slider-item">Gabarone</div>
+                    <div class="scrolling-slider-item">Rustenburg</div>
+                    <div class="scrolling-slider-item">Groot Marito</div>
+                    <div class="scrolling-slider-item">Ceres</div>
+                    <div class="scrolling-slider-item">Cape Town</div>
+                    <div class="scrolling-slider-item">Kroonstad</div>
+                    <div class="scrolling-slider-item">Bloemfontein</div>
+                    <div class="scrolling-slider-item">Colsberg</div>
+                    <div class="scrolling-slider-item">Laingsburg</div>
+                    <div class="scrolling-slider-item">Beaufort West</div>
+                    <div class="scrolling-slider-item">Worcester</div>
+                    <div class="scrolling-slider-item">Paarl</div>
+                    <!-- Add more items as needed -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</body>
+</html>

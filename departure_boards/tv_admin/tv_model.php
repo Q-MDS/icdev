@@ -25,10 +25,7 @@ switch ($action)
 		$tv_stop_serial = $json_data->tv_stop_serial;
 		$tv_stop_serial = htmlspecialchars($tv_stop_serial, ENT_QUOTES, 'UTF-8');
 
-		$tv_layout = $json_data->tv_layout;
-		$tv_layout = htmlspecialchars($tv_layout, ENT_QUOTES, 'UTF-8');
-
-		save($tv_name, $tv_branch, $tv_stop_serial, $tv_layout);
+		save($tv_name, $tv_branch, $tv_stop_serial);
 	break;
 	case 1:
 		$tv_id = $json_data->tv_id;
@@ -46,10 +43,8 @@ switch ($action)
 		$tv_branch = str_replace("'", "", $tv_branch);
 		$tv_stop_serial = $json_data->tv_stop_serial;
 		$tv_stop_serial = str_replace("'", "", $tv_stop_serial);
-		$tv_layout = $json_data->tv_layout;
-		$tv_layout = str_replace("'", "", $tv_layout);
 		
-		update($tv_id, $tv_name, $tv_branch, $tv_stop_serial, $tv_layout);
+		update($tv_id, $tv_name, $tv_branch, $tv_stop_serial);
 	break;
 	case 3:
 		// Remove
@@ -83,13 +78,13 @@ function oci_conn()
 	return $conn;
 }
 
-function save($tv_name, $tv_branch, $tv_stop_serial, $tv_layout)
+function save($tv_name, $tv_branch, $tv_stop_serial)
 {
 	$conn = oci_conn();
 
 	if ($tv_name != '' && $tv_branch != '' && $tv_stop_serial != '')
 	{
-		$sql = "INSERT INTO DEPARTURE_TVS (SCREEN_ID, NAME, BRANCH, STOP_SERIAL, IS_ACTIVE, SCREEN_LAYOUT) VALUES (SCREEN_ID_SEQ.NEXTVAL, '$tv_name', '$tv_branch', $tv_stop_serial, '1', $tv_layout)";
+		$sql = "INSERT INTO DEPARTURE_TVS (SCREEN_ID, NAME, BRANCH, STOP_SERIAL, IS_ACTIVE) VALUES (SCREEN_ID_SEQ.NEXTVAL, '$tv_name', '$tv_branch', $tv_stop_serial, '1')";
 		
 		$cursor = oci_parse($conn, $sql);
 		
@@ -129,12 +124,12 @@ function getRecord($tv_id)
 	echo json_encode($record);
 }
 
-function update($tv_id, $tv_name, $tv_branch, $tv_stop_serial, $tv_layout)
+function update($tv_id, $tv_name, $tv_branch, $tv_stop_serial)
 {
 	// OCI
 	$conn = oci_conn();
 
-	$sql = "UPDATE DEPARTURE_TVS SET NAME = '$tv_name', BRANCH = '$tv_branch', STOP_SERIAL = $tv_stop_serial, SCREEN_LAYOUT = '$tv_layout' WHERE SCREEN_ID = $tv_id";
+	$sql = "UPDATE DEPARTURE_TVS SET NAME = '$tv_name', BRANCH = '$tv_branch', STOP_SERIAL = $tv_stop_serial WHERE SCREEN_ID = $tv_id";
 	
 	$cursor = oci_parse($conn, $sql);
 	

@@ -88,7 +88,7 @@ function get_route_list()
 
 	$conn = oci_conn();
 
-	$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_TO >= $date_from AND DATE_FROM <= $date_to";
+	$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_TO >= $date_from AND DATE_FROM <= $date_to ORDER BY ROUTE_NO";
 
 	$stid = oci_parse($conn, $sql);
 
@@ -121,7 +121,7 @@ function get_settings($tv_list)
 
 		oci_execute($stid);
 
-		$row = oci_fetch_array($stid, OCI_ASSOC);
+		$row = oci_fetch_array($stid, OCI_ASSOC+OCI_RETURN_NULLS);
 
 		if ($row === false) 
 		{
@@ -179,26 +179,57 @@ get_settings($tv_list);
 				<?php
 				if (count($tv['SETTINGS']) > 0)
 				{
-					echo "<div>Route: {$tv['SETTINGS']['ROUTE_NO']} - {$tv['SETTINGS']['ROUTE_DESCRIPTION']}</div>";
+					if ($tv['SETTINGS']['ROUTE_NO_B']) 
+					{ 
+						echo "<div>Route 1 (Left): {$tv['SETTINGS']['ROUTE_NO']} - {$tv['SETTINGS']['ROUTE_DESCRIPTION']}</div>";
+						echo "<div>Route 2 (Right): {$tv['SETTINGS']['ROUTE_NO_B']} - {$tv['SETTINGS']['ROUTE_DESCRIPTION_B']}</div>";
+					} 
+					else 
+					{
+						echo "<div>Route 1 (Full): {$tv['SETTINGS']['ROUTE_NO']} - {$tv['SETTINGS']['ROUTE_DESCRIPTION']}</div>";
+					}
 					echo '<div style="padding-top: 5px"><input type="button" value="Remove" style="width: 75px; height: 40px;" onclick="removeRoute(' . $tv['SCREEN_ID'] . ')"></div>';
 				}
 				else
 				{
-					echo '<select name="route_' . $tv['SCREEN_ID'] , '" id="route_' . $tv['SCREEN_ID'] . '" style="max-width: 340px; height: 35px">';
-					echo "<option value=''>Select...</option>";
-					foreach ($route_list as $route) 
-					{
-						$route_no = $route['ROUTE_NO'];
-						$carrier_code = $route['CARRIER_CODE'];
-						$description = $route['DESCRIPTION'];
+					echo '<div>Route 1 (Full/Left)</div>';
+					echo '<div>';
+						echo '<select name="route_' . $tv['SCREEN_ID'] , '" id="route_' . $tv['SCREEN_ID'] . '" style="max-width: 340px; height: 35px">';
+						echo "<option value=''>Select...</option>";
+						foreach ($route_list as $route) 
+						{
+							$route_no = $route['ROUTE_NO'];
+							$carrier_code = $route['CARRIER_CODE'];
+							$description = $route['DESCRIPTION'];
 
-						$value = array($route_no, $carrier_code, $description);
-						$option_value = json_encode($value);
+							$value = array($route_no, $carrier_code, $description);
+							$option_value = json_encode($value);
 
-						echo "<option value='{$option_value}'>{$route['ROUTE_NO']} - {$route['DESCRIPTION']}</option>";
-					}
-					echo '</select>';
+							echo "<option value='{$option_value}'>{$route['ROUTE_NO']} - {$route['DESCRIPTION']}</option>";
+						}
+						echo '</select>';
+					echo '</div>';
+
+					echo '<div>Route 2 (Right)</div>';
+					echo '<div>';
+						echo '<select name="route_b_' . $tv['SCREEN_ID'] , '" id="route_b_' . $tv['SCREEN_ID'] . '" style="max-width: 340px; height: 35px">';
+						echo "<option value=''>Select...</option>";
+						foreach ($route_list as $route) 
+						{
+							$route_no = $route['ROUTE_NO'];
+							$carrier_code = $route['CARRIER_CODE'];
+							$description = $route['DESCRIPTION'];
+
+							$value = array($route_no, $carrier_code, $description);
+							$option_value = json_encode($value);
+
+							echo "<option value='{$option_value}'>{$route['ROUTE_NO']} - {$route['DESCRIPTION']}</option>";
+						}
+						echo '</select>';
+					echo '</div>';
+
 					echo '<div style="padding-top: 5px"><input type="button" value="Add" style="width: 75px; height: 40px;" onclick="addRoute(' . $tv['SCREEN_ID'] . ')"></div>';
+					// echo '</div>';
 				}
 				?>
 			</div>
@@ -213,17 +244,37 @@ function addRoute(screen_id)
 {
 	console.log("Add route: ", screen_id);
 	const route = document.getElementById('route_' + screen_id);
-	const route_value = JSON.parse(route.value);
 
+	if (!route.value)
+	{
+		alert('Please select a route for Route 1');
+		return;
+	}
+	
+	const route_value = JSON.parse(route.value);
 	const route_no = route_value[0];
-	const brand = route_value[1];;
+	const brand = route_value[1];
 	const route_description = route_value[2];
 
-	const formData = { "action" : 0, "screen_id": screen_id, "route_no": route_no, "brand": brand, "route_description": route_description };
+	const route_b = document.getElementById('route_b_' + screen_id);
+	let route_no_b = '';
+	let brand_b = '';
+	let route_description_b = '';
+	console.log('Route B: ', route_b.value);
+	if (route_b.value != 'null' && route_b.value != '')
+	{
+		route_b_value = JSON.parse(route_b.value);
+		route_no_b = route_b_value[0];
+		brand_b = route_b_value[1];
+		route_description_b = route_b_value[2];
+	}
+
+	const formData = { "action" : 0, "screen_id": screen_id, "route_no": route_no, "brand": brand, "route_description": route_description, "route_no_b": route_no_b, "brand_b": brand_b, "route_description_b": route_description_b };
 
 	const result = sendData(formData)
 	.then(result => 
 	{
+		// console.log('Result: ', result);
 		window.location.reload(); 
 	});
 }
