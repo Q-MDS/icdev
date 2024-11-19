@@ -23,15 +23,23 @@ switch ($action)
 		$route_no = $json_data->route_no;
 		$route_no = htmlspecialchars($route_no, ENT_QUOTES, 'UTF-8');
 		$route_no = trim($route_no);
-		
 		$brand = $json_data->brand;
 		$brand = htmlspecialchars($brand, ENT_QUOTES, 'UTF-8');
 		$brand = trim($brand);
-		
 		$route_description = $json_data->route_description;
 		$route_description = htmlspecialchars($route_description, ENT_QUOTES, 'UTF-8');
 
-		add_route($screen_id, $route_no, $brand, $route_description);
+		$route_no_b = $json_data->route_no_b;
+		$route_no_b = htmlspecialchars($route_no_b, ENT_QUOTES, 'UTF-8');
+		$route_no_b = trim($route_no_b);
+		$brand_b = $json_data->brand_b;
+		$brand_b = htmlspecialchars($brand_b, ENT_QUOTES, 'UTF-8');
+		$brand_b = trim($brand_b);
+		$route_description_b = $json_data->route_description_b;
+		$route_description_b = htmlspecialchars($route_description_b, ENT_QUOTES, 'UTF-8');
+		$route_description_b = trim($route_description_b);
+
+		add_route($screen_id, $route_no, $brand, $route_description, $route_no_b, $brand_b, $route_description_b);
 	break;
 	case 1:
 		$screen_id = $json_data->screen_id;
@@ -41,16 +49,19 @@ switch ($action)
 	break;
 }
 
-function add_route($screen_id, $route_no, $brand, $route_description)
+function add_route($screen_id, $route_no, $brand, $route_description, $route_no_b, $brand_b, $route_description_b)
 {
 	global $conn;
 
-	$cursor = ora_open($conn);
+	$route_description = TRIM($route_description);
 
-	$sql = "INSERT INTO DEPARTURE_TV_SETTINGS (SCREEN_ID, BRAND, ROUTE_NO, ROUTE_DESCRIPTION) VALUES ($screen_id, '$brand', '$route_no', '$route_description')";
+	$sql = "INSERT INTO DEPARTURE_TV_SETTINGS (SCREEN_ID, BRAND, ROUTE_NO, ROUTE_DESCRIPTION, BRAND_B, ROUTE_NO_B, ROUTE_DESCRIPTION_B) VALUES ($screen_id, '$brand', '$route_no', '$route_description', '$brand_b', '$route_no_b', '$route_description_b')";
 	
-	ora_parse($cursor, $sql);
-	ora_exec($cursor);
+	$cursor = oci_parse($conn, $sql);
+	
+	oci_execute($cursor);
+
+	oci_free_statement($cursor);
 
 	oci_close($conn);
 
@@ -60,17 +71,14 @@ function add_route($screen_id, $route_no, $brand, $route_description)
 function remove_route($screen_id)
 {
 	global $conn;
-	// OCI
+
 	$record = array();
 
-	$cursor = ora_open($conn);
-
 	$sql = "DELETE FROM DEPARTURE_TV_SETTINGS WHERE SCREEN_ID = $screen_id";
-
-	ora_parse($cursor, $sql);
-	ora_exec($cursor);
-
-	ora_close($cursor);
+	$cursor = oci_parse($conn, $sql);
+	oci_execute($cursor);
+	oci_free_statement($cursor);
+	oci_close($conn);
 
 	echo 1;
 }
