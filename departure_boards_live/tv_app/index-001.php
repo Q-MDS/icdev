@@ -3,6 +3,13 @@
 @header("Cache-Control: no-cache, must-revalidate");
 @header("Pragma: no-cache");
 
+ob_start();
+require_once ("/usr/local/www/pages/php3/oracle.inc");
+require_once ("/usr/local/www/pages/php3/misc.inc");
+require_once ("/usr/local/www/pages/php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+
 // Must be passed in as parameter
 $stop_serial = 0;
 $screen_id = 0;
@@ -13,35 +20,10 @@ if (isset($_GET['s']))
 	$screen_id = $_GET['s'];
 }
 
-function oci_conn()
-{
-	$host = 'localhost';
-	$port = '1521';
-	$sid = 'XE';
-	$username = 'SYSTEM';
-	$password = 'dontletmedown3';
-
-	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
-
-	if (!$conn) 
-	{
-		$e = oci_error();
-		exit;
-	} 
-	else 
-	{
-		// echo "Connection succeeded";
-	}
-
-	return $conn;
-}
-
 function get_stop_serial()
 {
-	global $stop_serial, $screen_id, $screen_layout;
+	global $conn, $stop_serial, $screen_id, $screen_layout;
 
-	$conn = oci_conn();
-	
 	$sql = "SELECT STOP_SERIAL FROM DEPARTURE_TVS WHERE SCREEN_ID = :screen_id";
 
 	$stid = oci_parse($conn, $sql);
@@ -61,10 +43,8 @@ function get_stop_serial()
 
 function get_layout()
 {
-	global $screen_id, $screen_layout;
+	global $conn, $screen_id, $screen_layout;
 
-	$conn = oci_conn();
-	
 	$sql = "SELECT * FROM DEPARTURE_TV_SETTINGS WHERE SCREEN_ID = :screen_id";
 
 	$stid = oci_parse($conn, $sql);
@@ -127,36 +107,56 @@ get_layout();
 </head>
 <body onload="init(<?php echo $screen_layout; ?>);">
 
-<div style="display: block; width: 100%; height: 100%; padding: 0px; margin: 0px; border: 0px;">
+<div id="fullscreen" style="display: block; width: 100%; height: 100%; padding: 0px; margin: 0px; border: 0px;">
 	<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; height: 100%;">
 		<div style="display: flex; align-items: center; justify-content: center; flex: 1; height: 100%; box-sizing: border-box;">
-		
-			<div id="fullscreen" style="width: 100%; height: 100%; display: none">
+			<?php
+			if ($screen_layout == 0) 
+			{
+				?>
+				<!-- FULLSCREEN -->
+				<!-- ---------- -->
 				<!-- IC Board -->
 				<iframe id="ic_board" src="ic.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
 				<!-- BI Board -->
 				<iframe id="bi_board" src="bi.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
-			</div>
-
-			<div id="ic_bi" style="width: 100%; height: 100%;">
-				<iframe id="icbi_board" src="ic_bi.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
-			</div>
-
-			<div id="bi_ic" style="width: 100%; height: 100%">
-				<iframe id="biic_board" src="bi_ic.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
-			</div>
-
-			<div id="ic_ic" style="width: 100%; height: 100%">
-				<iframe id="icic_board" src="ic_ic.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
-			</div>
-
-			<div id="bi_bi" style="width: 100%; height: 100%">
-				<iframe id="bibi_board" src="bi_bi.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
-			</div>
-		
+				<?php
+			}
+			else if ($screen_layout == 1) // IC/BI
+			{
+				?>
+				<!-- IC/BI -->
+				<!-- ----- -->
+				<iframe id="split_board" src="ic_bi.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
+				<?php
+			} 
+			elseif ($screen_layout == 2) 
+			{
+				?>
+				<!-- BI/IC -->
+				<!-- ----- -->
+				<iframe id="split_board" src="bi_ic.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
+				<?php
+			}
+			elseif($screen_layout == 3)
+			{
+				?>
+				<!-- IC/IC -->
+				<!-- ----- -->
+				<iframe id="split_board" src="ic_ic.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
+				<?php
+			}
+			else 
+			{
+				?>
+				<!-- BI/BI -->
+				<!-- ----- -->
+				<iframe id="split_board" src="bi_bi.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
+				<?php
+			}
+			?>
 			<!-- Arrivals -->
-			<iframe id="arrivals" src="https://secure.intercape.co.za/ignite/index.php?c=no_auth&m=vdeparture_boards&type=1&stop=<?php echo $stop_serial; ?>" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
-			
+			<iframe id="arrivals" src="https://secure.intercape.co.za/ignite/index.php?c=no_auth&m=vdeparture_boards&type=1&stop=<?php echo $stop_serial; ?>"  style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
 			<!-- Offline -->
 			<div id="offline" style="display: none; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f17d32">
 			<div>
@@ -164,104 +164,40 @@ get_layout();
 					<input type="text" id="screen_id" value="<?php echo $screen_id; ?>" style="display: none">
 				</div>
 			</div>
-
 		</div>
 	</div>
 </div>
 </body>
 </html>
 <script>
-baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/";
+// baseUrl = window.location.protocol + "//" + window.location.hostname + "/noauth/";
+baseUrl = window.location.protocol + "//" + window.location.hostname + "/move/";
 screenLayout = <?php echo $screen_layout; ?>;
-let fetchInterval;
-let fetchSplitInterval;
 
 function init()
 {
-	setLayout();
-
+	console.log('You are: ' + screenLayout);
 	if (screenLayout == 0)
 	{
 		// Fullscreen
-		console.log('Running fetchData()...');
 		fetchData();
 		refresh();
 	}
 	else 
 	{
-		console.log('Running fetchSplitData()...');
 		fetchSplitData();
 		refreshSplit();
 	}
 }
 
-function setLayout()
-{
-	console.log('Setting layout...', screenLayout);
-	const fullscreen = document.getElementById('fullscreen');
-	const icBi = document.getElementById('ic_bi');
-	const biIc = document.getElementById('bi_ic');
-	const icIc = document.getElementById('ic_ic');
-	const biBi = document.getElementById('bi_bi');
-
-	switch(screenLayout)
-	{
-		case 0:
-			fullscreen.style.display = 'block';
-			icBi.style.display = 'none';
-			biIc.style.display = 'none';
-			icIc.style.display = 'none';
-			biBi.style.display = 'none';
-		break;
-		case 1:
-			fullscreen.style.display = 'none';
-			icBi.style.display = 'block';
-			biIc.style.display = 'none';
-			icIc.style.display = 'none';
-			biBi.style.display = 'none';
-		break;
-		case 2:
-			fullscreen.style.display = 'none';
-			icBi.style.display = 'none';
-			biIc.style.display = 'block';
-			icIc.style.display = 'none';
-			biBi.style.display = 'none';
-		break;
-		case 3:
-			fullscreen.style.display = 'none';
-			icBi.style.display = 'none';
-			biIc.style.display = 'none';
-			icIc.style.display = 'block';
-			biBi.style.display = 'none';
-		break;
-		case 4:
-			fullscreen.style.display = 'none';
-			icBi.style.display = 'none';
-			biIc.style.display = 'none';
-			icIc.style.display = 'none';
-			biBi.style.display = 'block';
-		break;
-	}
-}
-
 function refresh()
 {
-	if (fetchInterval) 
-	{
-		clearInterval(fetchInterval);
-		fetchInterval = null;
-	}
-
-	fetchInterval = setInterval(() => { fetchData(); }, 5000);
+	setInterval(fetchData, 5000);
 }
 
 function refreshSplit()
 {
-	if (fetchSplitInterval) 
-	{
-		clearInterval(fetchSplitInterval);
-	}
-	fetchSplitInterval = setInterval(() => { fetchSplitData(); }, 5000);
+	setInterval(fetchSplitData, 5000);
 }
 
 async function fetchData() 
@@ -278,18 +214,7 @@ async function fetchData()
 		const result = await response.text()
 		.then(result => 
 		{
-			console.log('Received data for fullscreen:');
-
-			const check = JSON.parse(result);
-			const getLayout = check.screen_layout;
-			if (getLayout != screenLayout)
-			{
-				// console.log('Brand B: SPLIT SCREEN', getLayout);
-				screenLayout = getLayout;
-				init();
-				return;
-			}
-
+			// console.log('Result:', result);
 			const arrivals = document.getElementById('arrivals');
 			const offline = document.getElementById('offline');
 			const icBoard = document.getElementById('ic_board');
@@ -355,7 +280,7 @@ async function fetchData()
 
 async function fetchSplitData()
 {
-	// Splitscreen
+	// Fullscreen
 	const screenId = document.getElementById('screen_id').value;
 
 	if (navigator.onLine) 
@@ -367,18 +292,7 @@ async function fetchSplitData()
 		const result = await response.text()
 		.then(result => 
 		{
-			console.log('Received data for splitscreen:');
-
-			const check = JSON.parse(result);
-			const getLayout = check.screen_layout;
-			if (getLayout != screenLayout)
-			{
-				// console.log('Brand B: SPLIT SCREEN', getLayout);
-				screenLayout = getLayout;
-				init();
-				return;
-			}
-			
+			// console.log('Result:', result);
 			const arrivals = document.getElementById('arrivals');
 			const offline = document.getElementById('offline');
 			const splitBoard = document.getElementById('split_board');
@@ -396,7 +310,7 @@ async function fetchSplitData()
 			else 
 			{
 				const data = JSON.parse(result);
-				
+
 				arrivals.style.display = 'none';
 				offline.style.display = 'none';
 
@@ -417,7 +331,7 @@ async function fetchSplitData()
 
 function sendMessageToIc(result) 
 {
-	console.log('Sending message to IC iframe...');
+	console.log('Sending message to iframe...', result);
 	const iframe = document.getElementById('ic_board');
 	
 	const message = result;
@@ -426,7 +340,7 @@ function sendMessageToIc(result)
 
 function sendMessageToBi(result) 
 {
-	console.log('Sending message to BI iframe...');
+	console.log('Sending message to iframe...');
 	const iframe = document.getElementById('bi_board');
 	
 	const message = result;
@@ -435,30 +349,9 @@ function sendMessageToBi(result)
 
 function sendMessageToSplit(result) 
 {
-	console.log('Sending message to split iframe...');
-
-	let iframe;
-
-	if (screenLayout == 1)
-	{
-		iframe = document.getElementById('icbi_board');
-	} 
-	else if (screenLayout == 2)
-	{
-		 iframe = document.getElementById('biic_board');
-	} 
-	else if (screenLayout == 3)
-	{
-		 iframe = document.getElementById('icic_board');
-	}
-	else if (screenLayout == 4)
-	{
-		 iframe = document.getElementById('bibi_board');
-	}
-
-	iframe.style.display = 'block';
-	// const iframe = document.getElementById('split_board');
-	// console.log('Split:', result);
+	console.log('Sending message to iframe...');
+	const iframe = document.getElementById('split_board');
+	
 	const message = result;
 	iframe.contentWindow.postMessage(message, '*');
 }

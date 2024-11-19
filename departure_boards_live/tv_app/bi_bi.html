@@ -188,7 +188,7 @@
         <div class="pattern">
             <h1>NOW DEPARTING</h1>
             <h2 id="route_desc_b">Route Description</h2>
-            <h3 id="route_number_b">Route Number</h3>
+            <h3 id="route_number_b">0Route Number461</h3>
         </div>
         <div class="logo-bar">
             <h4 class="pop-stop">POPULAR STOPS:</h4>
@@ -201,33 +201,33 @@
     </div>
 
 <script>
-window.addEventListener('message', function(event) 
-{
-	const scrollingLeftSlider = document.getElementById("left_scrolling_slider");
-	const scrollingRightSlider = document.getElementById("right_scrolling_slider");
-	
-	if (event.origin !== window.location.origin) {
-		return;
-	}
-	document.getElementById('route_desc').innerText = event.data.route_desc;
-	document.getElementById('route_number').innerText = event.data.route_no;
-	document.getElementById('route_desc_b').innerText = event.data.route_desc_b;
-	document.getElementById('route_number_b').innerText = event.data.route_no_b;
-	
-	const stops = event.data.stops;
-	let content = '';
-	stops.forEach(stop => {
-		content += `<div class="scrolling-slider-item">${stop}</div>`;
+	window.addEventListener('message', function(event) 
+	{
+		const scrollingLeftSlider = document.getElementById("left_scrolling_slider");
+		const scrollingRightSlider = document.getElementById("right_scrolling_slider");
+		
+		if (event.origin !== window.location.origin) {
+			return;
+		}
+		document.getElementById('route_desc').innerText = event.data.route_desc;
+		document.getElementById('route_number').innerText = event.data.route_no;
+		document.getElementById('route_desc_b').innerText = event.data.route_desc_b;
+		document.getElementById('route_number_b').innerText = event.data.route_no_b;
+		
+		const stops = event.data.stops;
+		let content = '';
+		stops.forEach(stop => {
+			content += `<div class="scrolling-slider-item">${stop}</div>`;
+		});
+		scrollingLeftSlider.innerHTML = content;
+		
+		const stops_b = event.data.stops_b;
+		let content_b = '';
+		stops_b.forEach(stop => {
+			content_b += `<div class="scrolling-slider-item">${stop}</div>`;
+		});
+		scrollingRightSlider.innerHTML = content_b;
 	});
-	scrollingLeftSlider.innerHTML = content;
-	
-	const stops_b = event.data.stops_b;
-	let content_b = '';
-	stops_b.forEach(stop => {
-		content_b += `<div class="scrolling-slider-item">${stop}</div>`;
-	});
-	scrollingRightSlider.innerHTML = content_b;
-});
 </script>	
 </body>
 </html>

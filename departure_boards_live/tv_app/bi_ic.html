@@ -32,13 +32,13 @@
         }
 
         .right {
-            background: url('https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/BSI-pattern.jpg') no-repeat center center;
+            background: url('https://www.intercape.co.za/wp-content/uploads/2024/11/Background-Image.jpg') no-repeat center center;
             background-size: cover;
             border-left: 10px solid #000000;
         }
 
         h1, h2, h3, h4 {
-            color: #000;
+            color: #fff;
             text-transform: uppercase;
             margin: 0;
             text-align: center;
@@ -51,8 +51,8 @@
             text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.75);
             margin-bottom: 30px;
         }
-        .left h1, .right h1{
-            color: #ffffff;
+        .left h1{
+            color: #F7DB2B;
         }
 
         .left h2, .right h2 {
@@ -62,7 +62,7 @@
         }
 
         .left h2 {
-            color: #000;
+            color: #fff;
         }
 
         .right h2 {
@@ -91,7 +91,7 @@
             font-weight: 900;
         }
         .left h4.pop-stop{
-            color: #F57723;
+            color: #1978B9;
             font-size: 2.5em;
             font-style: italic;
             font-weight: 900;
@@ -130,7 +130,7 @@
             margin-right: 10vh;
             font-size: 3vw;
             font-weight: 900;
-            color: #000000;
+            color: #13a9e0;
             white-space: nowrap;
             text-transform: uppercase;
         }
@@ -164,7 +164,7 @@
 <body>
     <div class="split left">
         <div class="header">
-            <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/Big-Sky-Logo.svg" alt="Intercape Logo">
+            <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/Big-Sky-Logo.svg" alt="Big Sky Logo">
         </div>
         <div class="pattern">
             <h1>NOW DEPARTING</h1>
@@ -183,7 +183,7 @@
 
     <div class="split right">
         <div class="header">
-            <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/Big-Sky-Logo.svg" alt="Intercape Logo">
+            <img src="https://www.intercape.co.za/wp-content/uploads/2024/11/Intercape-Logo.svg" alt="Intercape Logo">
         </div>
         <div class="pattern">
             <h1>NOW DEPARTING</h1>
@@ -199,35 +199,35 @@
             </div>
         </div>
     </div>
-
+	
 <script>
-window.addEventListener('message', function(event) 
-{
-	const scrollingLeftSlider = document.getElementById("left_scrolling_slider");
-	const scrollingRightSlider = document.getElementById("right_scrolling_slider");
-	
-	if (event.origin !== window.location.origin) {
-		return;
-	}
-	document.getElementById('route_desc').innerText = event.data.route_desc;
-	document.getElementById('route_number').innerText = event.data.route_no;
-	document.getElementById('route_desc_b').innerText = event.data.route_desc_b;
-	document.getElementById('route_number_b').innerText = event.data.route_no_b;
-	
-	const stops = event.data.stops;
-	let content = '';
-	stops.forEach(stop => {
-		content += `<div class="scrolling-slider-item">${stop}</div>`;
+	window.addEventListener('message', function(event) 
+	{
+		const scrollingLeftSlider = document.getElementById("left_scrolling_slider");
+		const scrollingRightSlider = document.getElementById("right_scrolling_slider");
+		
+		if (event.origin !== window.location.origin) {
+			return;
+		}
+		document.getElementById('route_desc').innerText = event.data.route_desc;
+		document.getElementById('route_number').innerText = event.data.route_no;
+		document.getElementById('route_desc_b').innerText = event.data.route_desc_b;
+		document.getElementById('route_number_b').innerText = event.data.route_no_b;
+		
+		const stops = event.data.stops;
+		let content = '';
+		stops.forEach(stop => {
+			content += `<div class="scrolling-slider-item">${stop}</div>`;
+		});
+		scrollingLeftSlider.innerHTML = content;
+		
+		const stops_b = event.data.stops_b;
+		let content_b = '';
+		stops_b.forEach(stop => {
+			content_b += `<div class="scrolling-slider-item">${stop}</div>`;
+		});
+		scrollingRightSlider.innerHTML = content_b;
 	});
-	scrollingLeftSlider.innerHTML = content;
-	
-	const stops_b = event.data.stops_b;
-	let content_b = '';
-	stops_b.forEach(stop => {
-		content_b += `<div class="scrolling-slider-item">${stop}</div>`;
-	});
-	scrollingRightSlider.innerHTML = content_b;
-});
 </script>	
 </body>
 </html>

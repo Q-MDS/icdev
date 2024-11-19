@@ -59,6 +59,27 @@ function get_data()
 		$stops = get_route_stops($route_no, $current_stop);
 		$stops_b = get_route_stops($route_no_b, $current_stop);
 
+		if ($brand_b == "")
+		{
+			$screen_layout = 0;
+		}
+		else if ($brand != "BI" && $brand_b == "BI")
+		{
+			$screen_layout = 1;
+		}
+		else if ($brand == "BI" && $brand_b != "BI")
+		{
+			$screen_layout = 2;
+		}
+		else if ($brand != "BI" && $brand_b != "BI")
+		{
+			$screen_layout = 3;
+		}
+		else if ($brand == "BI" && $brand_b == "BI")
+		{
+			$screen_layout = 4;
+		}
+
 		$records = array(
 			"brand" => $brand,
 			"route_no" => $route_no,
@@ -67,7 +88,8 @@ function get_data()
 			"brand_b" => $brand_b,
 			"route_no_b" => $route_no_b,
 			"route_desc_b" => $route_desc_b,
-			"stops_b" => $stops_b
+			"stops_b" => $stops_b,
+			"screen_layout" => $screen_layout
 		);	
 	}
 

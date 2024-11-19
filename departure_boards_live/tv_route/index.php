@@ -20,8 +20,6 @@ function get_user_branch()
 {
 	global $conn, $user_id, $branch;
 	
-	$cursor = ora_open($conn);
-	
 	$sql = "SELECT BRANCH FROM USER_DETAILS WHERE STAFF_NO = '$user_id'";
 
 	$stid = oci_parse($conn, $sql);
@@ -46,12 +44,19 @@ function get_tv_list()
 {
 	global $conn, $branch, $tv_list;
 
-	$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1 ORDER BY NAME";
+	$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1";
 	$stid = oci_parse($conn, $sql);
 
 	oci_execute($stid);
 
-	while ($row = oci_fetch_array($stid, OCI_ASSOC)) {
+	while ($row = oci_fetch_array($stid, OCI_ASSOC)) 
+	{
+		$stop_serial = $row['STOP_SERIAL'];
+		$short_name = get_stop_name($stop_serial);
+		$route_list = get_route_list($short_name);
+		$row['SHORT_NAME'] = $short_name;
+		$row['ROUTE_LIST'] = $route_list;
+		
 		$tv_list[] = $row;
 	}
 
@@ -61,15 +66,24 @@ function get_tv_list()
 }
 
 // Step 3: get route list
-function get_route_list()
+function get_route_list($short_name)
 {
-	global $conn, $route_list;
-
 	// Dates are important in order to retrieve the list
+	global $conn;
+
+	$route_list = array();
 	$date_from = date('Ymd');
 	$date_to = date('Ymd');
 
-	$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_TO >= $date_from AND DATE_FROM <= $date_to ORDER BY ROUTE_NO";
+	$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_TO >= $date_from AND DATE_FROM <= $date_to";
+
+	// $sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_FROM <= $date_from and DATE_TO >= $date_to
+	// AND ROUTE_SERIAL IN (
+	// SELECT ROUTE_SERIAL
+	// FROM ROUTE_STOPS
+	// WHERE SHORT_NAME = '$short_name' AND DATE_FROM <= $date_from and DATE_TO >= $date_to
+	// ) ORDER BY ROUTE_NO
+	// ";
 
 	$stid = oci_parse($conn, $sql);
 
@@ -83,6 +97,8 @@ function get_route_list()
 	oci_free_statement($stid);
 
 	oci_close($conn);
+
+	return $route_list;
 }
 
 // Step 4: look for record in DEPARTURE_TV_SETTINGS. If found use that record else use loop record with no settings
@@ -119,9 +135,30 @@ function get_settings($tv_list)
 	oci_close($conn);
 }
 
+// Get shortname from stop_serial
+function get_stop_name($stop_serial)
+{
+	global $conn;
+
+	$sql = "SELECT SHORTNAME FROM STOP_DETAILS2 WHERE STOP_SERIAL = '$stop_serial'";
+
+	$stid = oci_parse($conn, $sql);
+
+	oci_execute($stid);
+
+	$row = oci_fetch_array($stid, OCI_ASSOC);
+
+	$stop_name = TRIM($row['SHORTNAME']);
+
+	oci_free_statement($stid);
+
+	oci_close($conn);
+
+	return $stop_name;
+}
+
 get_user_branch();	
 get_tv_list();
-get_route_list();
 get_settings($tv_list);
 ?>
 <!DOCTYPE html>
@@ -145,13 +182,15 @@ get_settings($tv_list);
 		Departure TVs
 	</div>
 	<?php 
-	foreach ($tv_settings as $tv) { ?>
+	// print_r($tv_settings);
+	foreach ($tv_settings as $tv) { //print_r($tv); ?>
 	<div style="display: grid; grid-template-columns: 1fr; width: 100%; border: 1px solid #000;">
 		<div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-start; padding-left: 10px;">
 			<div style="padding: 17px 20px; margin-top: 10px; border: 1px solid #000; background-color: #cacaca">
 				<input type="text" value="<?php echo $tv['SCREEN_ID']; ?>" style="display: none;" readonly>
 				<?php echo $tv['NAME']; ?>
 			</div>
+			<div style="padding-left: 20px;">Screen Id: <?php echo $tv['SCREEN_ID']; ?></div>
 		</div>
 		<div>
 			<div style="padding: 10px;">
@@ -175,7 +214,9 @@ get_settings($tv_list);
 					echo '<div>';
 						echo '<select name="route_' . $tv['SCREEN_ID'] , '" id="route_' . $tv['SCREEN_ID'] . '" style="max-width: 340px; height: 35px">';
 						echo "<option value=''>Select...</option>";
-						foreach ($route_list as $route) 
+						$routes = $tv['ROUTE_LIST'];
+						
+						foreach ($routes as $route) 
 						{
 							$route_no = $route['ROUTE_NO'];
 							$carrier_code = $route['CARRIER_CODE'];
@@ -193,7 +234,8 @@ get_settings($tv_list);
 					echo '<div>';
 						echo '<select name="route_b_' . $tv['SCREEN_ID'] , '" id="route_b_' . $tv['SCREEN_ID'] . '" style="max-width: 340px; height: 35px">';
 						echo "<option value=''>Select...</option>";
-						foreach ($route_list as $route) 
+						$routes = $tv['ROUTE_LIST'];
+						foreach ($routes as $route) 
 						{
 							$route_no = $route['ROUTE_NO'];
 							$carrier_code = $route['CARRIER_CODE'];

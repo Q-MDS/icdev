@@ -33,10 +33,13 @@ function get_data()
 		$route_no = TRIM($row['ROUTE_NO']);
 		$route_desc = TRIM($row['ROUTE_DESCRIPTION']);
 		$brand_b = TRIM($row['BRAND_B']);
+		$route_no_b = TRIM($row['ROUTE_NO_B']);
+		$route_desc_b = TRIM($row['ROUTE_DESCRIPTION_B']);
 
 		$stop_serial = get_stop_serial($screen_id);
 		$current_stop = TRIM(get_stop_name($stop_serial));
 		$stops = get_route_stops($route_no, $current_stop);
+		$stops_b = get_route_stops($route_no_b, $current_stop);
 
 		if ($brand_b == "")
 		{
@@ -64,6 +67,10 @@ function get_data()
 			"route_no" => $route_no,
 			"route_desc" => $route_desc,
 			"stops" => $stops,
+			"brand_b" => $brand_b,
+			"route_no_b" => $route_no_b,
+			"route_desc_b" => $route_desc_b,
+			"stops_b" => $stops_b, 
 			"screen_layout" => $screen_layout
 		);	
 	}
@@ -78,6 +85,7 @@ function get_data()
 	}
 	else 
 	{
+		// print_r($records);
 		echo json_encode($records);
 	}
 }

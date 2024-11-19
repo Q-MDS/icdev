@@ -78,7 +78,7 @@ get_stop_serial();
 				<!-- BI Board -->
 				<iframe id="bi_board" src="bi.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
 				<!-- Arrivals -->
-				<iframe id="arrivals" src="https://secure2.intercape.co.za/ignite/index.php?c=no_auth&m=vdeparture_boards&type=1&stop=<?php echo $stop_serial; ?>"  style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
+				<iframe id="arrivals" src="https://secure.intercape.co.za/ignite/index.php?c=no_auth&m=vdeparture_boards&type=1&stop=<?php echo $stop_serial; ?>"  style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
 				<!-- Offline -->
 				<div id="offline" style="display: none; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f17d32">
 					<div>
@@ -110,7 +110,7 @@ get_stop_serial();
 </body>
 </html>
 <script>
-baseUrl = window.location.protocol + "//" + window.location.hostname + "/noauth/";
+baseUrl = window.location.protocol + "//" + window.location.hostname + "/move/";
 
 function init()
 {
@@ -121,7 +121,7 @@ function init()
 
 function refresh()
 {
-	setInterval(fetchData, 30000);
+	setInterval(fetchData, 5000);
 }
 
 async function fetchData() 

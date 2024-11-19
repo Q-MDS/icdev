@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index Page</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background: url('https://www.intercape.co.za/wp-content/uploads/2024/11/Background-Image.jpg') no-repeat center center;
+            background-size: cover;
+            overflow: hidden;
+        }
+
+        .pattern {
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            padding-top: 3vh;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        h1, h2, h3, h4 {
+            color: #fff;
+            text-transform: uppercase;
+            margin: 0;
+            z-index: 3;
+        }
+
+        h1 {
+            font-size: 5em;
+            line-height: 1em;
+            font-weight: 800;
+            font-style: italic;
+            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.75);
+            margin-bottom:10px;
+			color: #ffffff;
+        }
+
+        h2, h3 {
+            font-size: 4.3em;
+            line-height: 1.25em;
+            color: #000;
+            font-weight: 700;
+        }
+
+        h4 {
+            font-size: 5vw;
+            line-height: 0.6em;
+            font-weight: 900;
+            color: #ec7a31;
+            font-style: italic;
+            margin-bottom:15px;
+        }
+
+        .logo-bar {
+            position: absolute;
+            bottom: 0;
+            background: white;
+            text-align: center;
+            width: 100%;
+            padding: 3em 0 2em 0;
+        }
+
+        /* Scrolling slider styles */
+        .scrolling-slider-container {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            margin-top: 1em;
+        }
+
+         .scrolling-slider {
+            display: flex;
+            animation: scroll 60s linear infinite;
+        }
+
+        /* Duplicate items by adding after content */
+        .scrolling-slider::after {
+            content: attr(data-content); /* Use data attribute to repeat content */
+            display: inline-flex;
+        }
+
+
+        .scrolling-slider-item {
+            display: inline-block;
+            margin-right: 10vh;
+			font-size: 3vw;
+			line-height: 1.3em;
+            font-weight: 900;
+            color: #000;
+			white-space: nowrap;
+            text-transform: uppercase;
+        }
+
+        .header {
+            position: sticky;
+            text-align: center;
+            width: 50%;
+            margin-left: 25%;
+            padding: 0px;
+            z-index: 1000;
+            min-height: 16vh;
+        }
+
+        .header img {
+            width: 33vw;
+            max-width: 33vw;
+            height: auto;
+        }
+        
+        @keyframes scroll {
+            from {
+                transform: translateX(0);
+            }
+            to {
+                transform: translateX(-100%);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="https://www.intercape.co.za/wp-content/uploads/2024/11/Intercape-Logo.svg" alt="Intercape Logo">
+    </div>
+    <div class="pattern">
+        <h1>BOARDING NOW</h1>
+        <h2 id="route_desc">Route Description</h2>
+        <h3 id="route_number">Route Number</h3>
+    </div>
+    <div class="logo-bar">
+       <h4>POPULAR STOPS:</h4>
+       <div class="scrolling-slider-container">
+            <div id="scrolling_slider" class="scrolling-slider">
+                <div class="scrolling-slider-item">Next stop</div>
+            </div>
+       </div>
+    </div>
+	
+    <script>
+        $(document).ready(function() {
+            // Duplicate slider items for a continuous effect
+            const $slider = $('.scrolling-slider');
+            $slider.append($slider.html());
+
+            // Function to animate the slider
+            function animateSlider() {
+                $slider.animate({ left: '-100%' }, 30000, 'linear', function() {
+                    // Reset position and repeat animation
+                    $slider.css('left', '0');
+                    animateSlider();
+                });
+            }
+
+            animateSlider();
+        });
+
+		window.addEventListener('message', function(event) 
+		{
+			const scrollingSlider = document.getElementById("scrolling_slider");
+            
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+            document.getElementById('route_desc').innerText = event.data.route_desc;
+            document.getElementById('route_number').innerText = event.data.route_no;
+			
+			const stops = event.data.stops;
+			let content = '';
+			stops.forEach(stop => {
+                content += `<div class="scrolling-slider-item">${stop}</div>`;
+            });
+			scrollingSlider.innerHTML = content;
+        });
+    </script>
+</body>
+</html>

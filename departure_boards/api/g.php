@@ -5,11 +5,11 @@
 // 	"description": "Bloemfontein via Colesberg via Beaufort West"
 // }';
 
-/*$ajax_data = file_get_contents("php://input");
+$ajax_data = file_get_contents("php://input");
 $json_data = json_decode($ajax_data);
 
-$screen_id = $json_data->screen_id;*/
-$screen_id = 4;
+$screen_id = $json_data->screen_id;
+// $screen_id = 4;
 
 // echo "PHP says that the screen id is: " . $screen_id;
 
@@ -60,16 +60,40 @@ function get_data()
 		$brand = TRIM($row['BRAND']);
 		$route_no = TRIM($row['ROUTE_NO']);
 		$route_desc = TRIM($row['ROUTE_DESCRIPTION']);
-
+		$brand_b = TRIM($row['BRAND_B']);
+		
 		$stop_serial = get_stop_serial($screen_id);
 		$current_stop = TRIM(get_stop_name($stop_serial));
 		$stops = get_route_stops($route_no, $current_stop);
+
+		if ($brand_b == "")
+		{
+			$screen_layout = 0;
+		}
+		else if ($brand != "BI" && $brand_b == "BI")
+		{
+			$screen_layout = 1;
+		}
+		else if ($brand == "BI" && $brand_b != "BI")
+		{
+			$screen_layout = 2;
+		}
+		else if ($brand != "BI" && $brand_b != "BI")
+		{
+			$screen_layout = 3;
+		}
+		else if ($brand == "BI" && $brand_b == "BI")
+		{
+			$screen_layout = 4;
+		}
 
 		$records = array(
 			"brand" => $brand,
 			"route_no" => $route_no,
 			"route_desc" => $route_desc,
-			"stops" => $stops
+			"stops" => $stops,
+			"brand_b" => $brand_b,
+			"screen_layout" => $screen_layout
 		);	
 	}
 

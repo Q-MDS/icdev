@@ -27,12 +27,12 @@
         }
 
         .left {
-            background: url('https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/BSI-pattern.jpg') no-repeat center center;
+            background: url('https://www.intercape.co.za/wp-content/uploads/2024/11/Background-Image.jpg') no-repeat center center;
             background-size: cover;
         }
 
         .right {
-            background: url('https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/BSI-pattern.jpg') no-repeat center center;
+            background: url('https://www.intercape.co.za/wp-content/uploads/2024/11/Background-Image.jpg') no-repeat center center;
             background-size: cover;
             border-left: 10px solid #000000;
         }
@@ -162,9 +162,9 @@
     </style>
 </head>
 <body>
-    <div class="split left">
+    <div id="split_left" class="split left">
         <div class="header">
-            <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/Big-Sky-Logo.svg" alt="Intercape Logo">
+            <img src="https://www.intercape.co.za/wp-content/uploads/2024/11/Intercape-Logo.svg" alt="Intercape Logo">
         </div>
         <div class="pattern">
             <h1>NOW DEPARTING</h1>
@@ -176,14 +176,15 @@
             <div class="scrolling-slider-container">
                 <div id="left_scrolling_slider" class="scrolling-slider">
                     <div class="scrolling-slider-item">Next stop</div>
+                    <!-- Add more items as needed -->
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="split right">
+    <div id="split_right" class="split right">
         <div class="header">
-            <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/Big-Sky-Logo.svg" alt="Intercape Logo">
+            <img src="https://www.intercape.co.za/wp-content/uploads/2024/11/Intercape-Logo.svg" alt="Intercape Logo">
         </div>
         <div class="pattern">
             <h1>NOW DEPARTING</h1>
@@ -195,6 +196,7 @@
             <div class="scrolling-slider-container">
                 <div id="right_scrolling_slider" class="scrolling-slider">
                     <div class="scrolling-slider-item">Next stop</div>
+                    <!-- Add more items as needed -->
                 </div>
             </div>
         </div>
@@ -228,6 +230,6 @@ window.addEventListener('message', function(event)
 	});
 	scrollingRightSlider.innerHTML = content_b;
 });
-</script>	
+</script>
 </body>
 </html>
