@@ -110,20 +110,24 @@ get_records();
 <body>
 	
 <div>
-	<div style="display: grid; grid-template-columns: 150px 250px 200px 70px 70px; column-gap: 10px; align-items: center; row-gap: 5px">
+	<div style="display: grid; grid-template-columns: 100px 150px 250px 200px 70px 70px; column-gap: 10px; align-items: center; row-gap: 5px">
 		<!-- Column titles -->
-		<div style="grid-column: span 5;">
+		<div style="grid-column: span 6;">
 			<h2>Departure TVs</h2>
 		</div>
+		<div style="grid-column: span 6;">
+			Add TV
+		</div>
+		<!-- <div>Screen Id</div>
 		<div>Name</div>
 		<div>Branch</div>
 		<div>Stop Serial</div>
-		<div style="grid-column: span 2;">Actions</div>
+		<div style="grid-column: span 2;">Actions</div> -->
 
-		<div style="grid-column: span 5; height: 2px; background-color: #000;"></div>
+		<div style="grid-column: span 6; height: 2px; background-color: #000;"></div>
 	
 		<!-- Row 2: Input form -->
-		<div style="display: flex; flex-direction: row; align-items: center; width: 150px; height: 40px;">
+		<div style="grid-column: span 2; display: flex; flex-direction: row; align-items: center; width: 100%; height: 40px;">
 			<input type="text" maxlength="10" name="tv_name" id="tv_name" value="" placeholder="Name" style="height: 26px; width: 100%;">
 		</div>
 
@@ -158,12 +162,19 @@ get_records();
 			<button id="edit_button" style="width: 100%; height: 32px; display: none" onclick="updateTv()">Update</button>
 		</div>
 
-		<div style="grid-column: span 5; height: 2px; background-color: #000;"></div>
+		<div style="grid-column: span 6; height: 2px; background-color: #000;"></div>
+
+		<div>Screen Id</div>
+		<div>Name</div>
+		<div>Branch</div>
+		<div>Stop Serial</div>
+		<div style="grid-column: span 2;">Actions</div>
 
 		<!-- Row 3: TV List -->
 		<?php
 			foreach($records as $row)
 			{
+				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 1px solid #000; padding-left: 5px; height: 26px">'.$row['SCREEN_ID'].'</div>';
 				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 1px solid #000; padding-left: 5px; height: 26px">'.$row['NAME'].'</div>';
 				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 1px solid #000; padding-left: 5px; height: 26px">'.$row['BRANCH'].'</div>';
 				echo '<div style="display: flex; flex-direction: row; align-items: center; border: 1px solid #000; padding-left: 5px; height: 26px">'.$row['STOP_SERIAL'].'</div>';

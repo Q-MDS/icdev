@@ -1,0 +1,29 @@
+20-11-2024
+Keith changes:
+1. If in split screen and you do a remove then arrival/dept board lands up in only 1 side -> on my PC now when it switches back to the arrivals and departures screen, it's only showing it on the right hand side of my screen
+2.
+function get_tv_list()
+{
+        global $conn, $branch, $tv_list;
+        if (AllowedFlag("DEVELOPERS"))
+          $sql = "SELECT * FROM DEPARTURE_TVS WHERE IS_ACTIVE = 1";
+        else
+          $sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1"; (edited) 
+:white_check_mark:
+1
+
+11:43
+please add this in so that our IT staff can see ALL the TVs on the tv_route/index.php page
+also remember to ORDER it alphabetically
+
+3. and the dropdown with the route numbers ORDER by route_no
+11:47
+select route_no, description from route_Details where date_from<=20241119 and date_to>=20241119
+and sub_route_one is null and sub_route_two is null
+and route_Serial in (
+select route_serial
+from route_stops
+where short_name='BELLVILLE' and date_from<=20241119 and date_to>=20241119
+) order by route_no
+;
+-> I've added in the 'sub_route_one is null ' and 'sub_route_two is null' in the query from yesterday - this will remove some more 'junk' from the list

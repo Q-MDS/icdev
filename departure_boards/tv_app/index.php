@@ -72,31 +72,36 @@ function get_layout()
 	oci_bind_by_name($stid, ':screen_id', $screen_id);
 
 	oci_execute($stid);
-
+	
 	$row = oci_fetch_array($stid, OCI_ASSOC+OCI_RETURN_NULLS);
+	
+	$screen_layout = 0;
 
-	$brand_a = $row['BRAND'];
-	$brand_b = $row['BRAND_B'];
+	if ($row != null)
+	{
+		$brand_a = $row['BRAND'];
+		$brand_b = $row['BRAND_B'];
 
-	if ($brand_b == "")
-	{
-		$screen_layout = 0;
-	}
-	else if ($brand_a != "BI" && $brand_b == "BI")
-	{
-		$screen_layout = 1;
-	}
-	else if ($brand_a == "BI" && $brand_b != "BI")
-	{
-		$screen_layout = 2;
-	}
-	else if ($brand_a != "BI" && $brand_b != "BI")
-	{
-		$screen_layout = 3;
-	}
-	else if ($brand_a == "BI" && $brand_b == "BI")
-	{
-		$screen_layout = 4;
+		if ($brand_b == "")
+		{
+			$screen_layout = 0;
+		}
+		else if ($brand_a != "BI" && $brand_b == "BI")
+		{
+			$screen_layout = 1;
+		}
+		else if ($brand_a == "BI" && $brand_b != "BI")
+		{
+			$screen_layout = 2;
+		}
+		else if ($brand_a != "BI" && $brand_b != "BI")
+		{
+			$screen_layout = 3;
+		}
+		else if ($brand_a == "BI" && $brand_b == "BI")
+		{
+			$screen_layout = 4;
+		}
 	}
 
 	oci_free_statement($stid);
@@ -125,33 +130,33 @@ get_layout();
 	}
 </style>
 </head>
-<body onload="init(<?php echo $screen_layout; ?>);">
+<body onload="init();">
 
-<div style="display: block; width: 100%; height: 100%; padding: 0px; margin: 0px; border: 0px;">
+<div style="display: block; width: 100%; height: 100%; padding: 0px; margin: 0px; border: 0px; background: #333">
 	<div style="display: flex; flex-direction: row; align-items: center; justify-content: center; height: 100%;">
 		<div style="display: flex; align-items: center; justify-content: center; flex: 1; height: 100%; box-sizing: border-box;">
 		
 			<div id="fullscreen" style="width: 100%; height: 100%; display: none">
 				<!-- IC Board -->
-				<iframe id="ic_board" src="ic.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
+				<iframe id="ic_board" src="ic.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
 				<!-- BI Board -->
-				<iframe id="bi_board" src="bi.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
+				<iframe id="bi_board" src="bi.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
 			</div>
 
-			<div id="ic_bi" style="width: 100%; height: 100%;">
-				<iframe id="icbi_board" src="ic_bi.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
+			<div id="ic_bi" style="display: none; width: 100%; height: 100%;">
+				<iframe id="icbi_board" src="ic_bi.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
 			</div>
 
-			<div id="bi_ic" style="width: 100%; height: 100%">
-				<iframe id="biic_board" src="bi_ic.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
+			<div id="bi_ic" style="display: none; width: 100%; height: 100%">
+				<iframe id="biic_board" src="bi_ic.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
 			</div>
 
-			<div id="ic_ic" style="width: 100%; height: 100%">
-				<iframe id="icic_board" src="ic_ic.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
+			<div id="ic_ic" style="display: none; width: 100%; height: 100%">
+				<iframe id="icic_board" src="ic_ic.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
 			</div>
 
-			<div id="bi_bi" style="width: 100%; height: 100%">
-				<iframe id="bibi_board" src="bi_bi.html" style="display: none; width: 100%; height: 100%; border: 0px;"></iframe>
+			<div id="bi_bi" style="display: none; width: 100%; height: 100%">
+				<iframe id="bibi_board" src="bi_bi.html" style="display: block; width: 100%; height: 100%; border: 0px;"></iframe>
 			</div>
 		
 			<!-- Arrivals -->
@@ -178,19 +183,25 @@ let fetchSplitInterval;
 
 function init()
 {
-	setLayout();
+	console.log('INIT Start: ', screenLayout);
+	// setLayout();
+
+	stopFetchInterval();
+	stopFetchSplitInterval();
 
 	if (screenLayout == 0)
 	{
 		// Fullscreen
 		console.log('Running fetchData()...');
 		fetchData();
+		// setLayout();
 		refresh();
 	}
 	else 
 	{
 		console.log('Running fetchSplitData()...');
 		fetchSplitData();
+		// setLayout();
 		refreshSplit();
 	}
 }
@@ -199,6 +210,8 @@ function setLayout()
 {
 	console.log('Setting layout...', screenLayout);
 	const fullscreen = document.getElementById('fullscreen');
+	const ic_board = document.getElementById('ic_board');
+	const bi_board = document.getElementById('bi_board');
 	const icBi = document.getElementById('ic_bi');
 	const biIc = document.getElementById('bi_ic');
 	const icIc = document.getElementById('ic_ic');
@@ -208,6 +221,8 @@ function setLayout()
 	{
 		case 0:
 			fullscreen.style.display = 'block';
+			ic_board.style.display = 'block';
+			bi_board.style.display = 'block';
 			icBi.style.display = 'none';
 			biIc.style.display = 'none';
 			icIc.style.display = 'none';
@@ -215,6 +230,8 @@ function setLayout()
 		break;
 		case 1:
 			fullscreen.style.display = 'none';
+			ic_board.style.display = 'none';
+			bi_board.style.display = 'none';
 			icBi.style.display = 'block';
 			biIc.style.display = 'none';
 			icIc.style.display = 'none';
@@ -222,6 +239,8 @@ function setLayout()
 		break;
 		case 2:
 			fullscreen.style.display = 'none';
+			ic_board.style.display = 'none';
+			bi_board.style.display = 'none';
 			icBi.style.display = 'none';
 			biIc.style.display = 'block';
 			icIc.style.display = 'none';
@@ -229,6 +248,8 @@ function setLayout()
 		break;
 		case 3:
 			fullscreen.style.display = 'none';
+			ic_board.style.display = 'none';
+			bi_board.style.display = 'none';
 			icBi.style.display = 'none';
 			biIc.style.display = 'none';
 			icIc.style.display = 'block';
@@ -236,6 +257,8 @@ function setLayout()
 		break;
 		case 4:
 			fullscreen.style.display = 'none';
+			ic_board.style.display = 'none';
+			bi_board.style.display = 'none';
 			icBi.style.display = 'none';
 			biIc.style.display = 'none';
 			icIc.style.display = 'none';
@@ -255,6 +278,14 @@ function refresh()
 	fetchInterval = setInterval(() => { fetchData(); }, 5000);
 }
 
+function stopFetchInterval()
+{
+	if (fetchInterval) {
+		clearInterval(fetchInterval);
+		fetchInterval = null;
+	}
+}
+
 function refreshSplit()
 {
 	if (fetchSplitInterval) 
@@ -262,6 +293,14 @@ function refreshSplit()
 		clearInterval(fetchSplitInterval);
 	}
 	fetchSplitInterval = setInterval(() => { fetchSplitData(); }, 5000);
+}
+
+function stopFetchSplitInterval()
+{
+	if (fetchSplitInterval) {
+		clearInterval(fetchSplitInterval);
+		fetchSplitInterval = null;
+	}
 }
 
 async function fetchData() 
@@ -278,29 +317,25 @@ async function fetchData()
 		const result = await response.text()
 		.then(result => 
 		{
-			console.log('Received data for fullscreen:');
-
-			const check = JSON.parse(result);
-			const getLayout = check.screen_layout;
-			if (getLayout != screenLayout)
-			{
-				// console.log('Brand B: SPLIT SCREEN', getLayout);
-				screenLayout = getLayout;
-				init();
-				return;
-			}
+			console.log('Received data for fullscreen:', result);
 
 			const arrivals = document.getElementById('arrivals');
 			const offline = document.getElementById('offline');
 			const icBoard = document.getElementById('ic_board');
 			const biBoard = document.getElementById('bi_board');
+			const fullscreen = document.getElementById('fullscreen');
 
 			if (result == 0)
 			{
 				// No data: show arrival screen
-				console.log('No data found');
+				console.log('No single data found');
+				stopFetchSplitInterval();
+				screenLayout = 0;
+				setLayout();
+
 				document.body.style.backgroundColor = "#333";
 				
+				fullscreen.style.display = 'none';
 				icBoard.style.display = 'none';
 				biBoard.style.display = 'none';
 				arrivals.style.display = 'block';
@@ -310,8 +345,17 @@ async function fetchData()
 			{
 				const data = JSON.parse(result);
 
+				const getLayout = data.screen_layout;
+
+				if (getLayout != screenLayout)
+				{
+					screenLayout = getLayout;
+					init();
+				}
+
 				arrivals.style.display = 'none';
 				offline.style.display = 'none';
+				fullscreen.style.display = 'block';
 				
 				switch(data.brand)
 				{
@@ -367,36 +411,45 @@ async function fetchSplitData()
 		const result = await response.text()
 		.then(result => 
 		{
-			console.log('Received data for splitscreen:');
+			console.log('Received data for splitscreen: ' + result);
 
-			const check = JSON.parse(result);
-			const getLayout = check.screen_layout;
-			if (getLayout != screenLayout)
-			{
-				// console.log('Brand B: SPLIT SCREEN', getLayout);
-				screenLayout = getLayout;
-				init();
-				return;
-			}
-			
 			const arrivals = document.getElementById('arrivals');
 			const offline = document.getElementById('offline');
-			const splitBoard = document.getElementById('split_board');
-
+			
 			if (result == 0)
 			{
 				// No data: show arrival screen
-				console.log('No data found');
+				console.log('No split data found');
 				document.body.style.backgroundColor = "#333";
 				
-				splitBoard.style.display = 'none';
+				screenLayout = 0;
+				init();
+
 				arrivals.style.display = 'block';
 				offline.style.display = 'none';
+				document.getElementById('fullscreen').style.display = "none";
+				document.getElementById('ic_board').style.display = "none";
+				document.getElementById('bi_board').style.display = "none";
+				document.getElementById('icbi_board').style.display = "none";
+				document.getElementById('biic_board').style.display = "none";
+				document.getElementById('icic_board').style.display = "none";
+				document.getElementById('bibi_board').style.display = "none";
 			}
 			else 
 			{
 				const data = JSON.parse(result);
-				
+
+				const getLayout = data.screen_layout;
+
+				if (getLayout != screenLayout)
+				{
+					screenLayout = getLayout;
+					init();
+				}
+
+				document.getElementById('fullscreen').style.display = "none";
+				console.log('Split:', data.screen_layout);
+				screenLayout = data.screen_layout;
 				arrivals.style.display = 'none';
 				offline.style.display = 'none';
 
@@ -409,7 +462,7 @@ async function fetchSplitData()
 		// System is offline
 		console.log('Cannot fetch data, you are offline');
 		
-		document.getElementById('splitBoard').style.display = 'none';
+		// document.getElementById('splitBoard').style.display = 'none';
 		document.getElementById('arrivals').style.display = 'none';
 		document.getElementById('offline').style.display = 'flex';
 	}
@@ -435,30 +488,41 @@ function sendMessageToBi(result)
 
 function sendMessageToSplit(result) 
 {
-	console.log('Sending message to split iframe...');
+	console.log('Sending message to split iframe...', screenLayout);
+
+	document.getElementById('ic_bi').style.display = 'none';
+	document.getElementById('bi_ic').style.display = 'none';
+	document.getElementById('ic_ic').style.display = 'none';
+	document.getElementById('bi_bi').style.display = 'none';
 
 	let iframe;
 
 	if (screenLayout == 1)
 	{
+		console.log('AAA');
+		document.getElementById('ic_bi').style.display = 'block';
 		iframe = document.getElementById('icbi_board');
 	} 
 	else if (screenLayout == 2)
 	{
-		 iframe = document.getElementById('biic_board');
+		console.log('BBB');
+		document.getElementById('bi_ic').style.display = 'block';
+		iframe = document.getElementById('biic_board');
 	} 
 	else if (screenLayout == 3)
 	{
-		 iframe = document.getElementById('icic_board');
+		console.log('CCC');
+		document.getElementById('ic_ic').style.display = 'block';
+		iframe = document.getElementById('icic_board');
 	}
 	else if (screenLayout == 4)
 	{
-		 iframe = document.getElementById('bibi_board');
+		console.log('DDD');
+		document.getElementById('bi_bi').style.display = 'block';
+		iframe = document.getElementById('bibi_board');
 	}
 
 	iframe.style.display = 'block';
-	// const iframe = document.getElementById('split_board');
-	// console.log('Split:', result);
 	const message = result;
 	iframe.contentWindow.postMessage(message, '*');
 }

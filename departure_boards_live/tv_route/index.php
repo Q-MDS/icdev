@@ -75,15 +75,15 @@ function get_route_list($short_name)
 	$date_from = date('Ymd');
 	$date_to = date('Ymd');
 
-	$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_TO >= $date_from AND DATE_FROM <= $date_to";
+	//$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_TO >= $date_from AND DATE_FROM <= $date_to";
 
-	// $sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_FROM <= $date_from and DATE_TO >= $date_to
-	// AND ROUTE_SERIAL IN (
-	// SELECT ROUTE_SERIAL
-	// FROM ROUTE_STOPS
-	// WHERE SHORT_NAME = '$short_name' AND DATE_FROM <= $date_from and DATE_TO >= $date_to
-	// ) ORDER BY ROUTE_NO
-	// ";
+	$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_FROM <= $date_from and DATE_TO >= $date_to
+	AND ROUTE_SERIAL IN (
+	SELECT ROUTE_SERIAL
+	FROM ROUTE_STOPS
+	WHERE SHORT_NAME = '$short_name' AND DATE_FROM <= $date_from and DATE_TO >= $date_to
+	) ORDER BY ROUTE_NO
+	";
 
 	$stid = oci_parse($conn, $sql);
 

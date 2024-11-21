@@ -1,527 +1,233 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Split Screen</title>
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
     <style>
-
         body, html {
-
             margin: 0;
-
             padding: 0;
-
             height: 100%;
-
             font-family: Arial, sans-serif;
-
             display: flex;
-
             overflow: hidden;
-
             width: 100%;
-
         }
-
-
 
         .split {
-
             width: 50%;
-
             height: 100%;
-
             display: flex;
-
             flex-direction: column;
-
             justify-content: center;
-
             align-items: center;
-
             position: relative;
-
         }
-
-
 
         .left {
-
-            background: url('https://www.intercape.co.za/wp-content/uploads/2024/11/Background-Image.jpg') no-repeat center center;
-
+            background: url('https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/BSI-pattern.jpg') no-repeat center center;
             background-size: cover;
-
         }
-
-
 
         .right {
-
-            background: url('https://www.intercape.co.za/wp-content/uploads/2024/11/Background-Image.jpg') no-repeat center center;
-
+            background: url('https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/BSI-pattern.jpg') no-repeat center center;
             background-size: cover;
-
             border-left: 10px solid #000000;
-
         }
-
-
 
         h1, h2, h3, h4 {
-
             color: #000;
-
             text-transform: uppercase;
-
             margin: 0;
-
             text-align: center;
-
         }
-
-
 
         .left h1, .right h1 {
-
-            font-size: 3.5vw;
-
-            line-height: 1.25em;
-
-            color: #fff;
-
+            font-size: 2.5em;
+            font-weight: 800;
             font-style: italic;
-
-            font-weight: 900;
-
             text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.75);
-
+            margin-bottom: 30px;
         }
-
-
+        .left h1, .right h1{
+            color: #ffffff;
+        }
 
         .left h2, .right h2 {
-
-            font-size: 3.5vw;
-
+            font-size: 4.3vw;
             line-height: 1em;
+            font-weight: 700;
+        }
 
+        .left h2 {
             color: #000;
-
-            font-weight: 900;
-
-            padding: 0px 6%;
-
         }
 
-
+        .right h2 {
+            color: #000;
+        }
         .left h3, .right h3 {
-
-            font-size: 4.5vw;
-
-            line-height: 1em;
-
-            color: #fff;
-
-            font-weight: 900;
-
-            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.75);
-
+            font-size: 7.5em;
+            font-weight: 800;
         }
-
+        .right h3 {
+            color: #000000; 
+        }
 
         .logo-bar {
-
             position: absolute;
-
             bottom: 0;
-
             background: white;
-
             text-align: center;
-
             width: 100%;
-
-            padding: 2em 0 2em 0;
-
+            padding: 3em 0 2em 0;
         }
-
         h4{
-
             color: #000000;
-
-            font-size: 3em;
-
+            font-size: 2.5em;
             font-style: italic;
-
-            font-weight: 700;
-
+            font-weight: 900;
         }
-
         .left h4.pop-stop{
-
-            color: #EC7A31;
-
-            font-size: 3em;
-
-            line-height: 0.6em;
-
+            color: #F57723;
+            font-size: 2.5em;
             font-style: italic;
-
             font-weight: 900;
-
         }
-
         .right h4.pop-stop{
-
-            color: #EC7A31;
-
-            font-size: 3em;
-
-            line-height: 0.6em;
-
+            color: #F57723;
+            font-size: 2.5em;
             font-style: italic;
-
             font-weight: 900;
-
         }
-
-
 
         .scrolling-slider-container {
-
             overflow: hidden;
-
             white-space: nowrap;
-
             display: flex;
-
             align-items: center;
-
             margin-top: 1em;
-
-
-            }
-
-        .right .scrolling-slider-container {
-
-            margin-left: auto;
-
-            margin-right: 0;
-
-            width: 95%;
-
-            }
-
-        .left .scrolling-slider-container {
-
-            margin-right: auto;
-
-            margin-left: 0;
-
-            width: 95%;
-
-            }
-
+        }
 
         .scrolling-slider {
-
             display: flex;
-
             animation: scroll 60s linear infinite;
-
         }
-
-
 
         .right .scrolling-slider-item {
-
             display: inline-block;
-
             margin-right: 10vh;
-
             font-size: 3vw;
-
-            font-weight: 700;
-
+            font-weight: 900;
             color: #000000;
-
             white-space: nowrap;
-
             text-transform: uppercase;
-
         }
-
         .left .scrolling-slider-item {
-
             display: inline-block;
-
             margin-right: 10vh;
-
             font-size: 3vw;
-
-            font-weight: 700;
-
+            font-weight: 900;
             color: #000000;
-
             white-space: nowrap;
-
             text-transform: uppercase;
-
         }
-
         .header {
-
             position: absolute;
-
             text-align: center;
-
             top: 0px;
-
             left: 50%;
-
             width: 100%;
-
             transform: translateX(-50%);
-
             padding: 0px;
-
             z-index: 1000;
-
             min-height: 16vh;
-
         }
-
-
 
         .header img {
-
             width: 33vw;
-
             height: auto;
-
         }
-
         
-
         @keyframes scroll {
-
             from {
-
                 transform: translateX(0);
-
             }
-
             to {
-
                 transform: translateX(-50%);
-
             }
-
         }
-
-        .pattern {
-
-        width: 100%;
-
-        position: relative;
-
-        z-index: 1;
-
-        display: flex;
-
-        padding-top: 3vh;
-
-        padding-bottom: 3vh;
-
-        flex-direction: column;
-
-        justify-content: center;
-
-        align-items: center;
-
-        text-align: center;
-
-        margin-top: -1.5vh;
-
-        }
-
     </style>
-
 </head>
-
 <body>
-
-    <div id="split_left" class="split left">
-
+    <div class="split left">
         <div class="header">
-
-            <img src="https://www.intercape.co.za/wp-content/uploads/2024/11/Intercape-Logo.svg" alt="Intercape Logo">
-
+            <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/Big-Sky-Logo.svg" alt="Intercape Logo">
         </div>
-
         <div class="pattern">
-
-            <h1>BOARDING NOW</h1>
-
-            <h2 id="route_desc">Express
-                East London
-                to Pretoria via 
-                Fort Beaufort
-                and Alice</h2>
-
-            <h3 id="route_number">0327</h3>
-
+            <h1>NOW DEPARTING</h1>
+            <h2 id="route_desc">Route Description</h2>
+            <h3 id="route_number">Route Number</h3>
         </div>
-
         <div class="logo-bar">
-
             <h4 class="pop-stop">POPULAR STOPS:</h4>
-
             <div class="scrolling-slider-container">
-
                 <div id="left_scrolling_slider" class="scrolling-slider">
-
-                    <div class="scrolling-slider-item">Rustenburg</div>
-                    <div class="scrolling-slider-item">Groot Marico</div>
-                    <div class="scrolling-slider-item">Ceres</div>
-                    <div class="scrolling-slider-item">Rustenburg</div>
-                    <div class="scrolling-slider-item">Groot Marico</div>
-                    <div class="scrolling-slider-item">Ceres</div> 
-                    <div class="scrolling-slider-item">Rustenburg</div>
-                    <div class="scrolling-slider-item">Groot Marico</div>
-                    <div class="scrolling-slider-item">Ceres</div> 
-
-                    <!-- Add more items as needed -->
-
+                    <div class="scrolling-slider-item">Next stop</div>
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
-
-
-    <div id="split_right" class="split right">
-
+    <div class="split right">
         <div class="header">
-
-            <img src="https://www.intercape.co.za/wp-content/uploads/2024/11/Intercape-Logo.svg" alt="Intercape Logo">
-
+            <img src="https://www.bigskyintercity.co.za/wp-content/uploads/2024/11/Big-Sky-Logo.svg" alt="Intercape Logo">
         </div>
-
         <div class="pattern">
-
-            <h1>BOARDING NOW</h1>
-
-            <h2 id="route_desc">Express
-                East London
-                to Pretoria via 
-                Fort Beaufort
-                and Alice</h2>
-
-            <h3 id="route_number">0327</h3>
-
+            <h1>NOW DEPARTING</h1>
+            <h2 id="route_desc_b">Route Description</h2>
+            <h3 id="route_number_b">Route Number</h3>
         </div>
-
         <div class="logo-bar">
-
             <h4 class="pop-stop">POPULAR STOPS:</h4>
-
             <div class="scrolling-slider-container">
-
                 <div id="right_scrolling_slider" class="scrolling-slider">
-
-                    <div class="scrolling-slider-item">Rustenburg</div>
-                    <div class="scrolling-slider-item">Groot Marico</div>
-                    <div class="scrolling-slider-item">Ceres</div>
-                    <div class="scrolling-slider-item">Rustenburg</div>
-                    <div class="scrolling-slider-item">Groot Marico</div>
-                    <div class="scrolling-slider-item">Ceres</div> 
-                    <div class="scrolling-slider-item">Rustenburg</div>
-                    <div class="scrolling-slider-item">Groot Marico</div>
-                    <div class="scrolling-slider-item">Ceres</div>   
-
-                    <!-- Add more items as needed -->
-
+                    <div class="scrolling-slider-item">Next stop</div>
                 </div>
-
             </div>
-
         </div>
-
     </div>
-
-
 
 <script>
-
 window.addEventListener('message', function(event) 
-
 {
-
 	const scrollingLeftSlider = document.getElementById("left_scrolling_slider");
-
 	const scrollingRightSlider = document.getElementById("right_scrolling_slider");
-
 	
-
 	if (event.origin !== window.location.origin) {
-
 		return;
-
 	}
-
 	document.getElementById('route_desc').innerText = event.data.route_desc;
-
 	document.getElementById('route_number').innerText = event.data.route_no;
-
 	document.getElementById('route_desc_b').innerText = event.data.route_desc_b;
-
 	document.getElementById('route_number_b').innerText = event.data.route_no_b;
-
 	
-
 	const stops = event.data.stops;
-
 	let content = '';
-
 	stops.forEach(stop => {
-
 		content += `<div class="scrolling-slider-item">${stop}</div>`;
-
 	});
-
 	scrollingLeftSlider.innerHTML = content;
-
 	
-
 	const stops_b = event.data.stops_b;
-
 	let content_b = '';
-
 	stops_b.forEach(stop => {
-
 		content_b += `<div class="scrolling-slider-item">${stop}</div>`;
-
 	});
-
 	scrollingRightSlider.innerHTML = content_b;
-
 });
-
-</script>
-
+</script>	
 </body>
-
 </html>

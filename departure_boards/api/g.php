@@ -184,22 +184,29 @@ function get_route_stops($route, $current_stop)
 
 	oci_close($conn);
 
-	foreach ($result as $key => $value) 
+	if (count($result) == 0)
 	{
-		if ($value == $current_stop)
-		{
-			$records = array_slice($result, $key);
-			break;
-		}
+		$filtered_array = array("0" => "-");
 	}
+	else 
+	{
+		foreach ($result as $key => $value) 
+		{
+			if ($value == $current_stop)
+			{
+				$records = array_slice($result, $key);
+				break;
+			}
+		}
 
-	$filtered_array = array_filter($records, function($item) {
-		return stripos($item, 'DEPOT') === false;
-	});
+		$filtered_array = array_filter($records, function($item) {
+			return stripos($item, 'DEPOT') === false;
+		});
 
-	$filtered_array = array_unique($filtered_array);
-	array_shift($filtered_array);
-	$filtered_array = array_values($filtered_array);
+		$filtered_array = array_unique($filtered_array);
+		array_shift($filtered_array);
+		$filtered_array = array_values($filtered_array);
+	}
 
 	return $filtered_array;
 }
