@@ -7,44 +7,27 @@ require_once ("/usr/local/www/pages/php3/sec.inc");
 if (!open_oracle()) { Exit; };
 if (!AllowedAccess("")) { Exit; };
 
-// Get user id from system
-$user_id = '0210';
+$user_id = getuserserial();;
+$branch = $my_branch_name;
 
-$branch = '1';
 $tv_list = array();
 $tv_settings = array();
 $route_list = array();
-
-// Step 1: get branch from USER_DETAILS
-function get_user_branch()
-{
-	global $conn, $user_id, $branch;
-	
-	$sql = "SELECT BRANCH FROM USER_DETAILS WHERE STAFF_NO = '$user_id'";
-
-	$stid = oci_parse($conn, $sql);
-
-	oci_execute($stid);
-
-	$row = oci_fetch_array($stid, OCI_ASSOC);
-
-	if ($row === false) {
-        echo "No rows found for user ID: $user_id";
-    } else {
-        $branch = $row['BRANCH'];
-    }
-
-	oci_free_statement($stid);
-
-	oci_close($conn);
-}
 
 // Step 2: get list of TVs from DEPARTURE TVS where branch = branch
 function get_tv_list()
 {
 	global $conn, $branch, $tv_list;
 
-	$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1";
+	if (AllowedFlag("DEVELOPERS"))
+	{
+		$sql = "SELECT * FROM DEPARTURE_TVS WHERE IS_ACTIVE = 1 ORDER BY NAME";
+	}
+	else
+	{
+		$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1 ORDER BY NAME";
+	}
+
 	$stid = oci_parse($conn, $sql);
 
 	oci_execute($stid);
@@ -157,7 +140,6 @@ function get_stop_name($stop_serial)
 	return $stop_name;
 }
 
-get_user_branch();	
 get_tv_list();
 get_settings($tv_list);
 ?>

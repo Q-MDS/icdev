@@ -63,16 +63,16 @@ function get_tv_list()
 
 	$conn = oci_conn();
 
-	// if (AllowedFlag("DEVELOPERS"))
-	// {
-	// 	$sql = "SELECT * FROM DEPARTURE_TVS WHERE IS_ACTIVE = 1 order by name";
-	// }
-	// else
-	// {
-	// 	$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1 order by name";
-	// }
+	if (AllowedFlag("DEVELOPERS"))
+	{
+		$sql = "SELECT * FROM DEPARTURE_TVS WHERE IS_ACTIVE = 1 order by name";
+	}
+	else
+	{
+		$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1 order by name";
+	}
 
-	$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1";
+	// $sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1";
 	$stid = oci_parse($conn, $sql);
 
 	oci_execute($stid);

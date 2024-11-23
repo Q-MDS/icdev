@@ -1,41 +1,27 @@
 <?php
-// Get user id from system
-$user_id = '1052';
+ob_start();
+require_once ("/usr/local/www/pages/php3/oracle.inc");
+require_once ("/usr/local/www/pages/php3/misc.inc");
+require_once ("/usr/local/www/pages/php3/sec.inc");
 
-$branch = '1';
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+
+// Get user id from system
+// $user_id = '0210';
+//$branch = '1';
+
+$user_id = getuserserial();;
+$branch = $my_branch_name;
+
 $tv_list = array();
 $tv_settings = array();
 $route_list = array();
 
-function oci_conn()
-{
-	$host = 'localhost';
-	$port = '1521';
-	$sid = 'XE';
-	$username = 'SYSTEM';
-	$password = 'dontletmedown3';
-
-	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
-
-	if (!$conn) 
-	{
-		$e = oci_error();
-		exit;
-	} 
-	else 
-	{
-		// echo "Connection succeeded";
-	}
-
-	return $conn;
-}
-
 // Step 1: get branch from USER_DETAILS
 function get_user_branch()
 {
-	global $user_id, $branch;
-	// $user_id = '1052';
-	$conn = oci_conn();
+	global $conn, $user_id, $branch;
 	
 	$sql = "SELECT BRANCH FROM USER_DETAILS WHERE STAFF_NO = '$user_id'";
 
@@ -59,20 +45,18 @@ function get_user_branch()
 // Step 2: get list of TVs from DEPARTURE TVS where branch = branch
 function get_tv_list()
 {
-	global $branch, $tv_list;
+	global $conn, $branch, $tv_list;
 
-	$conn = oci_conn();
+	//$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1";
+	if (AllowedFlag("DEVELOPERS"))
+	{
+		$sql = "SELECT * FROM DEPARTURE_TVS WHERE IS_ACTIVE = 1 ORDER BY NAME";
+	}
+	else
+	{
+		$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1 ORDER BY NAME";
+	}
 
-	// if (AllowedFlag("DEVELOPERS"))
-	// {
-	// 	$sql = "SELECT * FROM DEPARTURE_TVS WHERE IS_ACTIVE = 1 order by name";
-	// }
-	// else
-	// {
-	// 	$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1 order by name";
-	// }
-
-	$sql = "SELECT * FROM DEPARTURE_TVS WHERE BRANCH = '$branch' AND IS_ACTIVE = 1";
 	$stid = oci_parse($conn, $sql);
 
 	oci_execute($stid);
@@ -96,26 +80,22 @@ function get_tv_list()
 // Step 3: get route list
 function get_route_list($short_name)
 {
-	// $route_list[] = array("ROUTE_NO" => "111", "DESCRIPTION" => "aaaa");
-	// $route_list[] = array("ROUTE_NO" => "222", "DESCRIPTION" => "bbbb");
-	// $route_list[] = array("ROUTE_NO" => "333", "DESCRIPTION" => "ccc");
-
 	// Dates are important in order to retrieve the list
+	global $conn;
+
 	$route_list = array();
-	$date_from = 19700101;
+	$date_from = date('Ymd');
 	$date_to = date('Ymd');
 
-	$conn = oci_conn();
+	//$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_TO >= $date_from AND DATE_FROM <= $date_to";
 
-	$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_TO >= $date_from AND DATE_FROM <= $date_to ORDER BY ROUTE_NO";
-
-	// $sql = "SELECT ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_FROM <= $date_from and DATE_TO >= $date_to
-	// AND ROUTE_SERIAL IN (
-	// SELECT ROUTE_SERIAL
-	// FROM ROUTE_STOPS
-	// WHERE SHORT_NAME = '$short_name' AND DATE_FROM <= $date_from and DATE_TO >= $date_to
-	// ) ORDER BY ROUTE_NO
-	// ";
+	$sql = "SELECT CARRIER_CODE, ROUTE_NO, DESCRIPTION FROM ROUTE_DETAILS WHERE DATE_FROM <= $date_from and DATE_TO >= $date_to
+	AND ROUTE_SERIAL IN (
+	SELECT ROUTE_SERIAL
+	FROM ROUTE_STOPS
+	WHERE SHORT_NAME = '$short_name' AND DATE_FROM <= $date_from and DATE_TO >= $date_to
+	) ORDER BY ROUTE_NO
+	";
 
 	$stid = oci_parse($conn, $sql);
 
@@ -136,9 +116,7 @@ function get_route_list($short_name)
 // Step 4: look for record in DEPARTURE_TV_SETTINGS. If found use that record else use loop record with no settings
 function get_settings($tv_list)
 {
-	global $tv_settings;
-
-	$conn = oci_conn();
+	global $conn, $tv_settings;
 
 	foreach ($tv_list as $tv) 
 	{
@@ -172,7 +150,7 @@ function get_settings($tv_list)
 // Get shortname from stop_serial
 function get_stop_name($stop_serial)
 {
-	$conn = oci_conn();
+	global $conn;
 
 	$sql = "SELECT SHORTNAME FROM STOP_DETAILS2 WHERE STOP_SERIAL = '$stop_serial'";
 
@@ -191,9 +169,8 @@ function get_stop_name($stop_serial)
 	return $stop_name;
 }
 
-get_user_branch();	
+// get_user_branch();	
 get_tv_list();
-// get_route_list();
 get_settings($tv_list);
 ?>
 <!DOCTYPE html>
@@ -294,7 +271,7 @@ get_settings($tv_list);
 <?php } ?>
 </div>
 <script>
-baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/";
+baseUrl = window.location.protocol + "//" + window.location.hostname + "/booking/";
 
 function addRoute(screen_id)
 {
@@ -348,7 +325,7 @@ function removeRoute(screen_id)
 }
 async function sendData(formData) 
 {
-	const phpUrl = baseUrl + 'departure_boards/tv_route/tv_route_model.php';
+	const phpUrl = baseUrl + 'tv_route/tv_route_model.php';
 	
 	const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
 	const result = await response.text();
