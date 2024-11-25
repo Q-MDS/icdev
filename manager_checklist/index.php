@@ -289,8 +289,9 @@ get_vehicles();
 			$make = $row['MAKE'];
 			$model = $row['MODEL'];
 			$vehicle_class = $row['CLASS'];
-			// $link_vehicle = $row['LINK_TO_VEHICLE'];
-			// $link_docs = $row['LINK_TO_DOCUMENTS'];
+			
+			$vehicle_info = $serial . '@@' . $code . '@@' . $reg_no . '@@' . $make . '@@' . $model;
+
 			
 			echo "<div class='data_row'>";
 				echo '<div style="display: flex; align-items: center;">' . $serial . '</div>';
@@ -299,7 +300,7 @@ get_vehicles();
 				echo '<div style="display: flex; align-items: center;">' . $make . '</div>';
 				echo '<div style="display: flex; align-items: center;">' . $model . '</div>';
 				echo '<div style="display: flex; align-items: center;">' . $vehicle_class . '</div>';
-				echo '<div id="y_' . $id . '_' . $serial . '" style="display: flex; align-items: center; justify-content: center; background: red; color: white; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; cursor: pointer;" onclick="hasIssues(this.id);">Issues found</div>';
+				echo '<div id="y_' . $id . '_' . $serial . '" style="display: flex; align-items: center; justify-content: center; background: red; color: white; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; cursor: pointer;" onclick="hasIssues(this.id, \'' . $vehicle_info .'\');">Issues found</div>';
 				echo '<div id="n_' . $id . '" style="display: flex; align-items: center; justify-content: center; background: green; color: white; border-radius: 5px; border: 1px solid #000; margin-left: 10px; padding: 5px 20px; cursor: pointer;" onclick="noIssues(this.id);">No issues</div>';
 			echo "</div>";
 		}
@@ -307,6 +308,15 @@ get_vehicles();
 	</div>
 	<p>	
 	
+	<div id="faults" style="display: none;">
+		<!-- Selected vehicle info -->
+		 <div style="margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #000">
+			<div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between">
+				<div style="margin-top: 20px; margin-bottom: 10px; font-size: 18px;">Selected Vehicle</div>
+				<div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="faultCancel();">Cancel</div>
+			</div>
+			<div id="vehicle_info"></div>
+		</div>
 	<!-- Fault picker -->
 	<div style="display: flex; flex-direction: column; row-gap: 10px;">
 	<div style="display: none;"><input id="vc_id" type="text" style="display: block" /></div>
@@ -326,8 +336,12 @@ get_vehicles();
 			<div><input type="file" id="fault_picture" accept="image/*" /></div>
 			<div id="upload_status"></div>
 		</div>
-		<!-- <div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="saveIssue()">Save</div> -->
-		<div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="showCustomConfirm()">Save</div>
+		<div style="display: flex; flex-direction: row; align-items: center;  margin-top: 10px; column-gap: 10px;">
+			<div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="showCustomConfirm()">Save</div>
+			<div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="faultCancel();">Cancel</div>
+		</div>
+		<!-- <div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="showCustomConfirm()">Save</div>
+		<div>Cancel</div> -->
 	</div>
 </div>
 
@@ -346,6 +360,7 @@ get_vehicles();
 tfcFaults = [];
 breadCrumbs = [];
 let saveFault = {};
+let faultCtr = 0;
 
 function fetchFaults()
 {
@@ -501,15 +516,22 @@ function noIssues(id)
 	});
 }
 
-function hasIssues(id)
+function hasIssues(id, data)
 {
-	console.log('Has issues clicked: ' + id);
+	const vehicleInfo = data.split('@@');
+	console.log('Has issues clicked: ' + id, " > ", vehicleInfo);
+
+
+	const faults = document.getElementById('faults');
+	const vehicle_info = document.getElementById('vehicle_info');
 	const bread_crumbs = document.getElementById('breadcrumbs');
 	const fault_picker = document.getElementById('fault_picker');
 	const vcId = document.getElementById('vc_id');
 	const vehicleSerial = document.getElementById('vehicle_serial');
 
 	// Show fault picker
+	faults.style.display = "block";
+	vehicle_info.innerHTML = '• Serial: ' + vehicleInfo[0] + ' Code: ' + vehicleInfo[1] + ' Reg No: ' + vehicleInfo[2] + ' Make: ' + vehicleInfo[3] + ' Model: ' + vehicleInfo[4];
 	fault_picker.style.display = 'flex';
 	bread_crumbs.style.display = 'flex';
 
@@ -551,7 +573,18 @@ function saveIssue(more)
 	console.log('Result Save: ', result);
 		if (result == 1)
 		{
-			window.location.reload(); 
+			if (more == 0)
+			{
+				console.log('CIMMAA: ', vcId);
+				noIssues('n_' + vcId);
+			} 
+			else 
+			{
+				// window.location.reload(); 
+				document.getElementById('fault_desc').value = '';
+				document.getElementById('the_fault').style.display = 'none';
+				fetchFaults();
+			}
 		}
 		else
 		{
@@ -575,15 +608,40 @@ function showCustomConfirm()
 function handleYes() 
 {
 	console.log('MORE');
+	faultCtr++;
 	document.getElementById('customConfirmModal').style.display = 'none';
+	document.getElementById('fault_desc_div').style.display = 'none';
+	document.getElementById('form_footer').style.display = 'none';
 	saveIssue(1);
 }
 
 function handleNo() 
 {
 	console.log('NO MORE');
+	document.getElementById('faults').style.display = 'none';
 	document.getElementById('customConfirmModal').style.display = 'none';
 	saveIssue(0);
+}
+
+function pageCancel()
+{
+	window.location.reload();
+}
+
+function faultCancel()
+{
+	if (faultCtr > 0)
+	{
+		console.log('Do the no_issues thang');
+		faultCtr = 0;
+		noIssues('n_' + document.getElementById('vc_id').value);
+	}
+	else
+	{
+		console.log('Do fokall');
+		// document.getElementById('faults').style.display = 'none';
+		window.location.reload();
+	}
 }
 
 // Close the modal when clicking outside of it

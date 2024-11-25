@@ -143,24 +143,45 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	$conn = oci_conn();
 
 	// Add record to vehicle_checklist_detail
-	$sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID, FAULT_FULL) VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER, $now, '$fault', '$full_fault')";
+	// $sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID, FAULT_FULL) VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER, $now, '$fault', '$full_fault')";
 	
-	$cursor = oci_parse($conn, $sql);
-	oci_execute($cursor);
+	// $cursor = oci_parse($conn, $sql);
+	// oci_execute($cursor);
 	
 	//$reported_date = '23/OCT/24';
 	$reported_date = date('d/M/y', $now);
 
 	// Add record to move_jobcarditems
+	// $sql = "INSERT INTO 
+	// 	MOVE_JOBCARDITEMS (ITEMSERIAL, JOBCARDSERIAL, UNITSERIAL, REPORTEDWHO, REPORTEDDATE, FAULTCLASS, FAULTDESC, FAULTPICTURE, TYPE, FAULTVALID, STATUSENGINEER, REPORTCOMMENTS, FAULT_CATEGORY) 
+	// 	VALUES 
+	// 	(MOVE_ITEMS.nextval, 0, $vehicle_serial, '$REMOTE_USER', '$reported_date', 14616, '$fault_description', '$fault_picture', '1', 'N', 'Z', '', $fault)
+	// ";
 	$sql = "INSERT INTO 
-		MOVE_JOBCARDITEMS (ITEMSERIAL, JOBCARDSERIAL, UNITSERIAL, REPORTEDWHO, REPORTEDDATE, FAULTCLASS, FAULTDESC, FAULTPICTURE, TYPE, FAULTVALID, STATUSENGINEER, REPORTCOMMENTS, FAULT_CATEGORY) 
-		VALUES 
-		(MOVE_ITEMS.nextval, 0, $vehicle_serial, '$REMOTE_USER', '$reported_date', 14616, '$fault_description', '$fault_picture', '1', 'N', 'Z', '', $fault)
-	";
+        MOVE_JOBCARDITEMS (ITEMSERIAL, JOBCARDSERIAL, UNITSERIAL, REPORTEDWHO, REPORTEDDATE, FAULTCLASS, FAULTDESC, FAULTPICTURE, TYPE, FAULTVALID, STATUSENGINEER, REPORTCOMMENTS, FAULT_CATEGORY) 
+        VALUES 
+        (MOVE_ITEMS.nextval, 0, :vehicle_serial, :remote_user, TO_DATE(:reported_date, 'YYYY-MM-DD HH24:MI:SS'), 14616, :fault_description, :fault_picture, '1', 'N', 'Z', '', :fault)
+        RETURNING ITEMSERIAL INTO :itemserial";
+
+	$cursor = oci_parse($conn, $sql);
+
+	oci_bind_by_name($cursor, ':vehicle_serial', $vehicle_serial);
+	oci_bind_by_name($cursor, ':remote_user', $REMOTE_USER);
+	oci_bind_by_name($cursor, ':reported_date', $reported_date);
+	oci_bind_by_name($cursor, ':fault_description', $fault_description);
+	oci_bind_by_name($cursor, ':fault_picture', $fault_picture);
+	oci_bind_by_name($cursor, ':fault', $fault);
+
+	// Bind the output variable
+	oci_bind_by_name($cursor, ':itemserial', $itemserial, -1, SQLT_INT);
+
+	oci_execute($cursor);
+
+	// Add record to vehicle_checklist_detail
+	$sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID, FAULT_FULL, ITEMSERIAL) VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER, $now, '$fault', '$full_fault', $itemserial)";
 	
 	$cursor = oci_parse($conn, $sql);
 	oci_execute($cursor);
-
 
 	// $REMOTE_USER = getenv(“REMOTE_USER”); 
 	// INSERT INTO MOVE_JOBCARDITEMS ( itemserial, jobcardserial, unitserial, 
@@ -180,7 +201,8 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	} 
 	else 
 	{
-		echo '1';
+		// echo '1';
+		echo $itemserial;
 	}
 
 	oci_close($conn);

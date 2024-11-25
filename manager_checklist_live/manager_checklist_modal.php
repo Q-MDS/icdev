@@ -9,6 +9,7 @@ if (!AllowedAccess("")) { Exit; };
 
 $ajax_data = file_get_contents("php://input");
 $json_data = json_decode($ajax_data);
+$_check_gets_return = true; // dont show oracle gets at the end, which breaks JSON
 
 $action = $json_data->action;
 
@@ -33,7 +34,8 @@ switch ($action)
 		$fault = $json_data->fault;
 		$fault_picture = $json_data->fault_picture;
 		$more = $json_data->more;
-		save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more);
+		$full_fault = $json_data->full_fault;
+		save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more, $full_fault);
 	break;
 }
 
@@ -64,18 +66,6 @@ function no_issues($vc_id)
 	ora_close($cursor);
 
 	echo $result;
-
-	// ORA
-	/*global $conn;
-	$cursor = ora_open($conn);
-
-	$now = strtotime("now");
-
-	$sql = "UPDATE move_tech_bulletins_read SET mtr_status = 100, mtr_date_updated = $now  WHERE mtr_id = $mtr_id";
-	ora_parse($cursor, $sql);
-	ora_exec($cursor);
-
-	ora_close($cursor);*/
 }
 
 function fetch_faults()
@@ -84,8 +74,7 @@ function fetch_faults()
 
 	$cursor = ora_open($conn);
 
-	// $sql = "SELECT TFC_ID, TFC_REF_CATEGORY, TFC_NAME FROM TECHNICAL_FAULTS_CATEGORY WHERE TFC_IS_DELETED != 1 ORDER BY TFC_ID FETCH FIRST 1050 ROWS ONLY";
-	$sql = "SELECT TFC_ID, TFC_REF_CATEGORY, TFC_NAME FROM TECHNICAL_FAULTS_CATEGORY WHERE TFC_IS_DELETED != 1 ORDER BY TFC_ID";
+	$sql = "SELECT TFC_ID, TFC_REF_CATEGORY, TFC_NAME FROM TECHNICAL_FAULTS_CATEGORY WHERE TFC_IS_DELETED = 0 AND TFC_IS_OTHER = 0 ORDER BY TFC_ID";
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
 
@@ -101,37 +90,55 @@ function fetch_faults()
 	echo json_encode($fetch_faults);
 }
 
-function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more)
+function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more, $full_fault)
 {
 	global $conn;
 
 	// HARD CODED **** REMOVE ****
 	// $user_id = 123;
-	// $REMOTE_USER = getenv(“REMOTE_USER”); 
-	$REMOTE_USER = 123; 
+	$REMOTE_USER_SERIAL = getuserserial();
+	$REMOTE_USER = getenv("REMOTE_USER");
 	$now = strtotime("now");
 	
-	$insert_id = 999;
+	//$insert_id = 999;
 	
-	$cursor = ora_open($conn);
+	// $conn = oci_conn();
+
+	$reported_date = date('d/M/y', $now);
+
+	$sql = "INSERT INTO 
+        MOVE_JOBCARDITEMS (ITEMSERIAL, JOBCARDSERIAL, UNITSERIAL, REPORTEDWHO, REPORTEDDATE, FAULTCLASS, FAULTDESC, FAULTPICTURE, TYPE, FAULTVALID, STATUSENGINEER, REPORTCOMMENTS, FAULT_CATEGORY) 
+        VALUES 
+        (MOVE_ITEMS.nextval, 0, :vehicle_serial, :remote_user, TO_DATE(:reported_date, 'YYYY-MM-DD HH24:MI:SS'), 14616, :fault_description, :fault_picture, '1', 'N', 'Z', '', :fault)
+        RETURNING ITEMSERIAL INTO :itemserial";
+
+	$cursor = oci_parse($conn, $sql);
+
+	oci_bind_by_name($cursor, ':vehicle_serial', $vehicle_serial);
+	oci_bind_by_name($cursor, ':remote_user', $REMOTE_USER);
+	oci_bind_by_name($cursor, ':reported_date', $reported_date);
+	oci_bind_by_name($cursor, ':fault_description', $fault_description);
+	oci_bind_by_name($cursor, ':fault_picture', $fault_picture);
+	oci_bind_by_name($cursor, ':fault', $fault);
+
+	// Bind the output variable
+	oci_bind_by_name($cursor, ':itemserial', $itemserial, -1, SQLT_INT);
+
+	oci_execute($cursor);
 
 	// Add record to vehicle_checklist_detail
-	$sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID) VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER, $now, '$fault')";
-	ora_parse($cursor, $sql);
-	ora_exec($cursor);
-	
-	$reported_date = '23/OCT/24';
-	// Add record to move_jobcarditems
-	$sql = "INSERT INTO 
-		MOVE_JOBCARDITEMS (ITEMSERIAL, JOBCARDSERIAL, UNITSERIAL, REPORTEDWHO, REPORTEDDATE, FAULTCLASS, FAULTDESC, FAULTPICTURE, TYPE, FAULTVALID, STATUSENGINEER, REPORTCOMMENTS, FAULT_CATEGORY) 
-		VALUES 
-		(MOVE_ITEMS.nextval, 0, $vehicle_serial, '$REMOTE_USER', '$reported_date', 14616, '$fault_description', '$fault_picture', '1', 'N', 'Z', '', $fault)
-	";
-	
-	ora_parse($cursor, $sql);
-	ora_exec($cursor);
-	ora_close($cursor);
+	$now = time();
+	try{
+		$sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID, FAULT_FULL, ITEMSERIAL) VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER_SERIAL, $now, '$fault', '$full_fault', $itemserial)";
+		
+		$cursor = oci_parse($conn, $sql);
+		oci_execute($cursor);
+		
+	} catch (Exception $e) {
+		echo "Error: " . $e->getMessage();
+	}
 
+	// Update vehicle_checklist: work_date + 30
 	if ($more == 0)
 	{
 		no_issues($vc_id);
@@ -139,5 +146,8 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	else 
 	{
 		echo '1';
+		// echo "Boo: " . $itemserial;
 	}
+
+	oci_close($conn);
 }

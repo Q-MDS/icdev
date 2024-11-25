@@ -9,6 +9,7 @@ if (!AllowedAccess("")) { Exit; };
 
 $ajax_data = file_get_contents("php://input");
 $json_data = json_decode($ajax_data);
+$_check_gets_return = true; // dont show oracle gets at the end, which breaks JSON
 
 $action = $json_data->action;
 
@@ -32,7 +33,9 @@ switch ($action)
 		$fault_description = $json_data->fault_description;
 		$fault = $json_data->fault;
 		$fault_picture = $json_data->fault_picture;
-		save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture);
+		$more = $json_data->more;
+		$full_fault = $json_data->full_fault;
+		save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more, $full_fault);
 	break;
 }
 
@@ -74,10 +77,7 @@ function no_issues($vc_id)
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
 
-	ora_close($cursor);
-	
-	3487232
-	*/
+	ora_close($cursor);*/
 }
 
 function fetch_faults()
@@ -87,7 +87,7 @@ function fetch_faults()
 	$cursor = ora_open($conn);
 
 	// $sql = "SELECT TFC_ID, TFC_REF_CATEGORY, TFC_NAME FROM TECHNICAL_FAULTS_CATEGORY WHERE TFC_IS_DELETED != 1 ORDER BY TFC_ID FETCH FIRST 1050 ROWS ONLY";
-	$sql = "SELECT TFC_ID, TFC_REF_CATEGORY, TFC_NAME FROM TECHNICAL_FAULTS_CATEGORY WHERE TFC_IS_DELETED != 1 ORDER BY TFC_ID";
+	$sql = "SELECT TFC_ID, TFC_REF_CATEGORY, TFC_NAME FROM TECHNICAL_FAULTS_CATEGORY WHERE TFC_IS_DELETED = 0 AND TFC_IS_OTHER = 0 ORDER BY TFC_ID";
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
 
@@ -103,14 +103,15 @@ function fetch_faults()
 	echo json_encode($fetch_faults);
 }
 
-function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture)
+function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_picture, $more, $full_fault)
 {
 	global $conn;
 
 	// HARD CODED **** REMOVE ****
 	// $user_id = 123;
-	// $REMOTE_USER = getenv(“REMOTE_USER”); 
-	$REMOTE_USER = 123; 
+	$REMOTE_USER_SERIAL = getuserserial();
+	$REMOTE_USER = getenv("REMOTE_USER");
+	//$REMOTE_USER = 123; 
 	$now = strtotime("now");
 	
 	$insert_id = 999;
@@ -118,11 +119,12 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	$cursor = ora_open($conn);
 
 	// Add record to vehicle_checklist_detail
-	$sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID) VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER, $now, '$fault')";
+	$sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID, FAULT_FULL) VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER_SERIAL, $now, '$fault', '$full_fault')";
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
 	
-	$reported_date = '23/OCT/24';
+	$reported_date = date('d/M/y', $now);
+
 	// Add record to move_jobcarditems
 	$sql = "INSERT INTO 
 		MOVE_JOBCARDITEMS (ITEMSERIAL, JOBCARDSERIAL, UNITSERIAL, REPORTEDWHO, REPORTEDDATE, FAULTCLASS, FAULTDESC, FAULTPICTURE, TYPE, FAULTVALID, STATUSENGINEER, REPORTCOMMENTS, FAULT_CATEGORY) 
@@ -134,5 +136,12 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	ora_exec($cursor);
 	ora_close($cursor);
 
-	no_issues($vc_id);
+	if ($more == 0)
+	{
+		no_issues($vc_id);
+	} 
+	else 
+	{
+		echo '1';
+	}
 }
