@@ -118,6 +118,66 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         .content::-webkit-scrollbar-track {
             background-color: rgba(0, 0, 0, 0.1); /* Color of the scrollbar track */
         }
+
+		.content .row_title {
+			background-color: #0000000A;
+		}
+
+		.content .row {
+			background-color: #FFFFFF;
+		}
+
+		.content .bt {
+			border-top: 1px solid #d9d9d9; 
+		}
+
+		.content .bt2 {
+			border-top: 2px solid #c9c9c9; 
+		}
+
+		.content .bb {
+			border-bottom: 1px solid #d9d9d9; 
+		}
+		
+		.content .bl {
+			border-left: 1px solid #d9d9d9; 
+		}
+
+		.content .br {
+			border-right: 1px solid #d9d9d9; 
+		}
+
+		.content .heading {
+			font-weight: bold;
+			padding-left: 5px;
+			border-right: 1px solid #d9d9d9;
+			text-align: left;
+		}
+
+		.content .cell_title {
+			padding-left: 5px;
+			border-right: 1px solid #d9d9d9;
+			text-align: left;
+		}
+
+		.content .cell {
+			padding-right: 5px;
+			border-right: 1px solid #d9d9d9;
+			text-align: right;
+		}
+
+		.content .red {
+			background-color: #FFA9A98C;
+			border-top: 1px solid #a9a9a9;
+			border-right: 1px solid #a9a9a9;
+		}
+
+		.content .green {
+			background-color: #A0D09D8C;
+			border-top: 1px solid #a9a9a9;
+			border-right: 1px solid #a9a9a9;
+		}
+
     </style>
 </head>
 <body>
@@ -153,148 +213,149 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				<div style="flex: 1">&nbsp;</div>
 			</div>
 
-			<div class="content" style="display: grid; grid-template-columns: repeat(13, auto); width: 100%; margin-top: 20px; line-height: 2rem; overflow: hidden; overflow-y: auto">
+			<div class="content" style="display: grid; grid-template-columns: repeat(13, auto); width: 100%; margin-top: 20px; line-height: 1.9rem; overflow: hidden; overflow-y: auto">
+				
 				<!-- Last update -->
-				<div>Last Updated:</div>
+				<div class="row_title bt bl heading">Last Updated:</div>
 				<?php
 				foreach ($last_updated as $date)
 				{
-					echo '<div>' . $date . '</div>';
+					echo '<div class="row_title bt cell_title">' . $date . '</div>';
 				}
 				?>
-				<div>&nbsp;</div>
+				<div class="row_title bt br cell">&nbsp;</div>
 
 				<!-- Depot: TC -->
-				<div>Depot</div>
+				<div class="row_title bt bl heading">Depot</div>
 				<?php
 				foreach ($depot as $d)
 				{
-					echo '<div>' . $d . '</div>';
+					echo '<div class="row_title bt cell_title">' . $d . '</div>';
 				}
 				?>
-				<div>TOTAL</div>
+				<div class="row_title bt br cell">TOTAL</div>
 
 				<!-- Active drivers -->
-				<div>Active Drivers</div>
+				<div class="row bt bl heading">Active Drivers</div>
 				<?php
 				foreach ($active_drivers as $ad)
 				{
-					echo '<div>' . $ad . '</div>';
+					echo '<div class="row bt cell">' . $ad . '</div>';
 				}
 				?>
 				
 				<!-- Training -->
-				<div>Training</div>
+				<div class="row bt bl heading">Training</div>
 				<?php
 				foreach ($training as $t)
 				{
-					echo '<div>' . $t . '</div>';
+					echo '<div class="row bt cell">' . $t . '</div>';
 				}
 				?>
 
 				<!-- Old contrcts -->
-				<div>Old Contracts</div>
+				<div class="row bt bl heading">Old Contracts</div>
 				<?php
 				foreach ($old_contracts as $oc)
 				{
-					echo '<div>' . $oc . '</div>';
+					echo '<div class="row bt cell">' . $oc . '</div>';
 				}
 				?>
 
 				<!-- Completed Training/Passed -->
-				<div>Completed Training/Passed</div>
+				<div class="row bt bl heading">Completed Training/Passed</div>
 				<?php
 				foreach ($completed_training as $ct)
 				{
-					echo '<div>' . $ct . '</div>';
+					echo '<div class="row bt cell">' . $ct . '</div>';
 				}
 				?>
 
 				<!-- Dismissed -->
-				<div>Dismissed</div>
+				<div class="row bt bl heading">Dismissed</div>
 				<?php
 				foreach ($dismissed as $d)
 				{
-					echo '<div>' . $d . '</div>';
+					echo '<div class="row bt cell">' . $d . '</div>';
 				}
 				?>
 
 				<!-- Resigned -->
-				<div>Resigned</div>
+				<div class="row bt bl heading">Resigned</div>
 				<?php
 				foreach ($resigned as $r)
 				{
-					echo '<div>' . $r . '</div>';
+					echo '<div class="row bt cell">' . $r . '</div>';
 				}
 				?>
 
 				<!-- Able to schedule: TC -->
-				<div>Able To Schedule</div>
+				<div class="row_title bt bl heading">Able To Schedule</div>
 				<?php
 				foreach ($tot_able_to_schedule as $tot)
 				{
-					echo '<div>' . $tot . '</div>';
+					echo '<div class="row_title bt cell">' . $tot . '</div>';
 				}
 				?>
 
 				<!-- Not scheduled in 72 hours: TC -->
-				<div>Not scheduled in 72 hours</div>
+				<div class="row_title bt bl heading">Not scheduled in 72 hours</div>
 				<?php
 				foreach ($not_scheduled_in_72_hours as $ns)
 				{
-					echo '<div>' . $ns . '</div>';
+					echo '<div class="row_title bt cell">' . $ns . '</div>';
 				}
 				?>
 
 				<!-- Minimum Drivers Needed -->
-				<div>Minimum Drivers Needed</div>
+				<div class="row bt bl heading">Minimum Drivers Needed</div>
 				<?php
 				foreach ($min_drivers_needed as $mdn)
 				{
-					echo '<div>' . $mdn . '</div>';
+					echo '<div class="row bt cell">' . $mdn . '</div>';
 				}
 				?>
 
 				<!-- Minimum Drivers Needed - 5% -->
-				<div>Minimum Drivers Needed - 5%</div>
+				<div class="row bt bl heading">Minimum Drivers Needed - 5%</div>
 				<?php
 				foreach ($min_drivers_5 as $mdn5)
 				{
-					echo '<div>' . number_format($mdn5, 0) . '</div>';
+					echo '<div class="row bt cell">' . number_format($mdn5, 0) . '</div>';
 				}
 				?>
 
 				<!-- Minimum Drivers Needed - 10% -->
-				<div>Minimum Drivers Needed - 10%</div>
+				<div class="row bt bl heading">Minimum Drivers Needed - 10%</div>
 				<?php
 				foreach ($min_drivers_10 as $mdn10)
 				{
-					echo '<div>' . number_format($mdn10, 0) . '</div>';
+					echo '<div class="row bt cell">' . number_format($mdn10, 0) . '</div>';
 				}
 				?>
 
 				<!-- Minimum Drivers Needed - 15% -->
-				<div>Minimum Drivers Needed - 15%</div>
+				<div class="row bt bl heading">Minimum Drivers Needed - 15%</div>
 				<?php
 				foreach ($min_drivers_15 as $mdn15)
 				{
-					echo '<div>' . number_format($mdn15, 0) . '</div>';
+					echo '<div class="row bt cell">' . number_format($mdn15, 0) . '</div>';
 				}
 				?>
 
 				<!-- Total Trips -->
-				<div>Total Trips</div>
+				<div class="row_title bt bl heading">Total Trips</div>
 				<?php
 				$tot_total_trips = array_sum($total_trips);
 				foreach ($total_trips as $tt)
 				{
-					echo '<div>' . $tt . '</div>';
+					echo '<div class="row_title bt cell">' . $tt . '</div>';
 				}
 				?>
-				<div><?php echo $tot_total_trips; ?></div>
+				<div class="row_title bt br cell"><?php echo $tot_total_trips; ?></div>
 
 				<!-- Still need - MIN -->
-				<div>Still need - MIN</div>
+				<div class="row bt bl heading">Still need - MIN</div>
 				<?php
 				$still_need_min = array();
 				$tot_still_need_min = 0;
@@ -304,13 +365,27 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 					$tot_still_need_min += $tot;
 					$still_need_min[] = $tot;
 
-					echo '<div>' . $tot . '</div>';
+					if ($tot < 0)
+					{
+						echo '<div class="row bt cell red">' . $tot . '</div>';
+					}
+					else
+					{
+						echo '<div class="row bt cell green">' . $tot . '</div>';
+					}
+				}
+				if ($tot_still_need_min < 0)
+				{
+					echo '<div class="row bt cell red">' . number_format($tot_still_need_min, 0) . '</div>';
+				}
+				else
+				{
+					echo '<div class="row bt cell green">' . number_format($tot_still_need_min, 0) . '</div>';
 				}
 				?>
-				<div><?php echo $tot_still_need_min; ?></div>
 
 				<!-- Still need - 5% -->
-				<div>Still need - 5%</div>
+				<div class="row bt bl heading">Still need - 5%</div>
 				<?php
 				$still_need_5 = array();
 				$tot_still_need_5 = 0;
@@ -321,13 +396,27 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 					$tot_still_need_5 += $tot;
 					$still_need_5[] = $tot;
 
-					echo '<div>' . number_format($tot, 0) . '</div>';
+					if ($tot < 0)
+					{
+						echo '<div class="row bt cell red">' . number_format($tot, 0) . '</div>';
+					}
+					else
+					{
+						echo '<div class="row bt cell green">' . number_format($tot, 0) . '</div>';
+					}
+				}
+				if ($tot_still_need_5 < 0)
+				{
+					echo '<div class="row bt cell red">' . number_format($tot_still_need_5, 0) . '</div>';
+				}
+				else
+				{
+					echo '<div class="row bt cell green">' . number_format($tot_still_need_5, 0) . '</div>';
 				}
 				?>
-				<div><?php echo $tot_still_need_5; ?></div>
 
 				<!-- Still need - 10% -->
-				<div>Still need - 10%</div>
+				<div class="row bt bl heading">Still need - 10%</div>
 				<?php
 				$still_need_10 = array();
 				$tot_still_need_10 = 0;
@@ -338,13 +427,27 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 					$tot_still_need_10 += $tot;
 					$still_need_10[] = $tot;
 					
-					echo '<div>' . number_format($tot, 0) . '</div>';
+					if ($tot < 0)
+					{
+						echo '<div class="row bt cell red">' . number_format($tot, 0) . '</div>';
+					}
+					else
+					{
+						echo '<div class="row bt cell green">' . number_format($tot, 0) . '</div>';
+					}
+				}
+				if ($tot_still_need_10 < 0)
+				{
+					echo '<div class="row bt cell red">' . number_format($tot_still_need_10, 0) . '</div>';
+				}
+				else
+				{
+					echo '<div class="row bt cell green">' . number_format($tot_still_need_10, 0) . '</div>';
 				}
 				?>
-				<div><?php echo $tot_still_need_10; ?></div>
 
 				<!-- Still need - 15% -->
-				<div>Still need - 15%</div>
+				<div class="row bt bl heading">Still need - 15%</div>
 				<?php
 				$still_need_15 = array();
 				$tot_still_need_15 = 0;
@@ -355,22 +458,36 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 					$tot_still_need_15 += $tot;
 					$still_need_15[] = $tot;
 
-					echo '<div>' . number_format($tot, 0) . '</div>';
+					if ($tot < 0)
+					{
+						echo '<div class="row bt cell red">' . number_format($tot, 0) . '</div>';
+					}
+					else
+					{
+						echo '<div class="row bt cell green">' . number_format($tot, 0) . '</div>';
+					}
+				}
+				if ($tot_still_need_15 < 0)
+				{
+					echo '<div class="row bt cell red">' . number_format($tot_still_need_15, 0) . '</div>';
+				}
+				else
+				{
+					echo '<div class="row bt cell green">' . number_format($tot_still_need_15, 0) . '</div>';
 				}
 				?>
-				<div><?php echo $tot_still_need_15; ?></div>
 
 				<!-- Class training: TC -->
-				<div>Class Training</div>
+				<div class="row_title bt bl heading">Class Training</div>
 				<?php
 				foreach ($class_training as $ct)
 				{
-					echo '<div>' . $ct . '</div>';
+					echo '<div class="row_title bt cell">' . $ct . '</div>';
 				}
 				?>
 
 				<!-- Status - MIN -->
-				<div>Status - MIN</div>
+				<div class="row bt bl heading">Status - MIN</div>
 				<?php
 				$tot_status_min = 0;
 				$status_min = array();
@@ -382,13 +499,27 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 					$tot_status_min += $tot;
 					$status_min[] = $tot;
 
-					echo '<div>' . number_format($tot, 0) . '</div>';
+					if ($tot < 0)
+					{
+						echo '<div class="row bt cell red">' . number_format($tot, 0) . '</div>';
+					}
+					else
+					{
+						echo '<div class="row bt cell green">' . number_format($tot, 0) . '</div>';
+					}
+				}
+				if ($tot_status_min < 0)
+				{
+					echo '<div class="row bt cell red">' . number_format($tot_status_min, 0) . '</div>';
+				}
+				else
+				{
+					echo '<div class="row bt cell green">' . number_format($tot_status_min, 0) . '</div>';
 				}
 				?>
-				<div><?php echo $tot_status_min; ?></div>
 
 				<!-- Status - 5% -->
-				<div>Status - 5%</div>
+				<div class="row bt bl heading">Status - 5%</div>
 				<?php
 				$status_5 = array();
 				$tot_status_5 = 0;
@@ -400,13 +531,27 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 					$tot_status_5 += $tot;
 					$status_5[] = $tot;
 
-					echo '<div>' . number_format($tot, 0) . '</div>';
+					if ($tot < 0)
+					{
+						echo '<div class="row bt cell red">' . number_format($tot, 0) . '</div>';
+					}
+					else
+					{
+						echo '<div class="row bt cell green">' . number_format($tot, 0) . '</div>';
+					}
+				}
+				if ($tot_status_5 < 0)
+				{
+					echo '<div class="row bt cell red">' . number_format($tot_status_5, 0) . '</div>';
+				}
+				else
+				{
+					echo '<div class="row bt cell green">' . number_format($tot_status_5, 0) . '</div>';
 				}
 				?>
-				<div><?php echo $tot_status_5; ?></div>
 
 				<!-- Status - 10% -->
-				<div>Status - 10%</div>
+				<div class="row bt bl heading">Status - 10%</div>
 				<?php
 				$status_10 = array();
 				$tot_status_10 = 0;
@@ -418,13 +563,27 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 					$tot_status_10 += $tot;
 					$status_10[] = $tot;
 
-					echo '<div>' . number_format($tot, 0) . '</div>';
+					if ($tot < 0)
+					{
+						echo '<div class="row bt cell red">' . number_format($tot, 0) . '</div>';
+					}
+					else
+					{
+						echo '<div class="row bt cell green">' . number_format($tot, 0) . '</div>';
+					}
+				}
+				if ($tot_status_10 < 0)
+				{
+					echo '<div class="row bt cell red">' . number_format($tot_status_10, 0) . '</div>';
+				}
+				else
+				{
+					echo '<div class="row bt cell green">' . number_format($tot_status_10, 0) . '</div>';
 				}
 				?>
-				<div><?php echo $tot_status_10; ?></div>
 
 				<!-- Status - 15% -->
-				<div>Status - 15%</div>
+				<div class="row bt bl heading">Status - 15%</div>
 				<?php
 				$status_15 = array();
 				$tot_status_15 = 0;
@@ -436,40 +595,54 @@ $cvs = array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 					$tot_status_15 += $tot;
 					$status_15[] = $tot;
 
-					echo '<div>' . number_format($tot, 0) . '</div>';
+					if ($tot < 0)
+					{
+						echo '<div class="row bt cell red">' . number_format($tot, 0) . '</div>';
+					}
+					else
+					{
+						echo '<div class="row bt cell green">' . number_format($tot, 0) . '</div>';
+					}
+				}
+				if ($tot_status_15 < 0)
+				{
+					echo '<div class="row bt cell red">' . number_format($tot_status_15, 0) . '</div>';
+				}
+				else
+				{
+					echo '<div class="row bt cell green">' . number_format($tot_status_15, 0) . '</div>';
 				}
 				?>
-				<div><?php echo $tot_status_15; ?></div>
 
 				<!-- K53 -->
-				<div>K53</div>
+				<div class="row bt2 bl heading">K53</div>
 				<?php
 				foreach ($k53 as $k)
 				{
-					echo '<div>' . $k . '</div>';
+					echo '<div class="row bt2 cell">' . $k . '</div>';
 				}
 				?>
-				<div><?php echo array_sum($k53); ?></div>
+				<div class="row bt2 cell"><?php echo array_sum($k53); ?></div>
 
 				<!-- Interview -->
-				<div>Interview</div>
+				<div class="row bt bl heading">Interview</div>
 				<?php
 				foreach ($interview as $i)
 				{
-					echo '<div>' . $i . '</div>';
+					echo '<div class="row bt cell">' . $i . '</div>';
 				}
 				?>
-				<div><?php echo array_sum($interview); ?></div>
+				<div class="row bt cell"><?php echo array_sum($interview); ?></div>
 
 				<!-- CVs in hand -->
-				<div>CVs in hand</div>
+				<div class="row bt bl bb heading">CVs in hand</div>
 				<?php
 				foreach ($cvs as $c)
 				{
-					echo '<div>' . $c . '</div>';
+					echo '<div class="row bt bb cell">' . $c . '</div>';
 				}
 				?>
-				<div><?php echo array_sum($cvs); ?></div>
+				<div class="row bt bb cell"><?php echo array_sum($cvs); ?></div>
 			</div>	
 				
 
