@@ -2,18 +2,43 @@
 require('Dashboard_model.php');
 $dashboard_model = new Dashboard_model();
 
-$depot_totals = $dashboard_model->getDepotTotals(20241101);
+// Set page date
+if (isset($_POST['month']))
+{
+	$month = $_POST['month'];
+}
+else
+{
+	$month = date('Ym01');
+}
 
-// Line 1: Last Updated => From [Month] dropdowm 
-$last_updated = array("2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20");
+$data = $dashboard_model->getDepotTotals($month);
+$depot_totals = $data['depot_totals'];
+$result = $data['result'];
+
+if ($result == 1)
+{
+	$manual_input_msg = "OK";
+} 
+else 
+{
+	$manual_input_msg = "No data found for: Old contacts, Completed training/passed, Dismissed, Resigned, Class training, K53, Interview and CVs in hand";
+}
+
+
+$drift_data = $dashboard_model->getDriftData($month);
+
+
+// ##X## Line 1: Last Updated => From [Month] dropdowm 
+$last_updated = $drift_data['last_updated'];
 
 // Line 2: Depot => Static
-$depot = array("BLM", "CA", "CBS", "DBN", "GAP", "MAP", "MTH", "PE", "PTA", "UPT", "WHK");
+$depot = array("BLM", "CA", "CBS", "DBN", "GAB", "MAP", "MTH", "PE", "PTA", "UPT", "WHK");
 
-// Line 3: Active drivers
+// ##X## Line 3: Active drivers
 $active_drivers = array(45, 218, 17, 92, 4, 14, 6, 35, 230, 11, 24, 696);
 
-// Line 4: Training trips => DRIFT_DEPOT_TOTALS.TRAINING_TRIPS
+// ##X## Line 4: Training trips => DRIFT_DEPOT_TOTALS.TRAINING_TRIPS
 $training = array();
 foreach ($depot_totals as $depot_total) 
 {
@@ -55,16 +80,17 @@ $resigned[] = array_sum($resigned);
 
 // Line 9: Able to schedule
 $tot_able_to_schedule = array();
-for ($i = 0; $i < count($active_drivers); $i++) 
+for ($i = 0; $i < count($depot) + 1; $i++) 
 {
-    $tot_able_to_schedule[$i] = $active_drivers[$i] + $training[$i] + $old_contracts[$i] + $completed_training[$i] + $dismissed[$i] + $resigned[$i];
+	$tot_able_to_schedule[$i] = $active_drivers[$i] + $training[$i] + $old_contracts[$i] + $completed_training[$i] + $dismissed[$i] + $resigned[$i];
 }
 
-// Line 10: Not scheduled in 72 hours
+// ##X2## Line 10: Not scheduled in 72 hours
 $not_scheduled_in_72_hours = array(1, 9, 0, 2, 0, 0, 0, 4, 9, 0, 2, 27);
 
-// Line 11: Minimum drivers needed
-$min_drivers_needed = array(34, 227, 25, 112, 3, 15, 4, 42, 222, 9, 27, 720);
+// ##X## Line 11: Minimum drivers needed
+// $min_drivers_needed = array(34, 227, 25, 112, 3, 15, 4, 42, 222, 9, 27, 720);
+$min_drivers_needed = $drift_data['min_drivers_needed'];
 
 // Line 12: Minimum drivers needed - 5%
 $min_drivers_5 = array();
@@ -84,8 +110,9 @@ foreach ($min_drivers_needed as $value) {
     $min_drivers_15[] = $value * 1.15;
 }
 
-// Line 15: Total trips
-$total_trips = array(362, 1575, 174, 848, 58, 167, 0, 322, 2114, 62, 239);
+// ##X## Line 15: Total trips
+// $total_trips = array(362, 1575, 174, 848, 58, 167, 0, 322, 2114, 62, 239);
+$total_trips = $drift_data['total_trips'];
 
 // Line 16 - 19: Still need - MIN, 5%, 10%, 15% => Calculations
 
@@ -117,6 +144,15 @@ foreach ($depot_totals as $depot_total)
 	$cvs[] = $depot_total['CVS'];
 }
 $cvs[] = array_sum($cvs);
+
+function arr_last_updated()
+{
+	global $dashboard_model, $month;
+
+	$data = $dashboard_model->getLastUpdated($month);
+
+	return $data;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -273,7 +309,7 @@ $cvs[] = array_sum($cvs);
         <div class="content_container">
 
 			<div class="title"><pre>Drift Dashboard</pre></div>
-
+			<form action="index.php" method="post">
 			<div style="display: flex; flex-direction: row; align-items: center; column-gap: 10px;">
 				<div style="">Select date</div>
 				<?php
@@ -285,21 +321,24 @@ $cvs[] = array_sum($cvs);
 					echo '<select name="month" id="month" style="padding: 5px; border-radius: 5px;">';
 					for ($i = -$back; $i <= $forward; $i++) 
 					{
+						$value = date('Ym01', strtotime("$i months"));
 						$date = date('Y-m-01', strtotime("$i months"));
-						if ($date == $now)
+						if ($value == $month)
 						{
-							echo '<option value="' . $date . '" selected>' . $date . '</option>';
+							echo '<option value="' . $value . '" selected>' . $date . '</option>';
 						}
 						else
 						{
-							echo '<option value="' . $date . '">' . $date . '</option>';
+							echo '<option value="' . $value . '">' . $date . '</option>';
 						}
 					}
 					echo '</select>';
 				echo '</div>';
 				?>
-				<div style="flex: 1">&nbsp;</div>
+				<div><input type="submit" value="SUBMIT" style="background-color: #EC7A31; padding: 7px 10px; color: white; border-radius: 5px; border: 0;" /></div>
+				<div style="flex: 1"><?php echo $manual_input_msg; ?></div>
 			</div>
+			</form>
 
 			<div class="content" style="display: grid; grid-template-columns: repeat(13, auto); width: 100%; margin-top: 20px; line-height: 1.9rem; overflow: hidden; overflow-y: auto">
 				
@@ -454,66 +493,46 @@ $cvs[] = array_sum($cvs);
 				<!-- Minimum Drivers Needed -->
 				<div class="row bt bl heading">Minimum Drivers Needed</div>
 				<?php
-				foreach ($min_drivers_needed as $index => $mdn)
+				$tot_min_drivers_needed = array_sum($min_drivers_needed);
+				foreach ($min_drivers_needed as $mdn)
 				{
-					if ($index == count($active_drivers) - 1)
-					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $mdn . '</div>';
-					}
-					else
-					{
-						echo '<div class="row bt cell">' . $mdn . '</div>';
-					}
+					echo '<div class="row bt cell">' . $mdn . '</div>';
 				}
 				?>
+				<div class="row bt br cell" style="border-left: 2px solid #454545;"><?php echo $tot_min_drivers_needed; ?></div>
 
 				<!-- Minimum Drivers Needed - 5% -->
 				<div class="row bt bl heading">Minimum Drivers Needed - 5%</div>
 				<?php
-				foreach ($min_drivers_5 as $index =>$mdn5)
+				$tot_min_drivers_needed_5 = array_sum($min_drivers_5);
+				foreach ($min_drivers_5 as $mdn5)
 				{
-					if ($index == count($active_drivers) - 1)
-					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . number_format($mdn5, 0) . '</div>';
-					}
-					else
-					{
-						echo '<div class="row bt cell">' . number_format($mdn5, 0) . '</div>';
-					}
+					echo '<div class="row bt cell">' . number_format($mdn5, 0) . '</div>';
 				}
 				?>
+				<div class="row bt br cell" style="border-left: 2px solid #454545;"><?php echo number_format($tot_min_drivers_needed_5, 0); ?></div>
 
 				<!-- Minimum Drivers Needed - 10% -->
 				<div class="row bt bl heading">Minimum Drivers Needed - 10%</div>
 				<?php
-				foreach ($min_drivers_10 as $index => $mdn10)
+				$tot_min_drivers_needed_10 = array_sum($min_drivers_10);
+				foreach ($min_drivers_10 as $mdn10)
 				{
-					if ($index == count($active_drivers) - 1)
-					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . number_format($mdn10, 0) . '</div>';
-					}
-					else
-					{
-						echo '<div class="row bt cell">' . number_format($mdn10, 0) . '</div>';
-					}
+					echo '<div class="row bt cell">' . number_format($mdn10, 0) . '</div>';
 				}
 				?>
+				<div class="row bt br cell" style="border-left: 2px solid #454545;"><?php echo number_format($tot_min_drivers_needed_10, 0); ?></div>
 
 				<!-- Minimum Drivers Needed - 15% -->
 				<div class="row bt bl heading">Minimum Drivers Needed - 15%</div>
 				<?php
-				foreach ($min_drivers_15 as $index => $mdn15)
+				$tot_min_drivers_needed_15 = array_sum($min_drivers_15);
+				foreach ($min_drivers_15 as $mdn15)
 				{
-					if ($index == count($active_drivers) - 1)
-					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . number_format($mdn15, 0) . '</div>';
-					}
-					else
-					{
-						echo '<div class="row bt cell">' . number_format($mdn15, 0) . '</div>';
-					}
+					echo '<div class="row bt cell">' . number_format($mdn15, 0) . '</div>';
 				}
 				?>
+				<div class="row bt br cell" style="border-left: 2px solid #454545;"><?php echo number_format($tot_min_drivers_needed_15, 0); ?></div>
 
 				<!-- Total Trips -->
 				<div class="row_title bt bl heading">Total Trips</div>
