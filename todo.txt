@@ -119,3 +119,8 @@ Bulletin
 2265 3744 = 1479
 
 3518
+
+02-12-2024
+√ Active drivers
+√ Training
+- Not scheduled in 72 hours with hover data
