@@ -85,7 +85,7 @@ function getRecord()
 	{
 		$insert_id = addRecord($depot, $current_month);
 
-		$record = array('ID' => $insert_id, 'DEPOT' => $depot, 'FOR_MONTH' => $current_month, 'TRAINING_TRIPS' => 0, 'OLD_CONTRACTS' => 0, 'COMPLETED_TRAINING' => 0, 'DISMISSED' => 0, 'RESIGNED' => 0, 'CLASS_TRAINING' => 0, 'INTERVIEW' => 0, 'CVS' => 0);
+		$record = array('ID' => $insert_id, 'DEPOT' => $depot, 'FOR_MONTH' => $current_month, 'TRAINING_TRIPS' => 0, 'OLD_CONTRACTS' => 0, 'COMPLETED_TRAINING' => 0, 'DISMISSED' => 0, 'RESIGNED' => 0, 'CLASS_TRAINING' => 0, 'INTERVIEW' => 0, 'CVS' => 0, 'K53' => 0);
 	}
 
 	oci_close($conn);
@@ -100,9 +100,9 @@ function addRecord($depot, $current_month)
 
 	$sql = "
 	INSERT INTO 
-		DRIFT_DEPOT_TOTALS (ID, DEPOT, FOR_MONTH, TRAINING_TRIPS, OLD_CONTRACTS, COMPLETED_TRAINING, DISMISSED, RESIGNED, CLASS_TRAINING, INTERVIEW, CVS) 
+		DRIFT_DEPOT_TOTALS (ID, DEPOT, FOR_MONTH, TRAINING_TRIPS, OLD_CONTRACTS, COMPLETED_TRAINING, DISMISSED, RESIGNED, CLASS_TRAINING, INTERVIEW, CVS, K53) 
 	VALUES 
-		(DRIFT_DEPOT_TOTALS_ID_SEQ.NEXTVAL, :depot, :current_month, 0, 0, 0, 0, 0, 0, 0, 0)
+		(DRIFT_DEPOT_TOTALS_ID_SEQ.NEXTVAL, :depot, :current_month, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 	RETURNING ID INTO :insert_id
 		";
 	$cursor = oci_parse($conn, $sql);
@@ -238,6 +238,10 @@ getRecord();
 				<div class="title">CVs In Hand</div>
 				<div><input type="number" id="cvs" class="form_input" value="<?php echo $record['CVS']; ?>" onchange="update(this.id)" /></div>
 			</div>
+			<div class="form_row">
+				<div class="title">K53</div>
+				<div><input type="number" id="k53" class="form_input" value="<?php echo $record['K53']; ?>" onchange="update(this.id)" /></div>
+			</div>
 		</div>
 	</div>
 	<script>
@@ -263,6 +267,7 @@ getRecord();
 				document.getElementById('class_training').value = record.CLASS_TRAINING;
 				document.getElementById('interview').value = record.INTERVIEW;
 				document.getElementById('cvs').value = record.CVS;
+				document.getElementById('k53').value = record.K53;
 			});
 		}
 

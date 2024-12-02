@@ -73,6 +73,7 @@ class Dashboard_model
 					'CLASS_TRAINING' => 0,
 					'INTERVIEW' => 0,
 					'CVS' => 0,
+					'K53' => 0,
 					'FOUND'	=> 0
 				);
 				$result[] = $depot;

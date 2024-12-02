@@ -1,9 +1,19 @@
 <?php
-// Get logged in user's depot
+ob_start();
+require_once ("/usr/local/www/pages/php3/oracle.inc");
+require_once ("/usr/local/www/pages/php3/misc.inc");
+require_once ("/usr/local/www/pages/php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+
+$_check_gets_return = true; 
+
+// **** HARD CODED: PLEASE CHANGE => Get logged in user's depot ***
 $depot = 'CA';
 $current_month = date('Ym01');
 // $current_month = '';
-// $depot_totals_id = 1;
+
 $record = array();
 
 if (isset($_GET['action']))
@@ -42,34 +52,9 @@ if (isset($_GET['action']))
 	}
 }
 
-function oci_conn()
-{
-	$host = 'localhost';
-	$port = '1521';
-	$sid = 'XE';
-	$username = 'SYSTEM';
-	$password = 'dontletmedown3';
-
-	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
-
-	if (!$conn) 
-	{
-		$e = oci_error();
-		exit;
-	} 
-	else 
-	{
-		// echo "Connection succeeded";
-	}
-
-	return $conn;
-}
-
 function getRecord()
 {
-	global $record, $depot, $current_month;
-
-	$conn = oci_conn();
+	global $conn, $record, $depot, $current_month;
 
 	$sql = "SELECT * FROM DRIFT_DEPOT_TOTALS WHERE DEPOT = '$depot' AND FOR_MONTH = $current_month";
 		
@@ -85,7 +70,7 @@ function getRecord()
 	{
 		$insert_id = addRecord($depot, $current_month);
 
-		$record = array('ID' => $insert_id, 'DEPOT' => $depot, 'FOR_MONTH' => $current_month, 'TRAINING_TRIPS' => 0, 'OLD_CONTRACTS' => 0, 'COMPLETED_TRAINING' => 0, 'DISMISSED' => 0, 'RESIGNED' => 0, 'CLASS_TRAINING' => 0, 'INTERVIEW' => 0, 'CVS' => 0);
+		$record = array('ID' => $insert_id, 'DEPOT' => $depot, 'FOR_MONTH' => $current_month, 'TRAINING_TRIPS' => 0, 'OLD_CONTRACTS' => 0, 'COMPLETED_TRAINING' => 0, 'DISMISSED' => 0, 'RESIGNED' => 0, 'CLASS_TRAINING' => 0, 'INTERVIEW' => 0, 'CVS' => 0, 'K53' => 0);
 	}
 
 	oci_close($conn);
@@ -95,14 +80,13 @@ function getRecord()
 
 function addRecord($depot, $current_month)
 {
-	// OCI
-	$conn = oci_conn();
+	global $conn;
 
 	$sql = "
 	INSERT INTO 
-		DRIFT_DEPOT_TOTALS (ID, DEPOT, FOR_MONTH, TRAINING_TRIPS, OLD_CONTRACTS, COMPLETED_TRAINING, DISMISSED, RESIGNED, CLASS_TRAINING, INTERVIEW, CVS) 
+		DRIFT_DEPOT_TOTALS (ID, DEPOT, FOR_MONTH, TRAINING_TRIPS, OLD_CONTRACTS, COMPLETED_TRAINING, DISMISSED, RESIGNED, CLASS_TRAINING, INTERVIEW, CVS, K53) 
 	VALUES 
-		(DRIFT_DEPOT_TOTALS_ID_SEQ.NEXTVAL, :depot, :current_month, 0, 0, 0, 0, 0, 0, 0, 0)
+		(DRIFT_DEPOT_TOTALS_ID_SEQ.NEXTVAL, :depot, :current_month, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 	RETURNING ID INTO :insert_id
 		";
 	$cursor = oci_parse($conn, $sql);
@@ -122,7 +106,7 @@ function addRecord($depot, $current_month)
 
 function updateDepotTotals($depot_totals_id, $month, $data_type, $value)
 {
-	$conn = oci_conn();
+	global $conn;
 
 	$sql = "UPDATE DRIFT_DEPOT_TOTALS SET $data_type = $value WHERE ID = $depot_totals_id";
 
@@ -238,10 +222,14 @@ getRecord();
 				<div class="title">CVs In Hand</div>
 				<div><input type="number" id="cvs" class="form_input" value="<?php echo $record['CVS']; ?>" onchange="update(this.id)" /></div>
 			</div>
+			<div class="form_row">
+				<div class="title">K53</div>
+				<div><input type="number" id="k53" class="form_input" value="<?php echo $record['K53']; ?>" onchange="update(this.id)" /></div>
+			</div>
 		</div>
 	</div>
 	<script>
-		const baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/drift/";
+		const baseUrl = window.location.protocol + "//" + window.location.hostname + "/move/drift/";
 
 		function selectMonth()
 		{
@@ -263,6 +251,7 @@ getRecord();
 				document.getElementById('class_training').value = record.CLASS_TRAINING;
 				document.getElementById('interview').value = record.INTERVIEW;
 				document.getElementById('cvs').value = record.CVS;
+				document.getElementById('k53').value = record.K53;
 			});
 		}
 

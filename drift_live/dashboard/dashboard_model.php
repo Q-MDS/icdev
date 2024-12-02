@@ -1,34 +1,22 @@
 <?php
+ob_start();
+require_once ("/usr/local/www/pages/php3/oracle.inc");
+require_once ("/usr/local/www/pages/php3/misc.inc");
+require_once ("/usr/local/www/pages/php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+
 class Dashboard_model
 {
 	private $depot_totals;
+	private $conn;
 
 	public function __construct()
 	{
+		global $conn;
 		$this->depot_totals = array();
-	}
-
-	private function oci_conn()
-	{
-		$host = 'localhost';
-		$port = '1521';
-		$sid = 'XE';
-		$username = 'SYSTEM';
-		$password = 'dontletmedown3';
-	
-		$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
-	
-		if (!$conn) 
-		{
-			$e = oci_error();
-			exit;
-		} 
-		else 
-		{
-			// echo "Connection succeeded";
-		}
-	
-		return $conn;	
+		$this->conn = $conn;
 	}
 
 	public function getDepotTotals($month, $depot_list)
@@ -39,7 +27,7 @@ class Dashboard_model
 		$result = array();
 		// $month = 20241101;
 
-		$conn = $this->oci_conn();
+		$conn = $this->conn;
 
 		foreach ($depot_list as $depot)
 		{
@@ -99,7 +87,7 @@ class Dashboard_model
 
 		$depot = array("BLM", "CA", "CBS", "DBN", "GAB", "MAP", "MTH", "PE", "PTA", "UPT", "WHK");
 
-		$conn = $this->oci_conn();
+		$conn = $this->conn;
 		
 		$sql = "SELECT A.RUN_ID, A.DEPOT, A.LAST_GENERATED, B.DATE_RANGE_NAME, C.NAME, C.VALUE FROM DRIFT_RUN A LEFT JOIN DRIFT_DATE_RANGES B ON A.TIME_PERIOD = B.DATE_RANGE_SERIAL LEFT JOIN DRIFT_OUTPUT_LINES C ON A.RUN_ID = C.RUN_ID LEFT JOIN  (SELECT DEPOT, DATE_RANGE_NAME, MAX(A.LAST_GENERATED) LAST_GENERATED FROM DRIFT_RUN A LEFT JOIN DRIFT_DATE_RANGES B ON A.TIME_PERIOD = B.DATE_RANGE_SERIAL WHERE B.IS_CURRENT = 'Y' GROUP BY DEPOT, DATE_RANGE_NAME) D ON B.DATE_RANGE_NAME = D.DATE_RANGE_NAME AND A.LAST_GENERATED = D.LAST_GENERATED AND A.DEPOT = D.DEPOT WHERE B.IS_CURRENT = 'Y' AND D.DATE_RANGE_NAME IS NOT NULL";
 
@@ -298,7 +286,7 @@ class Dashboard_model
 		$data = array();
 		$active_drivers = array();
 
-		$conn = $this->oci_conn();
+		$conn = $this->conn;
 		
 		$sql = "SELECT CASE WHEN DEPOT = 'CHB' THEN 'BLM' ELSE DEPOT END DEPOT, COUNT(*) DRIVERS FROM HC_PEOPLE WHERE ACTIVE != 'N' AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%' AND DEPOT != 'GON' AND DEPOT != 'INC' AND DEPOT != 'XXX' GROUP BY CASE WHEN DEPOT = 'CHB' THEN 'BLM' ELSE DEPOT END";
 
@@ -342,7 +330,7 @@ class Dashboard_model
 		$data = array();
 		$training = array();
 
-		$conn = $this->oci_conn();
+		$conn = $this->conn;
 		
 		$sql = "SELECT
 			CASE WHEN DRIVER_DEPOT = 'CHB'
@@ -406,7 +394,7 @@ class Dashboard_model
 		$dormant_driver_counts = array();
 		$hover_data = array();
 
-		$conn = $this->oci_conn();
+		$conn = $this->conn;
 		
 		$sql = "SELECT DISTINCT
 			DEPOT,
@@ -486,7 +474,7 @@ class Dashboard_model
 	{
 		$data = array();
 
-		$conn = $this->oci_conn();
+		$conn = $this->conn;
 		
 		$sql = "SELECT DISTINCT
 			DEPOT,

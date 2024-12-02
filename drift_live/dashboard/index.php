@@ -1,5 +1,5 @@
 <?php
-require('Dashboard_model.php');
+require('dashboard_model.php');
 $dashboard_model = new Dashboard_model();
 
 /**
@@ -177,7 +177,12 @@ $class_training[] = array_sum($class_training);
  /**
  * Line 25: K53
  */
-$k53 = array(0, 10, 0, 0, 0, 0, 0, 10, 3, 0, 5);
+$k53 = array();
+foreach ($depot_totals as $depot_total) 
+{
+	$k53[] = $depot_total['K53'];
+}
+$k53[] = array_sum($k53);
 
 /**
  * Line 26: Interview => DRIFT_DEPOT_TOTALS.INTERVIEW
@@ -199,14 +204,14 @@ foreach ($depot_totals as $depot_total)
 }
 $cvs[] = array_sum($cvs);
 
-function arr_last_updated()
-{
-	global $dashboard_model, $month;
+// function arr_last_updated()
+// {
+// 	global $dashboard_model, $month;
 
-	$data = $dashboard_model->getLastUpdated($month);
+// 	$data = $dashboard_model->getLastUpdated($month);
 
-	return $data;
-}
+// 	return $data;
+// }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -924,12 +929,29 @@ function arr_last_updated()
 				<!-- K53 -->
 				<div class="row bt2 bl heading">K53</div>
 				<?php
-				foreach ($k53 as $k)
+				foreach ($k53 as $index => $k)
 				{
-					echo '<div class="row bt2 cell">' . $k . '</div>';
+					if ($index == count($active_drivers) - 1)
+					{
+						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $k . '</div>';
+					}
+					else
+					{
+						if ($index < 11)
+						{
+							$this_depot = $depot[$index];
+							if (in_array($this_depot, $result))
+							{
+								echo '<div class="row bt cell orange">' . $k . '</div>';
+							}
+							else 
+							{
+								echo '<div class="row bt cell">' . $k. '</div>';
+							}
+						}
+					}
 				}
 				?>
-				<div class="row bt2 cell" style="border-left: 2px solid #454545;"><?php echo array_sum($k53); ?></div>
 
 				<!-- Interview -->
 				<div class="row bt bl heading">Interview</div>
@@ -985,8 +1007,6 @@ function arr_last_updated()
 				}
 				?>
 			</div>	
-				
-
 		</div>
     </div>
 </body>
