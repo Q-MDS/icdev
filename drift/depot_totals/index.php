@@ -1,6 +1,31 @@
 <?php
-// Get logged in user's depot
-$depot = 'CA';
+if (isset($_GET['d'])) {
+	$params = base64_decode($_GET['d']);
+	$parts = explode('##', $params);
+	$depot = $parts[0];
+	$date = $parts[1];
+	$expires = $parts[2];
+
+	$today = time();
+
+	if ($today >= $date && $today <= $expires) {
+		echo "<p><i>This link expires on the " . date('Y-m-d', $expires) . "<i/></p><br/>";
+	} else {
+		echo "This link has expired";
+		die();
+	}
+} 
+else 
+{
+	if (!isset($_GET['action']))
+	{
+		echo "Invlaid URL";
+		die();
+	} 
+}
+
+
+// $depot = 'CA';
 $current_month = date('Ym01');
 // $current_month = '';
 // $depot_totals_id = 1;

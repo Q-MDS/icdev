@@ -9,8 +9,33 @@ if (!AllowedAccess("")) { Exit; };
 
 $_check_gets_return = true; 
 
+if (isset($_GET['d'])) {
+	$params = base64_decode($_GET['d']);
+	$parts = explode('##', $params);
+	$depot = $parts[0];
+	$date = $parts[1];
+	$expires = $parts[2];
+
+	$today = time();
+
+	if ($today >= $date && $today <= $expires) {
+		echo "<p><i>This link expires on the " . date('Y-m-d', $expires) . "<i/></p><br/>";
+	} else {
+		echo "This link has expired";
+		die();
+	}
+} 
+else 
+{
+	if (!isset($_GET['action']))
+	{
+		echo "Invlaid URL";
+		die();
+	} 
+}
+
 // **** HARD CODED: PLEASE CHANGE => Get logged in user's depot ***
-$depot = 'CA';
+// $depot = 'CA';
 $current_month = date('Ym01');
 // $current_month = '';
 

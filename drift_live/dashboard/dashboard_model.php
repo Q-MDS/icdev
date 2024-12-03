@@ -396,26 +396,52 @@ class Dashboard_model
 
 		$conn = $this->conn;
 		
-		$sql = "SELECT DISTINCT
+		// $sql = "SELECT DISTINCT
+		// 	DEPOT,
+		// 	COUNT(*) DORMANT_DRIVERS
+		// FROM HC_PEOPLE A
+		// LEFT JOIN 
+		// 	(SELECT DISTINCT
+		// 		SERIAL_NO
+		// 	FROM OPS_INFO 
+		// 	WHERE ENTRY_TYPE = 'o'
+		// 		AND TO_DATE(RUNDATE,'YYYYMMDD') > SYSDATE - 3
+		// 		AND TO_DATE(RUNDATE,'YYYYMMDD') <= SYSDATE) B
+		// 	ON A.PERSON_SERIAL = B.SERIAL_NO
+		// WHERE 
+		// 	ACTIVE != 'N'
+		// 	AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%'
+		// 	AND DEPOT != 'GON'
+		// 	AND DEPOT != 'INC'
+		// 	AND DEPOT != 'XXX'
+		// 	AND B.SERIAL_NO IS NULL
+		// GROUP BY DEPOT";
+
+		$sql = "SELECT
 			DEPOT,
 			COUNT(*) DORMANT_DRIVERS
-		FROM HC_PEOPLE A
-		LEFT JOIN 
+		FROM
+			(SELECT DISTINCT
+				DEPOT,
+				PERSON_SERIAL
+			FROM HC_PEOPLE A
+			WHERE
+				ACTIVE != 'N'
+				AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%'
+				AND DEPOT != 'GON'
+				AND DEPOT != 'INC'
+				AND DEPOT != 'XXX') A
+		LEFT JOIN
 			(SELECT DISTINCT
 				SERIAL_NO
-			FROM OPS_INFO 
+			FROM OPS_INFO
 			WHERE ENTRY_TYPE = 'o'
 				AND TO_DATE(RUNDATE,'YYYYMMDD') > SYSDATE - 3
 				AND TO_DATE(RUNDATE,'YYYYMMDD') <= SYSDATE) B
-			ON A.PERSON_SERIAL = B.SERIAL_NO
-		WHERE 
-			ACTIVE != 'N'
-			AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%'
-			AND DEPOT != 'GON'
-			AND DEPOT != 'INC'
-			AND DEPOT != 'XXX'
-			AND B.SERIAL_NO IS NULL
-		GROUP BY DEPOT";
+		ON A.PERSON_SERIAL = B.SERIAL_NO
+			WHERE B.SERIAL_NO IS NULL
+		GROUP BY DEPOT
+		";
 
 		$stid = oci_parse($conn, $sql);
 
@@ -458,10 +484,11 @@ class Dashboard_model
 				if ($row['DEPOT'] == $depot)
 				{
 					$driver = $row['DRIVER'];
-					$string .= $driver . '<br>';
-					$hover[$depot] = $driver;
+					$string .= $driver . ', ';
+					// $hover[$depot] = $driver;
 				}
 			}
+			$hover[$depot] = $string;
 		}
 
 		$ret['dormant_drivers'] = $dormant_drivers;
@@ -476,34 +503,55 @@ class Dashboard_model
 
 		$conn = $this->conn;
 		
+		// $sql = "SELECT DISTINCT
+		// 	DEPOT,
+		// 	UPPER(STAFFNO || ' - ' || NAME || ' ' || SURNAME) DRIVER,
+		// 	TO_DATE(MAX_RUNDATE,'YYYYMMDD') LAST_SCHEDULED
+		// FROM HC_PEOPLE A
+		// LEFT JOIN 
+		// 	(SELECT DISTINCT
+		// 		SERIAL_NO
+		// 	FROM OPS_INFO 
+		// 	WHERE ENTRY_TYPE = 'o'
+		// 		AND TO_DATE(RUNDATE,'YYYYMMDD') > SYSDATE - 3
+		// 		AND TO_DATE(RUNDATE,'YYYYMMDD') <= SYSDATE) B
+		// 	ON A.PERSON_SERIAL = B.SERIAL_NO
+		// LEFT JOIN
+		// 	(SELECT
+		// 		SERIAL_NO,
+		// 		MAX(RUNDATE) MAX_RUNDATE
+		// 	FROM OPS_INFO
+		// 	WHERE ENTRY_TYPE = 'o'
+		// 	GROUP BY SERIAL_NO) C
+		// 	ON A.PERSON_SERIAL = C.SERIAL_NO
+		// WHERE 
+		// 	ACTIVE != 'N'
+		// 	AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%'
+		// 	AND DEPOT != 'GON'
+		// 	AND DEPOT != 'INC'
+		// 	AND DEPOT != 'XXX'
+		// 	AND B.SERIAL_NO IS NULL";
+
 		$sql = "SELECT DISTINCT
 			DEPOT,
-			UPPER(STAFFNO || ' - ' || NAME || ' ' || SURNAME) DRIVER,
-			TO_DATE(MAX_RUNDATE,'YYYYMMDD') LAST_SCHEDULED
+			UPPER(STAFFNO || ' - ' || NAME || ' ' || SURNAME) DRIVER
 		FROM HC_PEOPLE A
-		LEFT JOIN 
+		LEFT JOIN
 			(SELECT DISTINCT
 				SERIAL_NO
-			FROM OPS_INFO 
+			FROM OPS_INFO
 			WHERE ENTRY_TYPE = 'o'
 				AND TO_DATE(RUNDATE,'YYYYMMDD') > SYSDATE - 3
 				AND TO_DATE(RUNDATE,'YYYYMMDD') <= SYSDATE) B
 			ON A.PERSON_SERIAL = B.SERIAL_NO
-		LEFT JOIN
-			(SELECT
-				SERIAL_NO,
-				MAX(RUNDATE) MAX_RUNDATE
-			FROM OPS_INFO
-			WHERE ENTRY_TYPE = 'o'
-			GROUP BY SERIAL_NO) C
-			ON A.PERSON_SERIAL = C.SERIAL_NO
-		WHERE 
+		WHERE
 			ACTIVE != 'N'
 			AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%'
 			AND DEPOT != 'GON'
 			AND DEPOT != 'INC'
 			AND DEPOT != 'XXX'
-			AND B.SERIAL_NO IS NULL";
+			AND B.SERIAL_NO IS NULL
+		";
 
 		$stid = oci_parse($conn, $sql);
 
