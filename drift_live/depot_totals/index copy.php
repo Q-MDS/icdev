@@ -9,7 +9,36 @@ if (!AllowedAccess("")) { Exit; };
 
 $_check_gets_return = true; 
 
-$depot = '';
+if (isset($_GET['d'])) {
+	$params = base64_decode($_GET['d']);
+	$parts = explode('##', $params);
+	$depot = $parts[0];
+	$date = $parts[1];
+	$expires = $parts[2];
+
+	$today = time();
+
+	if ($today >= $date && $today <= $expires) {
+		echo "<p><i>This link expires on the " . date('Y-m-d', $expires) . "<i/></p><br/>";
+	} else {
+		echo "This link has expired";
+		die();
+	}
+} 
+else 
+{
+	if (!isset($_GET['action']))
+	{
+		echo "Invlaid URL";
+		die();
+	} 
+}
+
+// **** HARD CODED: PLEASE CHANGE => Get logged in user's depot ***
+// $depot = 'CA';
+$current_month = date('Ym01');
+// $current_month = '';
+
 $record = array();
 
 if (isset($_GET['action']))
@@ -30,20 +59,6 @@ if (isset($_GET['action']))
 		updateDepotTotals($depot_totals_id, $month, $data_type, $data_value);
 		exit;
 	}
-
-	if ($action == 'select_depot')
-	{
-		global $depot;
-
-		$ajax_data = file_get_contents("php://input");
-		$json_data = json_decode($ajax_data);
-		$_check_gets_return = true;
-
-		$depot = $json_data->depot;
-
-		exit;
-	}
-
 	if ($action == "select_month")
 	{
 		global $current_month;
@@ -52,10 +67,9 @@ if (isset($_GET['action']))
 		$json_data = json_decode($ajax_data);
 		$_check_gets_return = true;
 		
-		$month = $json_data->month;
-		$depot = $json_data->depot;
+		$current_month = $json_data->month;
 
-		$record = getRecord($month, $depot);
+		$record = getRecord();
 
 		echo json_encode($record);
 
@@ -63,11 +77,11 @@ if (isset($_GET['action']))
 	}
 }
 
-function getRecord($month, $depot)
+function getRecord()
 {
-	global $conn, $record;
+	global $conn, $record, $depot, $current_month;
 
-	$sql = "SELECT * FROM DRIFT_DEPOT_TOTALS WHERE DEPOT = '$depot' AND FOR_MONTH = $month";
+	$sql = "SELECT * FROM DRIFT_DEPOT_TOTALS WHERE DEPOT = '$depot' AND FOR_MONTH = $current_month";
 		
 	$cursor = oci_parse($conn, $sql);
 	oci_execute($cursor);
@@ -79,9 +93,9 @@ function getRecord($month, $depot)
 
 	if (count($record) == 0)
 	{
-		$insert_id = addRecord($depot, $month);
+		$insert_id = addRecord($depot, $current_month);
 
-		$record = array('ID' => $insert_id, 'DEPOT' => $depot, 'FOR_MONTH' => $month, 'TRAINING_TRIPS' => 0, 'OLD_CONTRACTS' => 0, 'COMPLETED_TRAINING' => 0, 'DISMISSED' => 0, 'RESIGNED' => 0, 'CLASS_TRAINING' => 0, 'INTERVIEW' => 0, 'CVS' => 0, 'K53' => 0);
+		$record = array('ID' => $insert_id, 'DEPOT' => $depot, 'FOR_MONTH' => $current_month, 'TRAINING_TRIPS' => 0, 'OLD_CONTRACTS' => 0, 'COMPLETED_TRAINING' => 0, 'DISMISSED' => 0, 'RESIGNED' => 0, 'CLASS_TRAINING' => 0, 'INTERVIEW' => 0, 'CVS' => 0, 'K53' => 0);
 	}
 
 	oci_close($conn);
@@ -126,7 +140,7 @@ function updateDepotTotals($depot_totals_id, $month, $data_type, $value)
 	oci_close($conn);
 }
 
-
+getRecord();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -168,117 +182,85 @@ function updateDepotTotals($depot_totals_id, $month, $data_type, $value)
 </head>
 <body>
 	<div>
-		<div style="display: flex; flex-direction: row; align-items: center; column-gap: 10px; margin-bottom: 10px">
-				<div style="width: 100px">Select depot</div>
-					<select name="depot" id="depot" value="PE" style="width: 100px; padding: 5px; border-radius: 5px;" onchange="selectDepot()">
-						<option value="">Select...</option>
-						<option value="BLM">BLM</option>
-						<option value="CA">CA</option>
-						<option value="CBS">CBS</option>
-						<option value="DBN">DBN</option>
-						<option value="GAB">GAB</option>
-						<option value="MAP">MAP</option>
-						<option value="MTH">MTH</option>
-						<option value="PE">PE</option>
-						<option value="PTA">PTA</option>
-						<option value="UPT">UPT</option>
-						<option value="WHK">WHK</option>
-					</select>
-				</div>
-			</div>
+		<div style="font-size: 1.3em; margin-bottom: 20px">Depot: <?php echo $depot; ?></div>
 		<div style="display: flex; flex-direction: row; align-items: center; column-gap: 10px;">
-			<div style="width: 100px">Select date</div>
+			<div style="">Select date</div>
 			<?php
 			$back = 24;
 			$forward = 12;
 			// $now = date('Y-m-01');
 			
 			echo '<div>'; 
-				echo '<select name="month" id="month" style="width: 100px; padding: 5px; border-radius: 5px;" onchange="selectMonth()">';
-				echo '<option value="">Select...</option>';
+				echo '<select name="month" id="month" style="padding: 5px; border-radius: 5px;" onchange="selectMonth()">';
 				for ($i = -$back; $i <= $forward; $i++) 
 				{
 					$date = date('Ym01', strtotime("$i months"));
 					$label_date = date('Y-m-01', strtotime("$i months"));
-					echo '<option value="' . $date . '">' . $label_date . '</option>';
-					// if ($date == $current_month)
-					// {
-					// 	echo '<option value="' . $date . '" selected>' . $label_date . '</option>';
-					// }
-					// else
-					// {
-						
-					// }
+					if ($date == $current_month)
+					{
+						echo '<option value="' . $date . '" selected>' . $label_date . '</option>';
+					}
+					else
+					{
+						echo '<option value="' . $date . '">' . $label_date . '</option>';
+					}
 				}
 				echo '</select>';
 			echo '</div>';
 			?>
+			
 		</div>
-		
-		<div id="form" style="display: none">
-			<div style="margin-top: 20px; margin-bottom: 15px; font-weight: bold">
-				Please enter totals in the form below
-				<input type="text" id="depot_totals_id" value="" style="display: none" />
+		<div style="margin-top: 20px; margin-bottom: 15px; font-weight: bold">
+			Please enter totals in the form below
+			<input type="text" id="depot_totals_id" value="<?php echo $record['ID']; ?>" style="display: none" />
+		</div>
+		<div style="display: flex; flex-direction: column; row-gap: 10px;">
+			<div class="form_row">
+				<div class="title">On Training Trips</div>
+				<div><input type="number" id="training_trips" class="form_input" value="<?php echo $record['TRAINING_TRIPS']; ?>" onchange="update(this.id)" /></div>
 			</div>
-			<div style="display: flex; flex-direction: column; row-gap: 10px;">
-				<div class="form_row">
-					<div class="title">On Training Trips</div>
-					<div><input type="number" id="training_trips" class="form_input" value="" onchange="update(this.id)" /></div>
-				</div>
-				<div class="form_row">
-					<div class="title">Old Contracts</div>
-					<div><input type="number" id="old_contracts" class="form_input" value="" onchange="update(this.id)" /></div>
-				</div>
-				<div class="form_row">
-					<div class="title">Completed Training/Passed</div>
-					<div><input type="number" id="completed_training" class="form_input" value="" onchange="update(this.id)" /></div>
-				</div>
-				<div class="form_row">
-					<div class="title">Dismissed</div>
-					<div><input type="number" id="dismissed" class="form_input" value="" onchange="update(this.id)" /></div>
-				</div>
-				<div class="form_row">
-					<div class="title">Resigned</div>
-					<div><input type="number" id="resigned" class="form_input" value="" onchange="update(this.id)" /></div>
-				</div>
-				<div class="form_row">
-					<div class="title">Class Training</div>
-					<div><input type="number" id="class_training" class="form_input" value="" onchange="update(this.id)" /></div>
-				</div>
-				<div class="form_row">
-					<div class="title">Interview Process</div>
-					<div><input type="number" id="interview" class="form_input" value="" onchange="update(this.id)" /></div>
-				</div>
-				<div class="form_row">
-					<div class="title">CVs In Hand</div>
-					<div><input type="number" id="cvs" class="form_input" value="" onchange="update(this.id)" /></div>
-				</div>
-				<div class="form_row">
-					<div class="title">K53</div>
-					<div><input type="number" id="k53" class="form_input" value="" onchange="update(this.id)" /></div>
-				</div>
+			<div class="form_row">
+				<div class="title">Old Contracts</div>
+				<div><input type="number" id="old_contracts" class="form_input" value="<?php echo $record['OLD_CONTRACTS']; ?>" onchange="update(this.id)" /></div>
+			</div>
+			<div class="form_row">
+				<div class="title">Completed Training/Passed</div>
+				<div><input type="number" id="completed_training" class="form_input" value="<?php echo $record['COMPLETED_TRAINING']; ?>" onchange="update(this.id)" /></div>
+			</div>
+			<div class="form_row">
+				<div class="title">Dismissed</div>
+				<div><input type="number" id="dismissed" class="form_input" value="<?php echo $record['DISMISSED']; ?>" onchange="update(this.id)" /></div>
+			</div>
+			<div class="form_row">
+				<div class="title">Resigned</div>
+				<div><input type="number" id="resigned" class="form_input" value="<?php echo $record['RESIGNED']; ?>" onchange="update(this.id)" /></div>
+			</div>
+			<div class="form_row">
+				<div class="title">Class Training</div>
+				<div><input type="number" id="class_training" class="form_input" value="<?php echo $record['CLASS_TRAINING']; ?>" onchange="update(this.id)" /></div>
+			</div>
+			<div class="form_row">
+				<div class="title">Interview Process</div>
+				<div><input type="number" id="interview" class="form_input" value="<?php echo $record['INTERVIEW']; ?>" onchange="update(this.id)" /></div>
+			</div>
+			<div class="form_row">
+				<div class="title">CVs In Hand</div>
+				<div><input type="number" id="cvs" class="form_input" value="<?php echo $record['CVS']; ?>" onchange="update(this.id)" /></div>
+			</div>
+			<div class="form_row">
+				<div class="title">K53</div>
+				<div><input type="number" id="k53" class="form_input" value="<?php echo $record['K53']; ?>" onchange="update(this.id)" /></div>
 			</div>
 		</div>
-		
 	</div>
 	<script>
 		const baseUrl = window.location.protocol + "//" + window.location.hostname + "/move/drift/";
 
-		function selectDepot()
-		{
-			const form = document.getElementById('form');
-			const month = document.getElementById('month');
-			form.style.display = 'none';
-			month.value = '';
-		}
-
 		function selectMonth()
 		{
-			const form = document.getElementById('form');
 			const month = document.getElementById('month').value;
-			const depot = document.getElementById('depot').value;
 
-			const formData = { "month": month, "depot": depot };
+			const formData = { "month": month };
 
 			const result = sendData(formData, "select_month")
 			.then(result => 
@@ -296,8 +278,6 @@ function updateDepotTotals($depot_totals_id, $month, $data_type, $value)
 				document.getElementById('cvs').value = record.CVS;
 				document.getElementById('k53').value = record.K53;
 			});
-
-			form.style.display = 'block';
 		}
 
 		function update(dataType)
