@@ -1,5 +1,5 @@
 <?php
-require('Dashboard_model.php');
+require('dashboard_model.php');
 $dashboard_model = new Dashboard_model();
 
 /**
@@ -177,7 +177,6 @@ $class_training[] = array_sum($class_training);
  /**
  * Line 25: K53
  */
-// $k53 = array(0, 10, 0, 0, 0, 0, 0, 10, 3, 0, 5);
 $k53 = array();
 foreach ($depot_totals as $depot_total) 
 {
@@ -205,14 +204,14 @@ foreach ($depot_totals as $depot_total)
 }
 $cvs[] = array_sum($cvs);
 
-function arr_last_updated()
-{
-	global $dashboard_model, $month;
+// function arr_last_updated()
+// {
+// 	global $dashboard_model, $month;
 
-	$data = $dashboard_model->getLastUpdated($month);
+// 	$data = $dashboard_model->getLastUpdated($month);
 
-	return $data;
-}
+// 	return $data;
+// }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1008,8 +1007,6 @@ function arr_last_updated()
 				}
 				?>
 			</div>	
-				
-
 		</div>
     </div>
 </body>
