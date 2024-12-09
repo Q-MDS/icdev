@@ -1,0 +1,43 @@
+Hi
+
+Here's the changes discussed on DRIFT dashboard
+
+√. Add hide/show button to "hide" inputs from totals page.
+√. Change names : Active drivers to Skilled Drivers and Training to Drivers on Training Trips.
+   - data for Drivers on Training Trips is not coming from depot_totals !!!
+√. Delete able to schedule row. Now use new skilled drivers for the calculation on Still Needed - MIN.
+
+√. Amend hover query to the following
+SELECT DISTINCT
+    DEPOT,
+    UPPER(STAFFNO || ' - ' || NAME || ' ' || SURNAME || ' - ' || TO_DATE(MAX_RUNDATE,'YYYYMMDD')) DRIVER
+FROM HC_PEOPLE A
+LEFT JOIN
+    (SELECT DISTINCT
+        SERIAL_NO
+    FROM OPS_INFO
+    WHERE ENTRY_TYPE = 'o'
+        AND TO_DATE(RUNDATE,'YYYYMMDD') > SYSDATE - 3
+        AND TO_DATE(RUNDATE,'YYYYMMDD') <= SYSDATE) B
+    ON A.PERSON_SERIAL = B.SERIAL_NO
+LEFT JOIN
+    (SELECT
+        SERIAL_NO,
+        MAX(RUNDATE) MAX_RUNDATE
+    FROM OPS_INFO
+    WHERE ENTRY_TYPE = 'o'
+    GROUP BY SERIAL_NO) C
+    ON A.PERSON_SERIAL = C.SERIAL_NO
+WHERE
+    ACTIVE != 'N'
+    AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%'
+    AND DEPOT != 'GON'
+    AND DEPOT != 'INC'
+    AND DEPOT != 'XXX'
+    AND B.SERIAL_NO IS NULL;
+
+5. Add the who changed what and when columns to DRIFT_DEPOT_TOTALS to be able to see history
+6. Add the who changed what and when columns to DRIFT_PARAMETERS table.
+7. Only include org_unit = 'Ops Drivers' to the totals displayed here
+
+8. On the summary tab can we please show Permanent and Fixed term split, not just the totals.
