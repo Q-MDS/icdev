@@ -362,7 +362,8 @@ ora_exec($cursor);
 
 echo "<tr><Td $col1>Total hours needed for period</td><td><center>".number_format($totalhoursneeded)."</td><td colspan=3 $col1>&nbsp;</td></tr>";
 
-ora_parse($cursor,"select subtype,count(*) from operators where depot='".$data["DEPOT"]."' group by subtype");
+// ora_parse($cursor,"select subtype,count(*) from operators where depot='".$data["DEPOT"]."' group by subtype");
+ora_parse($cursor,"select subtype,count(*) from operators_org where depot='".$data["DEPOT"]."' group by subtype");
 ora_Exec($cursor);
 $total_drivers=0;
 $permanent_drivers=0;
