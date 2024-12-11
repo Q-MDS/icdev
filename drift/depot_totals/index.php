@@ -379,6 +379,8 @@ function updateDepotTotals($dirty, $depot_totals_id, $month, $depot, $training_t
 	<script>
 		const baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/drift/";
 
+		let isDirty = false;
+
 		function selectDepot()
 		{
 			const form = document.getElementById('form');
@@ -522,6 +524,7 @@ function updateDepotTotals($dirty, $depot_totals_id, $month, $depot, $training_t
 		function save()
 		{
 			let ctr = 0;
+			isDirty = false;
 			
 			const depotTotalsId = document.getElementById('depot_totals_id').value;
 			const month = document.getElementById('month').value;
@@ -567,21 +570,52 @@ function updateDepotTotals($dirty, $depot_totals_id, $month, $depot, $training_t
 			console.log('Save: ', ctr);
 		}
 
-		// function update(dataType)
-		// {
-			// const depotTotalsId = document.getElementById('depot_totals_id').value;
-			// const month = document.getElementById('month').value;
-			// const dataValue = document.getElementById(dataType).value;
+		function checkIfDirty() 
+		{
+			let ctr = 0;
+			const training_trips = document.getElementById('training_trips').value;
+			const training_trips_curr = document.getElementById('training_trips_curr').value;
+			if (training_trips != training_trips_curr) { ctr++; }
+			const old_contracts = document.getElementById('old_contracts').value;
+			const old_contracts_curr = document.getElementById('old_contracts_curr').value;
+			if (old_contracts != old_contracts_curr) { ctr++; }
+			const completed_training = document.getElementById('completed_training').value;
+			const completed_training_curr = document.getElementById('completed_training_curr').value;
+			if (completed_training != completed_training_curr) { ctr++; }
+			const dismissed = document.getElementById('dismissed').value;
+			const dismissed_curr = document.getElementById('dismissed_curr').value;
+			if (dismissed != dismissed_curr) { ctr++; }
+			const resigned = document.getElementById('resigned').value;
+			const resigned_curr = document.getElementById('resigned_curr').value;
+			if (resigned != resigned_curr) { ctr++; }
+			const class_training = document.getElementById('class_training').value;
+			const class_training_curr = document.getElementById('class_training_curr').value;
+			if (class_training != class_training_curr) { ctr++; }
+			const interview = document.getElementById('interview').value;
+			const interview_curr = document.getElementById('interview_curr').value;
+			if (interview != interview_curr) { ctr++; }
+			const cvs = document.getElementById('cvs').value;
+			const cvs_curr = document.getElementById('cvs_curr').value;
+			if (cvs != cvs_curr) { ctr++; }
+			const k53 = document.getElementById('k53').value;
+			const k53_curr = document.getElementById('k53_curr').value;
+			if (k53 != k53_curr) { ctr++; }
 
-		// 	const formData = { "depot_totals_id" : depotTotalsId, "month": month, "data_type": dataType, "data_value": dataValue };
+			isDirty = ctr > 0;
+		}
 
-		// 	const result = sendData(formData, "update")
-		// 	.then(result => 
-		// 	{
-		// 		console.log('Result: ', result);
-		// 		// window.location.reload(); 
-		// 	});
-		// }
+		document.querySelectorAll('input').forEach(input => {
+			input.addEventListener('change', checkIfDirty);
+		});
+
+		window.addEventListener('beforeunload', function (e) 
+		{
+			if (isDirty) {
+				const confirmationMessage = 'You have unsaved changes. Are you sure you want to leave?';
+				e.returnValue = confirmationMessage; // Standard for most browsers
+				return confirmationMessage; // For some older browsers
+			}
+		});
 
 		async function sendData(formData, action) 
 		{

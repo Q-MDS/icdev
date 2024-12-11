@@ -1,0 +1,485 @@
+<html>
+<body>
+<link rel="stylesheet" type="text/css" href="driftstyle.css" />
+
+<? require("../php3/context.inc"); ?>
+<?
+require("../php3/oracle.inc");
+require("../php3/colors.inc");
+require("../php3/logs.inc");
+require("../php3/misc.inc");
+require("../php3/sec.inc");
+
+require("../php3/opstimes.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+if ($iframe!="Y")
+{
+
+echo "<div id='mainnav'><a href=drift_dates.phtml>Edit Dates</a>  <a class=active href=drift_parameters.phtml>Edit Scenarios</font></a>  <a href=drift_globals.phtml>Edit Globals</a>  <a href=drift.phtml>DRIFT Forecast</a>  <a href=drift_report_details.phtml>Route Details</a>  <a href=drift_report_details2.phtml>Date Details</a>  <a href=drift_report.phtml>Summary</a></div><hr>";
+
+
+}
+else echo "<center>";
+
+
+$depots=array();
+$depots["ALL"]="All Depots";
+ora_parse($cursor,"select depot_code from depots where drift_forecast='Y' order by 1");
+ora_exec($cursor);
+while (ora_fetch($cursor))
+	$depots[getdata($cursor,0)] = getdata($cursor,0);
+
+
+if ($iframe!="Y") {
+echo "<form id=myform method=get action=drift_parameters.phtml>";
+
+echo "Select a depot to work with: <select name=depot onchange=\"document.getElementById('myform').submit();\">";
+echo "<option value=''>Please Select</option>";
+echo makeselect2($depots, $depot);
+echo "</selecT>";
+echo "</form>";
+}
+
+if (!isset($depots[$depot]))
+	exit;
+
+if (is_numeric($delete)) {
+	ora_parse($cursor,"update drift_parameters set active='N' where parameter_serial=$delete");
+	ora_exec($cursor);
+}
+
+echo "<b><u><font size=+1>Working with $depot:</font></b></u> ";
+if (is_numeric($parameter) && $iframe!="Y")
+	echo "<a href=drift_parameters.phtml?depot=$depot>Return to list of $depot scenarios</a>";
+echo "<br>";
+
+if ($parameter == "NEW") {
+	echo "Creating a new set of parameters for $depot depot:<br>";
+	ora_parse($cursor, "select drift_param.nextval from dual");
+	ora_exec($cursor);
+	ora_fetch($cursor);
+	$parameter=getdata($cursor,0);
+	$found=0;
+}
+else
+	$found=1;
+
+if (!is_numeric($parameter)) {
+?>
+<script>
+	function set_preferred(serial) {
+		document.getElementById('iframe').src='set_preferred.phtml?serial='+serial;
+	}
+</script>
+<?
+	ob_start();
+	echo "Select which scenario set you'd like to change:<br>";
+	echo "<table class=ResultsTable border=1 cellspacing=0>";
+	echo "<tr bgcolor=lavender><th>Name</th><th>Preferred</th><th>Delete</th></tr>";
+	echo "<tr bgcolor=#BBBBFF><td><a href=drift_parameters.phtml?depot=$depot&parameter=NEW><b><font size=+1>NEW</font></b></a></td><td colspan=2>&nbsp;</td>";
+	echo "</tr>";
+	$found=0;
+
+	ora_parse($cursor,"select parameter_serial, parameter_name, preferred from drift_parameters where depot='$depot' and active='Y'");
+	ora_exec($cursor);
+	while (ora_fetch($cursor)) {
+		$found++;
+		$ser=getdata($cursor,0);
+		$name=getdata($cursor,1);
+//		echo "<tr><td><a href=drift_parameters.phtml?depot=$depot&parameter=$ser><font size=+1>$ser</font></a></td>";
+		echo "<tr><td><a href=drift_parameters.phtml?depot=$depot&parameter=$ser><font size=+1>$name</font></a></td>";
+		echo "<td><center><input type=radio name=preferred id=p$found value=$ser onclick=\"set_preferred($ser);\"";
+		if (getdata($cursor,2)=="Y")
+			echo " CHECKED";
+		echo "></center></td>";
+		echo "<td><div id=d1$found><input type=button value='Delete' style='background: FF9999'  onclick=\"document.getElementById('d2$found').style.display='block'; return false; \"></div><div id=d2$found style='display: none'><input type=button  style='background: FF9999' value='Confirm Delete' onclick=\"window.location='drift_parameters.phtml?depot=$depot&delete=$ser'; return false; \"> <input type=button value='Dont Delete' style='backgound: lightgreen' onclick=\"document.getElementById('d1$found').style.display='block'; document.getElementById('d2$found').style.display='none'; return false;  \"></div>";
+	}
+	echo "</table>";
+
+	
+	echo "<iframe id=iframe width='100%' height='20px' style='border: 0px'></iframe>";
+
+
+	if ($found==0)
+	{
+		ob_end_clean();
+		ora_parse($cursor, "select drift_param.nextval from dual");
+	        ora_exec($cursor);
+	        ora_fetch($cursor);
+	        $parameter=getdata($cursor,0);
+		echo "Creating a new set of parameters for $depot depot:<br>";
+
+
+	}
+	else
+		exit;
+}
+
+if (!is_numeric($parameter))
+	exit;
+
+if (isset($add) || isset($update)) {
+	$errors = false;
+	echo "<font color=red>";
+	if (!is_numeric($standby_drivers_per_day) || $standby_drivers_per_day<0) {
+		$errors=true;
+		echo "Bad number: Standby drivers per day<br>";
+	}
+        if (!is_numeric($standby_hours_per_shift) || $standby_hours_per_shift<0) {
+                $errors=true;
+                echo "Bad number: Standby hours per shift<br>";
+        }
+        if (!is_numeric($charters_per_day) || $charters_per_day<0) {
+                $errors=true;
+                echo "Bad number: Charters per day<br>";
+        }
+        if (!is_numeric($average_hours_per_charter) || $average_hours_per_charter<0) {
+                $errors=true;
+                echo "Bad number: Average hours Per charter<br>";
+        }
+        if (!is_numeric($drivers_training_per_day) || $drivers_training_per_day<0) {
+                $errors=true;
+                echo "Bad number: Drivers training per day<br>";
+        }
+        if (!is_numeric($drivers_awol_per_day) || $drivers_awol_per_day<0) {
+                $errors=true;
+                echo "Bad number: Drivers AWOL per day<br>";
+        }
+	if ($include_budgeted_routes!="Y")
+		$include_budgeted_routes="N";
+        if (!is_numeric($drivers_on_leave_per_day) || $drivers_on_leave_per_day<0) {
+                $errors=true;
+                echo "Bad number: Drivers on leave per day<br>";
+        }
+        if (!is_numeric($drivers_sick_per_day) || $drivers_sick_per_day<0) {
+                $errors=true;
+                echo "Bad number: Drivers sick per day<br>";
+        }
+        if (!is_numeric($shunters_per_day) || $shunters_per_day<0) {
+                $errors=true;
+                echo "Bad number: Shunter / Shuttle drivers per day<br>";
+        }
+	if (!is_numeric($percentage_fixedterm) || $percentage_fixedterm<0) {
+		$percentage_fixedterm="null";
+	}
+	if (!is_numeric($percentage_permanent) || $percentage_permanent<0) {
+                $percentage_permanent="null";
+        }
+	if (!is_numeric($percentage_learnership) || $percentage_learnership<0) {
+                $percentage_learnership="null";
+        }
+
+/*
+
+$fields["PERCENTAGE_FIXEDTERM"]="F,Percentage of Drivers that are Fixed Term";
+$fields["PERCENTAGE_PERMANENT"]="F,Percentage of Drivers that are Permanent";
+$fields["PERCENTAGE_LEARNERSHIP"]="F,Percentage of Drivers that are Learnership";
+
+*/
+
+
+	$name=trim(str_replace("'","",$name));
+
+	if ($errors) {
+		echo "Please go back and correct this<bR>";
+		exit;
+	}	
+	echo "</font>";
+
+	if ($add) {
+		$qry = "insert into drift_parameters values ($parameter, '$depot', '$name', $standby_drivers_per_day, $standby_hours_per_shift, $charters_per_day, $average_hours_per_charter, $drivers_training_per_day, $drivers_awol_per_day, $drivers_on_leave_per_day, $drivers_sick_per_day, $shunters_per_day, $percentage_fixedterm, $percentage_permanent, $percentage_learnership,'Y','N', '$include_budgeted_routes')";
+		
+	} else {
+		/**
+		 * Quintin
+		 * 11-12-2024
+		 * Record changes to the drift_parameters table and store in NEW table: DRIFT_PARAMETERS_CHANGES
+		 * 
+		 * START
+		 */
+		$previous_data = array('parameter_name' => $name, 
+		'standby_drivers_per_day' => $standby_drivers_per_day, 
+		'standby_hours_per_shift' => $standby_hours_per_shift, 
+		'charters_per_day' => $charters_per_day, 
+		'average_hours_per_charter' => $average_hours_per_charter, 
+		'drivers_training_per_day' => $drivers_training_per_day, 
+		'drivers_awol_per_day' => $drivers_awol_per_day, 
+		'drivers_on_leave_per_day' => $drivers_on_leave_per_day, 
+		'drivers_sick_per_day' => $drivers_sick_per_day, 
+		'shunters_per_day' => $shunters_per_day, 
+		'percentage_fixedterm' => $percentage_fixedterm, 
+		'percentage_permanent' => $percentage_permanent, 
+		'percentage_learnership' => $percentage_learnership, 
+		'include_budgeted_routes' => $include_budgeted_routes);
+		$parameter_serial = $parameter;
+		$update_date = time();
+		$updated_by = getuserserial();
+		$previous_data = json_encode($previous_data);
+
+		$sql_change = "INSERT INTO DRIFT_PARAMETERS_CHANGES (PARAMETER_SERIAL, PREVIOUS_DATA, UPDATE_DATE, UPDATED_BY) VALUES ($parameter_serial, '$previous_data', $update_date, $updated_by)";
+
+		ora_parse($cursor, $qry);
+		ora_exec($cursor);
+		/**
+		 * END
+		 */
+
+		$qry = "update drift_parameters set  parameter_name='$name', standby_drivers_per_day=$standby_drivers_per_day, standby_hours_per_shift=$standby_hours_per_shift, charters_per_day=$charters_per_day, average_hours_per_charter=$average_hours_per_charter, drivers_training_per_day=$drivers_training_per_day, drivers_awol_per_day=$drivers_awol_per_day, drivers_on_leave_per_day=$drivers_on_leave_per_day, drivers_sick_per_day=$drivers_sick_per_day, shunters_per_day=$shunters_per_day, percentage_fixedterm=$percentage_fixedterm, percentage_permanent=$percentage_permanent, percentage_learnership=$percentage_learnership, include_budgeted_routes='$include_budgeted_routes'  where parameter_serial=$parameter";
+	}
+//	echo "$qry<bR>";
+	ora_parse($cursor, $qry);
+	ora_exec($cursor);
+
+	// NOW date ranges
+	$current=array();
+	$today=date("Ymd");
+
+	ora_parse($cursor,"select date_range_serial from drift_parameter_dates where parameter_serial=$parameter");
+	ora_exec($cursor);
+	while (ora_fetch($cursor))
+		$current[getdata($cursor,0)]=true;
+
+	reset($_POST);
+	foreach ($_POST as $key => $val) if (substr($key,0,2)=="dr") {
+		$srl=substr($key,2);
+		if (is_numeric($srl)) {
+			if ($val=="Y" && !isset($current[$srl])) {
+				//insert
+				$qry="insert into drift_parameter_Dates values ($parameter, $srl)";
+				echo "$qry<bR>";
+				ora_parse($cursor, $qry);
+				ora_exec($cursor);
+
+			} elseif ($val=="N" && isset($current[$srl])) {
+				// remove
+				$qry="delete from drift_parameter_dates where parameter_serial=$parameter and date_range_serial=$srl";
+				echo "$qry<bR>";
+                                ora_parse($cursor, $qry);
+                                ora_exec($cursor);
+
+
+			}
+
+
+		}
+
+
+	}
+	if ($iframe=="Y") {
+		echo "<script> parent.refresh_me(); </script>";
+	}
+} // process form
+
+echo "<form method=post><input type=hidden name=parameter value='$parameter'><input type=hidden name=depot value='$depot'>";
+echo "<input type=hidden name=iframe value='$iframe'>";
+
+unset($data);
+
+ora_parse($cursor,"select * from drift_parameters where parameter_serial=$parameter");
+ora_exec($cursor);
+ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC);
+
+echo "<table border=1 cellspacing=0 class=ResultsTable>";
+
+echo "<tr><th class=caption>Name</th><td colspan=2><input name=name size=30 maxlength=80 value='".$data["PARAMETER_NAME"]."'></td>";
+
+echo "<tr bgcolor=lavender><th>Parameter</th><th>Value</th>";
+
+if ($iframe!="Y")
+	echo "<th>Value for <span id=LY_START></span> to <span id=LY_END></th>";
+
+echo "</tr>";
+
+function fixless($no) {
+	if ($no>0 && $no<1) {
+		return "0$no";
+	} else return $no;
+
+}
+
+
+if (!is_numeric($data["DRIVERS_ON_LEAVE_PER_DAY"]))
+        $data["DRIVERS_ON_LEAVE_PER_DAY"] = 1;
+$data["DRIVERS_ON_LEAVE_PER_DAY"] = fixless($data["DRIVERS_ON_LEAVE_PER_DAY"]);
+echo "<tr><td>Drivers on leave per day</td><td><input name=drivers_on_leave_per_day size=3 value='".$data["DRIVERS_ON_LEAVE_PER_DAY"]."'></td><td><span id=DRIVERS_ON_LEAVE_PER_DAY></span></td>";
+
+
+if (!is_numeric($data["DRIVERS_SICK_PER_DAY"]))
+        $data["DRIVERS_SICK_PER_DAY"] = 0.5;
+$data["DRIVERS_SICK_PER_DAY"] = fixless($data["DRIVERS_SICK_PER_DAY"]);
+echo "<tr><td>Drivers sick per day</td><td><input name=drivers_sick_per_day size=3 value='".$data["DRIVERS_SICK_PER_DAY"]."'></td><td><span id=DRIVERS_SICK_PER_DAY></span></td>";
+
+
+if (!is_numeric($data["STANDBY_DRIVERS_PER_DAY"]))
+	$data["STANDBY_DRIVERS_PER_DAY"] = 1;
+$data["STANDBY_DRIVERS_PER_DAY"] = fixless($data["STANDBY_DRIVERS_PER_DAY"]);
+echo "<tr><td>Standby drivers per day</td><td><input name=standby_drivers_per_day size=3 value='".$data["STANDBY_DRIVERS_PER_DAY"]."'></td><td><span id=STANDBY_DRIVERS_PER_DAY></span></td></tr>";
+
+if (!is_numeric($data["STANDBY_HOURS_PER_SHIFT"]))
+	$data["STANDBY_HOURS_PER_SHIFT"] = 9;
+echo "<tr><td>Standby hours per shift</td><td><input name=standby_hours_per_shift size=3 value='".$data["STANDBY_HOURS_PER_SHIFT"]."'></td><td><span id=STANDBY_HOURS_PER_SHIFT></span></td>";
+
+if (!is_numeric($data["SHUNTERS_PER_DAY"]))
+        $data["SHUNTERS_PER_DAY"] = 1;
+$data["SHUNTERS_PER_DAY"] = fixless($data["SHUNTERS_PER_DAY"]);
+echo "<tr><td>Shunter / Shuttle drivers per day</td><td><input name=shunters_per_day size=3 value='".$data["SHUNTERS_PER_DAY"]."'></td><td><span id=SHUNTERS_PER_DAY></span></td>";
+
+if (!is_numeric($data["CHARTERS_PER_DAY"]))
+        $data["CHARTERS_PER_DAY"] = 0;
+$data["CHARTERS_PER_DAY"] = fixless($data["CHARTERS_PER_DAY"]);
+echo "<tr><td>Charters per day</td><td><input name=charters_per_day size=3 value='".$data["CHARTERS_PER_DAY"]."'></td><td><span id=CHARTERS_PER_DAY></span></td>";
+
+
+if (!is_numeric($data["AVERAGE_HOURS_PER_CHARTER"]))
+        $data["AVERAGE_HOURS_PER_CHARTER"] = 8;
+echo "<tr><td>Average hours per charter</td><td><input name=average_hours_per_charter size=3 value='".$data["AVERAGE_HOURS_PER_CHARTER"]."'></td><td><span id=AVERAGE_HOURS_PER_CHARTER></span></td>";
+
+if (!is_numeric($data["DRIVERS_TRAINING_PER_DAY"]))
+        $data["DRIVERS_TRAINING_PER_DAY"] = 1;
+$data["DRIVERS_TRAINING_PER_DAY"] = fixless($data["DRIVERS_TRAINING_PER_DAY"] );
+echo "<tr><td>Drivers training per day</td><td><input name=drivers_training_per_day size=3 value='".$data["DRIVERS_TRAINING_PER_DAY"]."'></td><td><span id=DRIVERS_TRAINING_PER_DAY></span></td>";
+
+if (!is_numeric($data["DRIVERS_AWOL_PER_DAY"]))
+        $data["DRIVERS_AWOL_PER_DAY"] = 1;
+$data["DRIVERS_AWOL_PER_DAY"] = fixless($data["DRIVERS_AWOL_PER_DAY"]);
+echo "<tr><td>Drivers AWOL per day</td><td><input name=drivers_awol_per_day size=3 value='".$data["DRIVERS_AWOL_PER_DAY"]."'></td><td><span id=DRIVERS_AWOL_PER_DAY></span></td>";
+
+
+
+if ($data["INCLUDE_BUDGETED_ROUTES"] != "Y")
+{
+        $data["INCLUDE_BUDGETED_ROUTES"] = "N";
+	$sel1="CHECKED";
+	$sel2="";
+} else {
+	$sel1="";
+	$sel2="CHECKED";
+}
+echo "<tr><td>Routes budgeted but not running</td><td>Exclude <input name=include_budgeted_routes value=N type=radio $sel1> or Include <input name=include_budgeted_routes value=Y type=radio $sel2></td><td></td>";
+
+echo "<tr><td colspan=3><center><i>For the next 3 lines, leave blank to use the system global setting</i></td></tr>";
+
+
+echo "<tr><td>Percentage of drivers that are permanent</td><td><input id=p1  onkeyup='checkperc();' name=percentage_permanent size=3 value='".$data["PERCENTAGE_PERMANENT"]."'></td><td><span id=PERCENTAGE_PERMANENT></span></td>";
+
+echo "<tr><td>Percentage of drivers that are learnership</td><td><input id=p2  onkeyup='checkperc();' name=percentage_learnership size=3 value='".$data["PERCENTAGE_LEARNERSHIP"]."'></td><td><span id=PERCENTAGE_LEARNERSHIP></span></td>";
+
+echo "<tr><td>Percentage of drivers that are fixed term</td><td><input id=p3 onkeyup='checkperc();' name=percentage_fixedterm size=3 value='".$data["PERCENTAGE_FIXEDTERM"]."'></td><td><span id=PERCENTAGE_FIXEDTERM></span></td>";
+
+echo "</table>";
+?>
+<script>
+	function checkperc() {
+
+		let p1 = parseFloat(document.getElementById('p1').value);
+		let p2 = parseFloat(document.getElementById('p2').value);
+		let p3 = parseFloat(document.getElementById('p3').value);
+
+		let sum = p1 + p2 + p3;
+		if (sum === 100) {
+			console.log('ok');
+			document.getElementById('p1').style.background = 'lightgreen';
+                        document.getElementById('p2').style.background = 'lightgreen';
+                        document.getElementById('p3').style.background = 'lightgreen';
+		} else {
+			console.log('bad');
+			document.getElementById('p1').style.background = 'red';
+                        document.getElementById('p2').style.background = 'red';
+                        document.getElementById('p3').style.background = 'red';
+
+		}	
+
+	}
+checkperc();
+</script>
+
+
+<?
+
+if ($iframe=="Y") {
+echo "<p>";
+if ($found==0)
+	echo "<input  class='submit-button'  type=submit name=add value='Add Scenario' >";
+else
+	echo "<input  class='submit-button'  type=submit name=update value='Update Scenario'  >";
+}
+if ($iframe=="Y")
+	exit;
+echo "<br><u><b>Relevant Date Ranges</b></u>";
+echo "<br><table border=1 cellspacing=0>";
+
+$today=date("Ymd");
+ora_parse($cursor,"select A.*, B.parameter_serial from drift_date_ranges A left join drift_parameter_dates B on A.date_range_serial=B.date_range_serial and B.parameter_Serial=$parameter where A.end_date>=$today and A.is_current='Y' order by start_date");
+ora_exec($cursor);
+unset($data);
+while (ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)) {
+	if ($line++%2==0)
+		echo "<tr bgcolor=#DDDDDD>";
+	else
+		echo "<tr>";
+	$serial=$data["DATE_RANGE_SERIAL"];
+	echo "<td>".$data["START_DATE"]."</td>";
+	echo "<td>".$data["END_DATE"]."</td>";
+	echo "<td>".$data["DATE_RANGE_NAME"]."</td>";
+	if ($data["PARAMETER_SERIAL"] == $parameter) {
+		$yes="CHECKED";
+		$no="";
+	} else {
+		$yes="";
+		$no="CHECKED";
+	}
+	echo "<td><center>YES: <input type=radio name=dr$serial value=Y $yes></td>";
+	echo "<td><center>NO: <input type=radio name=dr$serial value=N $no></td>";
+
+	if ($iframe!="Y")
+		echo "<td><button onclick=\"document.getElementById('iframe').src='drift_history.phtml?daterange=$serial&depot=$depot'; return false;\">Show History</button></tr>";
+
+	unset($data);
+} // while
+echo "</table><br>";
+if ($found==0)
+        echo "<input type=submit name=add  class='submit-button'  value='Add'>";
+else
+        echo "<input type=submit name=update class='submit-button' value='Update'>";
+
+echo "</form>";
+
+$thisyear=date("Y");
+$thismonth=date("m")-1;
+if ($thismonth==0) {
+	$thisyear--;
+	$thismonth=12;
+}
+$start=$thisyear.sprintf("%02d",$thismonth)."01";
+$end=prevdate(date("Ym")."01");
+
+
+?>
+<script>
+	function do_populate(data) {
+		for (const key in data) {
+
+//    console.log(`${key}: ${user[key]}`);
+			if (document.getElementById(key))
+				document.getElementById(key).innerHTML = data[key];
+		   } 
+	}
+</script>
+<? 
+if ($iframe!="Y") {
+?>
+<iframe style='display: none' width=100% height=30 src='drift_history.phtml?start=<?=$start?>&end=<?=$end?>&depot=<?=$depot?>' id=iframe></iframe>
+
+</form>
+<?
+}
+	else echo "</form>";
+?>
+
+</body>
+</html>
+<? close_oracle() ?>

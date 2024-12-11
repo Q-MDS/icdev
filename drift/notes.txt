@@ -36,8 +36,19 @@ WHERE
     AND DEPOT != 'XXX'
     AND B.SERIAL_NO IS NULL;
 
-5. Add the who changed what and when columns to DRIFT_DEPOT_TOTALS to be able to see history
-6. Add the who changed what and when columns to DRIFT_PARAMETERS table.
+√. Add the who changed what and when columns to DRIFT_DEPOT_TOTALS to be able to see history
+√. Add the who changed what and when columns to DRIFT_PARAMETERS table.
+  - tables: DEPOTS, DUAL, DRIFT_PARAMETERS, drift_parameter_dates
+  - must create a new table or add a record
+  
 7. Only include org_unit = 'Ops Drivers' to the totals displayed here
+  - Is this the results forxxx on december xxxx
+  - Is it all 4 totals
+8. On the summary tab can we please show Permanent and Fixed term split, not just the totals
+- which total must be split? Drivers on sops, minimum drivers needed?
 
-8. On the summary tab can we please show Permanent and Fixed term split, not just the totals.
+
+https://www.youtube.com/shorts/UoMpuAj3l3c
+https://www.youtube.com/shorts/fsimESlZ_p8
+
+#6 url: http://192.168.10.239/booking/drift_parameters.phtml

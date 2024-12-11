@@ -1,0 +1,168 @@
+<?  if ($csv=="Y") {
+	
+		
+
+		ob_start();
+	}
+
+?><html>
+<head>
+<link rel="stylesheet" type="text/css" href="/booking/css/bootstrap.min.css">
+<link rel="stylesheet" type="text/css" href="/booking/css/dataTables.bootstrap.min.css">
+</head>
+<body>
+<link rel="stylesheet" type="text/css" href="driftstyle.css" />
+<script src="/booking/js/jquery-3.5.1.min.js"></script>
+<script src="/booking/js/jquery.dataTables.min.js"></script>
+<script src="/booking/js/dataTables.bootstrap.min.js"></script>
+<? require("../php3/context.inc"); ?>
+<?
+require("../php3/oracle.inc");
+require("../php3/colors.inc");
+require("../php3/logs.inc");
+require("../php3/misc.inc");
+require("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+echo "<div id='mainnav'><a href=drift_dates.phtml>Edit Dates</a>  <a href=drift_parameters.phtml>Edit Scenarios</a>  <a href=drift_globals.phtml>Edit Globals</a>  <a href=drift.phtml>DRIFT Forecast</a>  <a href=drift_report_details.phtml>Route Details</a>  <a href=drift_report_details2.phtml>Date Details</a>  <a class=active href=drift_report.phtml>Summary</font></a></div><hr>";
+
+echo "<div style='padding: 5px'>";
+echo "<form method=get id=myform>";
+        echo "<B>Season:</b> <select name=date_range_serial onchange=\"document.getElementById('myform').submit();\">";
+        $today=date("Ymd");
+        ora_parse($cursor,"select date_range_serial,date_range_name, null, start_date, end_date from drift_date_ranges where end_date>=$today order by start_date");
+        ora_Exec($cursor);
+        if(!isset($date_range_serial))
+                $date_range_serial="null";
+        while (ora_fetch_into($cursor,$data,ORA_FETCHINTO_ASSOC)) {
+                echo "<option value=".$data["DATE_RANGE_SERIAL"];
+                if ($data["DATE_RANGE_SERIAL"]==$date_range_serial)
+		{
+                        echo " SELECTED";
+			$thisname=$data["DATE_RANGE_NAME"];
+		}
+                echo ">".$data["DATE_RANGE_NAME"]." - from ".$data["START_DATE"]." to ".$data["END_DATE"]."\n";
+
+        } //while
+        echo "</select>\n";
+echo " <input type=submit value=Go><br></form>";
+if (!is_numeric($date_range_serial))
+	exit;
+
+echo "<a href=drift_report.phtml?csv=Y&date_range_serial=$date_range_serial>Download as CSV</a><br>";
+echo "<div id=tablediv style='width: 70%'>";
+echo "<table id=mytable border=1 cellspacing=0 width='100%'>";
+echo "<thead>";
+echo "<tr bgcolor=#BBBBBB><td><B>Scenario</td><td align=right><b>Depot</td><td align=right><b>Last Generated</td><td align=right><b>Heading</td><td align=right><b>Value</td><td align=right><b>+5%</td><td align=right><b>+10%</td><td align=right><b>+15%</td></tr>";
+echo "</thead><tbody>";
+
+if ($csv=="Y") {
+	ob_end_clean();
+
+        header( "Content-Disposition: inline; filename=\"$thisname.csv\"");
+        header( "Content-Type: application/download; filename=\"$thisname.csv\"");
+
+	echo "Scenario,Depot,Last Generated,Heading,Value,+5%,+10%,+15%\n";
+}
+ora_parse($cursor,"select C.parameter_name, R.depot, R.last_generated, A.name, A.value from drift_output_lines A, drift_date_ranges B, drift_parameters C, drift_run R where R.run_id in (select max(run_id) from drift_run Y, drift_parameters Z where Y.time_period=$date_range_serial and Y.scenario_no=Z.parameter_serial and Z.active='Y' group by Y.depot) and R.scenario_no=C.parameter_serial and R.time_period=B.date_range_serial and R.run_id=A.run_id order by R.depot,B.date_range_name,A.name");
+ora_exec($cursor);
+$totals=array();
+
+$colours=array();
+for ($a=0;$a<3;$a++) {
+	for ($b=2;$b>=0;$b--) {
+		for ($c=0; $c<2 ; $c++ ) {
+			$col1=sprintf("%02X",150+$a*50);
+                        $col2=sprintf("%02X",150+$c*75);
+                        $col3=sprintf("%02X",150+$b*50);
+
+			$colours[]=$col1.$col2.$col3;
+
+		}
+	}
+}
+
+$lastdepot="";
+while (ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)) {
+	$totals[$data["NAME"]] += $data["VALUE"];
+	if (strstr($data["NAME"],"Needed")) {
+		$data["FIVEPERC"] = round($data["VALUE"] * 1.05);
+		$data["TENPERC"] = round($data["VALUE"] * 1.1);
+		$data["FIFTEENPERC"] = round($data["VALUE"] * 1.15);
+	}
+	else {
+		$data["BLANK1"] = "";
+		$data["BLANK2"] = "";
+		$data["BLANK3"] = "";
+	}
+	if ($csv=="Y") {
+
+		foreach ($data as $key=>$val) 
+			echo '"'.$val.'",';
+		echo "\n";
+
+	} else {
+		if ($data["DEPOT"]!=$lastdepot) {
+			$col++;
+			$color=$colours[$col];
+/*
+			$col1=sprintf("%02X",100+mt_rand()%155);
+			$col2=sprintf("%02X",100+mt_rand()%155);
+			$col3=sprintf("%02X",100+mt_rand()%155);
+
+*/
+			$lastdepot=$data["DEPOT"];
+		}
+		echo "<tr bgcolor=#$color>";
+
+		echo "<td>";
+		echo implode("</td><td align=right>", $data);
+		echo "</td></tr>";
+	}
+	unset($data);
+}
+
+foreach ($totals as $name=>$value) {
+       if (strstr($name,"Needed")) {
+                        $value5 = round($value*1.05);
+                        $value10 = round($value*1.1);
+                        $value15 = round($value*1.15);
+       } else {
+                        $value5 = "";
+                        $value10 = "";
+                        $value15 = "";
+       }
+
+	if ($csv=="Y") {
+		echo '"Total","All","","'.$name.'",'.$value.','.$value5.','.$value10.','.$value15."\n";	
+	} else {
+		echo "<tr><td><b>Total</td><td align=right><b>All</td><td></td><td align=right>$name</td><td align=right>$value</td><td align=right>$value5</td><td align=right>$value10</td><td align=right>$value15</td></tR>";
+	}
+}
+if ($csv=="Y") {
+	exit;
+}
+
+echo "</tbody></table>";
+echo "</div>";
+
+
+?>
+</form>
+
+</div>
+<script>
+$(document).ready(function() {
+    console.log('about to');
+    $('#mytable').DataTable( { "searching": true, "pageLength": 25,  "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ] } );
+    console.log('test');
+} );
+</script>
+
+
+</body>
+</html>
+<? close_oracle() ?>

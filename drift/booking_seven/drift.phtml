@@ -1,0 +1,707 @@
+<html>
+<body>
+<link rel="stylesheet" type="text/css" href="driftstyle.css" />
+
+
+<script>
+	function refresh_me() {
+		document.body.style.opacity=0.3;
+
+		window.location.reload(false);
+
+	}
+</script>
+<?
+require("../php3/oracle.inc");
+require("../php3/colors.inc");
+require("../php3/logs.inc");
+require("../php3/misc.inc");
+require("../php3/sec.inc");
+require("../php3/opstimes.inc");
+
+require("drift_functions.phtml");
+
+
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+
+echo "<div id='mainnav'><a href=drift_dates.phtml>Edit Dates</a>  <a href=drift_parameters.phtml>Edit Scenarios</a>  <a href=drift_globals.phtml>Edit Globals</a>  <a class=active href=drift.phtml>DRIFT Forecast</font></a>  <a href=drift_report_details.phtml>Route Details</a>  <a href=drift_report_details2.phtml>Date Details</a>  <a href=drift_report.phtml>Summary</a></div><hr>";
+    ora_parse($cursor,"alter session set nls_date_format='YYYY/MM/DD HH24:MI'");
+    ora_exec($cursor);
+
+$data=array();
+$season=array();
+$loaded=false;
+
+
+if (isset($parameter_serial) && $depot!="" && is_numeric($date_range_serial)) {
+	$run_number=0;
+       // Scenarios for connection to mysql forecast database
+        $myServer = "127.0.0.1";
+        $myUser = "root";
+        $myPass = "fast#SQL!";
+        $myDB = "forecast";
+
+        // Create database connection
+      try {
+                $mylink = new PDO  ("mysql:host=$myServer;dbname=$myDB",$myUser,$myPass);
+          } catch ( PDOException $e){
+            echo "Error connecting to Mysql on $myServer<bR>";
+            echo $e->getMessage();
+                if (is_numeric($data["FORECAST_TO_USE"]))
+                        exit;
+                else
+                        unset($mylink);
+        }
+
+	if (is_numeric($save_lmh)) {
+		ora_parse($cursor,"update drift_date_ranges set learnership_min_hours=$save_lmh where date_range_serial=$date_range_serial");
+		ora_Exec($cursor);
+		echo "<script> window.location='drift.phtml?depot=$depot&date_range_serial=$date_range_serial&parameter_serial=$parameter_serial';</script>";
+		exit;
+	}
+	if (is_numeric($save_fmh)) {
+                ora_parse($cursor,"update drift_date_ranges set fixedterm_min_hours=$save_fmh where date_range_serial=$date_range_serial");
+                ora_Exec($cursor);
+		echo "<script> window.location='drift.phtml?depot=$depot&date_range_serial=$date_range_serial&parameter_serial=$parameter_serial';</script>";
+                exit;
+        }
+
+	// process!!
+	ora_parse($cursor,"select * from drift_date_ranges where date_range_serial=$date_range_serial");
+	ora_Exec($cursor);
+	unset($ddata);
+	if (!ora_fetch_into($cursor, $ddata, ORA_FETCHINTO_ASSOC)) {
+		echo "Error!  Cannot find date range $date_range_serial<bR>";
+		exit;
+	}
+	$start_date=$ddata["START_DATE"];
+	$end_date=$ddata["END_DATE"];
+	if ($depot=="ALL") {
+//		echo "Big!";
+		$use_iframes=false;
+		$bigcursor = ora_open($conn);
+		ora_parse($bigcursor,"select depot_code from depots where drift_forecast='Y' order by 1");
+		ora_exec($bigcursor);
+		while (ora_fetch($bigcursor)) {
+			$depot=getdata($bigcursor,0);
+//			echo "Switch to $depot<Br>";
+			process_forecast($parameter_serial, $depot, $start_date, $end_date, $date_range_serial, $ddata);
+		}
+	} else {
+		$use_iframes=true;
+//		echo "Small! $depot<br>";
+		process_forecast($parameter_serial, $depot, $start_date, $end_date, $date_range_serial, $ddata);
+	}
+}
+
+
+
+
+
+
+if (!is_numeric($date_range_serial) || !isset($depot) || isset($showmenu) || !isset($parameter_serial)) {
+	echo "<table class='ResultsTable'><tr><th class='caption' colspan=2><B>Please select a period & depot:</u></th></tr>";
+	echo "<form method=get action=drift.phtml>";
+	echo "\n<tr><th><B>Depot:</b></th><td style='text-align: left'>\n<select name=depot>";
+	echo "<option value='ALL'>All Depots</option>\n";
+	ora_parse($cursor,"select depot_code from depots where drift_forecast='Y' order by 1");
+	ora_exec($cursor);
+	if (!isset($depot))
+		$depot="";
+	while (ora_Fetch($cursor)) {
+		$dp=getdata($cursor,0);
+		if ($dp==$depot)
+			echo "<option selected>";
+		else
+			echo "<option>";
+		echo $dp."\n";
+	}
+	echo "</select></td></tr>\n";
+	echo "<tr><th><B>Season:</b></th><td><select name=date_range_serial>";
+	$today=date("Ymd");
+	ora_parse($cursor,"select date_range_serial,date_range_name, null, start_date, end_date from drift_date_ranges where end_date>=$today and is_Current='Y' order by start_date");
+	ora_Exec($cursor);
+	if(!isset($date_range_serial))
+		$date_range_serial="null";
+	while (ora_fetch_into($cursor,$data,ORA_FETCHINTO_ASSOC)) {
+		echo "<option value=".$data["DATE_RANGE_SERIAL"];
+		if ($data["DATE_RANGE_SERIAL"]==$date_range_serial)
+			echo " SELECTED";
+		echo ">".$data["DATE_RANGE_NAME"]." - from ".$data["START_DATE"]." to ".$data["END_DATE"]."\n";
+
+	} //while
+	echo "</select></td></tr>\n";
+
+	if (is_numeric($date_range_serial) && $depot!="") {
+		echo "<tr><th>Scenarios to use:</th><td style='text-align: left'><select name=parameter_serial>\n";
+		echo "<option value=AUTO>Automatic</option>\n";
+		ora_parse($cursor,"select A.parameter_serial, A.parameter_name, A.depot from drift_parameters A, drift_parameter_dates B where B.date_range_serial=$date_range_serial and (A.depot='ALL' or A.depot='$depot') and A.parameter_serial=B.parameter_serial and A.active='Y' order by A.depot desc, A.parameter_serial desc");
+		ora_exec($cursor);
+		while (ora_fetch_into($cursor, $data)) {
+			echo "<option value='$data[0]'>$data[2]: $data[1]</option>\n";
+		}
+		echo "</select></td></tr>\n";
+	}
+
+	echo "<tr><th colspan=2><input type=submit value=GO></th></tr></table>";
+	echo "</form>";
+	exit;
+
+}
+
+
+
+function process_forecast($parameter_serial, $depot, $start_date, $end_date, $date_range_serial, $date_data) {
+        global $cursor, $conn, $debug, $mylink, $run_number,$fc_hours_debug, $use_iframes, $runid;
+
+	$run_number++;
+	$fc_hours_debug=array();
+
+	ora_parse($cursor,"select drift_run_id.nextval from dual");
+	ora_Exec($cursor);
+	ora_fetch($cursor);
+	$runid=getdata($cursor,0);
+	
+        if ($parameter_serial == "AUTO") {
+                ora_parse($cursor,"select A.parameter_serial, A.parameter_name, A.depot from drift_parameters A, drift_parameter_dates B where B.date_range_serial=$date_range_serial and (A.depot='ALL' or A.depot='$depot') and A.parameter_serial=B.parameter_serial and A.active='Y' order by A.depot desc, A.preferred desc, A.parameter_serial desc");
+                ora_exec($cursor);
+                if (ora_fetch($cursor)) {
+                        $parameter_serial = getdata($cursor,0);
+                }
+        }
+        if (!is_numeric($parameter_serial)) {
+                echo "Skipping $depot due to no parameters<BR>";
+                return false;
+        }
+	ora_parse($cursor,"insert into drift_run values ($runid, '$depot', $date_range_serial, $parameter_serial, CURRENT_TIMESTAMP)");
+        ora_exec($cursor);
+
+        if ($debug) echo "Loading Scenarios $parameter_serial<BR>";
+                ora_parse($cursor,"select * from drift_parameters where parameter_serial=$parameter_serial");
+                ora_exec($cursor);
+                if (!ora_fetch_into($cursor,$data,ORA_FETCHINTO_ASSOC)) {
+                        echo "Could not find scenario # $parameter_serial<Br>";
+                        exit;
+                }
+
+
+
+	$data["DEPOT"]=$depot;
+//        echo "<B>".$data["DEPOT"]."</b> Scenario <b>#$parameter_serial:</b> &nbsp; <i><font size=+1><u>".$data["PARAMETER_NAME"]."</u></font></i><bR>";
+
+        $loaded=true;
+
+	// set up $season for backward compatibility
+	$season=array();
+	$season["DSD_START_DATE"] = $start_date;
+	$season["DSD_END_DATE"] = $end_date;
+
+
+$numdays=0;
+$numweekdays=0;
+for ($date=$season["DSD_START_DATE"];$date<=$season["DSD_END_DATE"];$date=nextdate($date)) {
+        $dt=vgetdate($date);
+        $dow=date("N",$dt);
+        $numdays++;
+        if ($dow<6)
+                $numweekdays++;
+}
+
+
+
+$hours_per_week=get_hours_per_week($cursor,$depot);  // work hours per week
+$hours_per_day=$hours_per_week/7;
+echo "<div style='float: left'>";
+echo "<Table border=0 cellspacing=0 class=resultstable>";
+echo "<form method=post action=drift.phtml><input type=hidden name=parameter_serial value=$parameter_serial><input type=hidden name=update value=Y>";
+
+echo "<tr><th colspan=4 class=caption>$depot on ".$date_data["DATE_RANGE_NAME"]."</th></tr>";
+echo "<Tr bgcolor=lavender><th ><B>Setting</th><th align=right colspan=2 ><b><b>Value $sofar</th>";
+if ($use_iframes || true) {
+	echo "<td rowspan=30>";
+//	echo "<iframe src=drift_globals.phtml?iframe=Y width=600 height=200></iframe>";
+
+	echo "<iframe src=drift_parameters.phtml?depot=$depot&parameter=$parameter_serial&iframe=Y width=500 height=600 style='border: 0px'></iframe>";
+	echo "</td>";
+}
+echo "</tr>";
+$col2="bgcolor=#BBBBBB";
+if (!$use_iframes)
+{
+	echo "<tr><td>Scenario Name</td><td colspan=2 align=right><a href=drift_parameters.phtml?depot=$depot&parameter=$parameter_serial>".$data["PARAMETER_NAME"]."</a></td></tr>";
+	echo "<tr><td>Depot</td><td bgcolor='yellow' colspan=2 align=right>$depot</td></tr>";
+}
+echo "<tr $col2><td>Number of days</td><td colspan=2 align=right><b>$numdays</td></tr>";
+echo "<tr><Td>Number of weekdays</td><td colspan=2 align=right><b>$numweekdays</td></tr>";
+
+$mystart=substr($season["DSD_START_DATE"],0,4)."-".substr($season["DSD_START_DATE"],0,2)."-".substr($season["DSD_START_DATE"],0,2);
+$myend=substr($season["DSD_END_DATE"],0,4)."-".substr($season["DSD_END_DATE"],0,2)."-".substr($season["DSD_END_DATE"],0,2);
+$qry="select FCID, FCName from forecast.fc_globals where toDate>='$mystart' and fromDate<='$myend'";
+//echo "$qry<br>";
+
+ora_parse($cursor,"select parameter, value from drift_globals");
+ora_exec($cursor);
+while (ora_fetch($cursor)) {
+    if (!isset($data[getdata($cursor,0)])) 
+	$data[getdata($cursor,0)] = getdata($cursor,1);
+}
+
+if (isset($data["FORECAST_TO_USE"])) {
+	$di_forecast_to_use = $data["FORECAST_TO_USE"];
+}
+else $di_forecast_to_use = "LIVE";
+
+$data["FIXEDTERM_MIN_HOURS"] = $date_data["FIXEDTERM_MIN_HOURS"];
+$data["LEARNERSHIP_MIN_HOURS"] = $date_data["LEARNERSHIP_MIN_HOURS"];
+
+$data["DEPOT"] = $depot;
+
+echo "<tr $col2><th>&nbsp;</th><th align=center><b>Value</th><th align=center width='80px'><b>Hours</th></tR>";
+
+
+$leave_days=$data["DRIVERS_ON_LEAVE_PER_DAY"] * $numweekdays;
+$leave_hours= $leave_days * 9;
+echo "<tr $col2><td>Leave Days</td><td align=right>$leave_days</td><td align=right>".number_format($leave_hours)."</td></tr>";
+
+
+$sick_days=$data["DRIVERS_SICK_PER_DAY"] * $numweekdays;
+$sick_hours = $sick_days * 9;
+echo "<tr><td>Sick Days</td><td align=right>$sick_days</td><td align=right>".number_format($sick_hours)."</td></tr>";
+
+$standby_hours = $data["STANDBY_DRIVERS_PER_DAY"] * $numdays * $data["STANDBY_HOURS_PER_SHIFT"];
+
+$standby_shifts = $data["STANDBY_DRIVERS_PER_DAY"] * $numdays;
+$standby_ave=nformat(sprintf("%.2f",$standby_hours/$numdays));
+
+echo "<tr  $col2><td>Standby Shifts</td><Td align=right>$standby_shifts<font size=1> of average ".$data["STANDBY_HOURS_PER_SHIFT"]." hours</td><td align=right>".number_format($standby_hours)."</td></tr>";
+
+
+$shunter_shifts=$data["SHUNTERS_PER_DAY"] * $numdays;
+$shunter_hours=$shunter_shifts * 12;
+echo "<tr><td>Shunter & Shuttle Shifts</td><td align=right>$shunter_shifts<font size=1> of 12 hours</td><td align=right>".number_format($shunter_hours)."</td></tr>";
+
+$charter_shifts=$data["CHARTERS_PER_DAY"] * $numdays;
+$charter_hours = $charter_shifts * $data["AVERAGE_HOURS_PER_CHARTER"];
+echo "<tr $col2><td>Charter Shifts</td><td align=right>$charter_shifts<font size=1> of ".$data["AVERAGE_HOURS_PER_CHARTER"]." average hours</td><td align=right>".number_format($charter_hours)."</td></tr>";
+
+$training_shifts=$data["DRIVERS_TRAINING_PER_DAY"] * $numdays;
+$training_hours = $training_shifts * 9;
+echo "<tr><td>Training Shifts</td><td align=right>$training_shifts<font size=1> of 9 hours</td><td align=right>".number_format($training_hours)."</td></tr>";
+
+
+$awol_shifts=$data["DRIVERS_AWOL_PER_DAY"] * $numdays;
+$awol_hours = $awol_shifts * 9;
+echo "<tr $col2><td>AWOL Shifts</td><td align=right>$awol_shifts</td><td align=right>".number_format($awol_hours)."</td></tr>";
+
+$col3="bgcolor=#4F81BD";
+echo "<tr $col3><th colspan=3>Percentage Split</th></tr>";
+if (($data["PERCENTAGE_PERMANENT"] + $data["PERCENTAGE_LEARNERSHIP"] + $data["PERCENTAGE_FIXEDTERM"] )!=100) {
+	echo "<tr><td colspan=3><font color=red>ERROR!  Percentage Driver share must total 100%</td></tr>";
+	$perror=true;
+}
+
+echo "<tr><td>Percentage PERMANENT</td><td colspan=2 align=right>".$data["PERCENTAGE_PERMANENT"]."%</td></tr>";
+echo "<tr ><td>Percentage LEARNERSHIP</td><td colspan=2 align=right>".$data["PERCENTAGE_LEARNERSHIP"]."%</td></tr>";
+echo "<tr $col2><td>LEARNERSHIP Min Hours</td><td colspan=2 align=right><div id=lmh_read onclick=\"this.style.display='none'; document.getElementById('lmh_edit').style.display='block'; document.getElementById('lmh').focus();  \">".$data["LEARNERSHIP_MIN_HOURS"]."h</div><div id=lmh_edit style='display:none'><input id=lmh size=3 value='".$data["LEARNERSHIP_MIN_HOURS"]."'>h <input type=button onclick=\"document.location='drift.phtml?depot=$depot&date_range_serial=$date_range_serial&parameter_serial=$parameter_serial&save_lmh='+document.getElementById('lmh').value; document.body.style.opacity=0.3; return false; \" value='Save'></div></td></tr>";
+echo "<tr><td>Percentage FIXEDTERM</td><td colspan=2 align=right>".$data["PERCENTAGE_FIXEDTERM"]."%</td></tr>";
+echo "<tr $col2><td>FIXEDTERM Min Hours</td><td colspan=2 align=right><div id=fmh_read onclick=\"this.style.display='none'; document.getElementById('fmh_edit').style.display='block'; document.getElementById('fmh').focus();  \">".$data["FIXEDTERM_MIN_HOURS"]."h</div><div id=fmh_edit style='display:none'><input id=fmh size=3 value='".$data["FIXEDTERM_MIN_HOURS"]."'>h <input type=button onclick=\"document.location='drift.phtml?depot=$depot&date_range_serial=$date_range_serial&parameter_serial=$parameter_serial&save_fmh='+document.getElementById('fmh').value; document.body.style.opacity=0.3; return false; \" value='Save'></div></td></tr>";
+echo "</table></div>";
+
+if ($perror)
+	return false;
+/// CALCULATION....
+echo "<div style='float: left'>";
+echo "<table border=1 cellspacing=0 class=ResultsTable>";
+echo "<tr><th colspan=6 class=caption>Results for $depot on ".$date_data["DATE_RANGE_NAME"]."</th></tr>";
+
+$normaltimeperdriver=$hours_per_week/5*$numweekdays;
+if (!is_numeric($data["OVERTIME_PERCENTAGE"]))
+	$data["OVERTIME_PERCENTAGE"]=0;
+$totaltimeperdriver=sprintf("%.2f",$normaltimeperdriver*(100+$data["OVERTIME_PERCENTAGE"])/100);
+if ($totaltimeperdriver==sprintf("%.2f",round($totaltimeperdriver)))
+	$totaltimeperdriver=round($totaltimeperdriver);
+
+
+$col1="bgcolor=lavender";
+
+echo "<tr><td $col1>Hours normal time allowed per driver</td><td ><center>$normaltimeperdriver</td><td colspan=3 $col1>&nbsp;</td></tr>";
+//echo "<Tr><td $col1>Hours (Incl Overtime) allowed per driver</td><td ><center>$totaltimeperdriver</td></tr>";
+
+
+$cols=6;
+
+echo "<tr bgcolor=lavender><th><b>Item</th><th colspan=5><b><center>Calculation</th></tr>";
+
+
+$routehoursneeded= get_combined_hours($data["DEPOT"],$season["DSD_START_DATE"],$season["DSD_END_DATE"],$parameter_serial, $date_range_serial,$data["FORECAST_TO_USE"]);
+
+//$routehoursneeded_actual=get_actual_hours($data["DEPOT"],$season["DSD_START_DATE"],$season["DSD_END_DATE"]);
+
+
+
+echo "<tr><Td $col1>Hours on routes</td><td><center><b>".number_format($routehoursneeded)."<br><font size=1>combined</font></b>";
+if ($routehoursneeded==0)
+	echo "</td><td colspan=4><font color=red><b>NO ROUTES RUNNING!!!</b>";
+else
+	echo "</td><td colspan=3 $col1>&nbsp;";
+echo "</td></tr>";
+
+$totalhoursneeded=ceil($routehoursneeded+$leave_hours+$sick_hours+$standby_hours+$charter_hours+$awol_hours+$shunter_hours+$training_hours);
+$extrahoursneeded=ceil($leave_hours+$sick_hours+$standby_hours+$charter_hours+$awol_hours+$shunter_hours+$training_hours);
+
+/*
+ora_parse($cursor,"insert into drift_output_lines values ($runid,'Hours needed on routes', ".round($routehoursneeded).")");
+ora_exec($cursor);
+ora_parse($cursor,"insert into drift_output_lines values ($runid,'Other Hours needed', $extrahoursneeded)");;
+ora_exec($cursor);
+*/
+
+echo "<tr><Td $col1>Total hours needed for period</td><td><center>".number_format($totalhoursneeded)."</td><td colspan=3 $col1>&nbsp;</td></tr>";
+
+ora_parse($cursor,"select subtype,count(*) from operators where depot='".$data["DEPOT"]."' group by subtype");
+ora_Exec($cursor);
+$total_drivers=0;
+$permanent_drivers=0;
+$learnership_drivers=0;
+$fixedterm_drivers=0;
+
+while (ora_fetch($cursor))
+{
+	$typeof=getdata($cursor,0);
+	$count=getdata($cursor,1);
+	$total_drivers+=$count;
+	if ($typeof=="L")
+		$learnership_drivers+=$count;
+	elseif ($typeof=="f")
+		$fixedterm_drivers+=$count;
+	else
+		$permanent_drivers+=$count;
+}
+
+//$debug=true;
+
+if ($debug)
+	echo "<i>";
+
+/* Calculation */
+// 1) Factors 
+$factor_fixedterm=$data["PERCENTAGE_FIXEDTERM"]/$data["PERCENTAGE_PERMANENT"];
+if ($debug) 
+	echo "Factor Fixed-Term: $factor_fixedterm = Fixed-TermPercentage ".$data["PERCENTAGE_FIXEDTERM"]." / PercentPerm ".$data["PERCENTAGE_PERMANENT"]."<Br>";
+$factor_learnership=$data["PERCENTAGE_LEARNERSHIP"]/$data["PERCENTAGE_PERMANENT"];
+if ($debug)
+        echo "Factor Learnership: $factor_learnership = LearnPerc ".$data["PERCENTAGE_LEARNERSHIP"]." / PercentPerm ".$data["PERCENTAGE_PERMANENT"]."<Br>";
+
+
+// 2) work out X (number of perm) in turns of total hours / totals factored
+$permanent_needed=$totalhoursneeded/($totaltimeperdriver + $factor_fixedterm*$data["FIXEDTERM_MIN_HOURS"] + $factor_learnership*$data["LEARNERSHIP_MIN_HOURS"]);
+if ($debug)
+	echo "Perm $permanent_needed = Hrs $totalhoursneeded / ($totaltimeperdriver + $factor_fixedterm*".$data["FIXEDTERM_MIN_HOURS"]." + $factor_learnership*".$data["LEARNERSHIP_MIN_HOURS"]." )<br>";
+
+// 3) work out the other 2 using the factors
+$fixedterm_needed=$permanent_needed*$factor_fixedterm;
+$learnership_needed=$permanent_needed*$factor_learnership;
+if ($debug)
+	echo "Last 2 numbers: $fixedterm_needed Fixed-Term and $learnership_needed Learnerships</i><p>";
+
+// 4) round up
+$permanent_needed=ceil($permanent_needed);
+$fixedterm_needed=ceil($fixedterm_needed); 
+$learnership_needed=ceil($learnership_needed); 
+
+// 5) add up
+$drivers_needed=$permanent_needed+$fixedterm_needed+$learnership_needed;
+//if ($debug)
+//	echo "$drivers_needed = $permanent_needed+$fixedterm_needed+$learnership_needed<br>";
+
+//$drivers_needed=ceil($totalhoursneeded/$totaltimeperdriver);
+$driver_difference=$drivers_needed-$total_drivers; // shortfall/surplus of drivers
+
+$cols+=3;
+echo "<tr $col1><td colspan=$cols>&nbsp;</td></tr>";
+echo "<tr><th style='text-align: right'># Drivers on system</th><td><center>$total_drivers</td><td $col2><center>+ 5% Fat</td><td $col2><center>+ 10% Fat</td><td $col2><center>+ 15% Fat</td></tr>";
+
+ora_parse($cursor,"insert into drift_output_lines values ($runid, 'Drivers on SOPS', $total_drivers)");
+ora_exec($cursor);
+
+//echo "<tr><Td $col1>Min drivers needed to do trips</td><td><center>$drivers_needed</td><td>&nbsp;</td></tr>";
+//echo "<tr><td $col1>Unavailable drivers</td><td><center>$total_unavailable</td><td>&nbsp;</td></tr>";
+
+$fat1=round($drivers_needed * 1.05);
+$fat2=round($drivers_needed * 1.1);
+$fat3=round($drivers_needed * 1.15);
+
+
+echo "<Tr><th style='text-align: right'># Drivers needed</th><td><center><b>$drivers_needed</td><td><center>$fat1</td><td><center>$fat2</td><td><center>$fat3</td></tr>";
+ora_parse($cursor,"insert into drift_output_lines values ($runid, 'Minimum Drivers Needed', $drivers_needed)");
+ora_exec($cursor);
+
+echo "<Tr><th  style='text-align: right'>Difference</th><td><center><b>";
+if ($driver_difference<0)
+	echo abs($driver_difference)." less needed";
+elseif ($driver_difference==0)
+	echo "0";
+else echo "$driver_difference more needed";
+echo "</td>";
+
+$driver_difference1=$fat1-$total_drivers; // shortfall/surplus of drivers
+$driver_difference2=$fat2-$total_drivers; // shortfall/surplus of drivers
+$driver_difference3=$fat3-$total_drivers; // shortfall/surplus of drivers
+
+echo "<td><center><b>";
+if ($driver_difference1<0)
+        echo abs($driver_difference1)." less needed";
+elseif ($driver_difference1==0)
+        echo "0";
+else echo "$driver_difference1 more needed";
+echo "</td>";
+
+
+echo "<td><center><b>";
+if ($driver_difference2<0)
+        echo abs($driver_difference2)." less needed";
+elseif ($driver_difference2==0)
+        echo "0";
+else echo "$driver_difference2 more needed";
+echo "</td>";
+
+echo "<td><center><b>";
+if ($driver_difference3<0)
+        echo abs($driver_difference3)." less needed";
+elseif ($driver_difference3==0)
+        echo "0";
+else echo "$driver_difference3 more needed";
+echo "</td>";
+
+
+echo "</tr>";
+
+echo "<tr $col1><td colspan=$cols>&nbsp;</td></tr>";
+
+if ($total_drivers!=0)
+$perm_perc=sprintf("%.1f",100*$permanent_drivers/$total_drivers);
+echo "<tr><td $col1># Permanent drivers on system</td><td ><center><B>$permanent_drivers</b> <i>($perm_perc%)</td><td $col2><center>+ 5% Fat</td><td $col2><center>+ 10% Fat</td><td $col2><center>+ 15% Fat</td></tr>";
+echo "<Tr><Td $col1># Permanent drivers needed</td><td><center>$permanent_needed</td>";
+$fat1 = round($permanent_needed * 1.05);
+$fat2 = round($permanent_needed * 1.1);
+$fat3 = round($permanent_needed * 1.15);
+
+echo "<td><center>$fat1</td>";
+echo "<td><center>$fat2</td>";
+echo "<td><center>$fat3</td>";
+
+
+echo "</tr>";
+$diff=$permanent_drivers-$permanent_needed;
+echo "<tr><Td $col1>Difference</td><td><center>";
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td><td><center>";
+
+$diff=$permanent_drivers-$fat1;
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td><td><center>";
+
+
+$diff=$permanent_drivers-$fat2;
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td><td><center>";
+
+
+$diff=$permanent_drivers-$fat3;
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td>";
+
+echo "</tr>";
+
+echo "<tr $col1><td colspan=$cols>&nbsp;</td></tr>";
+
+if ($total_drivers!=0)
+$learn_perc=sprintf("%.1f",100*$learnership_drivers/$total_drivers);
+
+echo "<tr><td $col1># Learnership Drivers on system</td><td><center><b>$learnership_drivers</b> <i>($learn_perc%)</td><td $col2><center>+ 5% Fat</td><td $col2><center>+ 10% Fat</td><td $col2><center>+ 15% Fat</td></tr>";
+echo "<Tr><Td $col1># Learnership Drivers needed</td><td><center>$learnership_needed</td>";
+
+$fat1 = round($learnership_needed * 1.05);
+$fat2 = round($learnership_needed * 1.1);
+$fat3 = round($learnership_needed * 1.15);
+
+echo "<td><center>$fat1</td>";
+echo "<td><center>$fat2</td>";
+echo "<td><center>$fat3</td>";
+
+
+
+echo "</tr>";
+$diff=$learnership_drivers-$learnership_needed;
+echo "<tr><Td $col1>Difference</td><td><center>";
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td><td><center>";
+
+$diff=$learnership_drivers-$fat1;
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td><td><center>";
+
+
+$diff=$learnership_drivers-$fat2;
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td><td><center>";
+
+
+$diff=$learnership_drivers-$fat3;
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td>";
+
+
+
+
+
+echo "</tr>";
+
+
+
+if ($total_drivers!=0)
+$fix_perc=sprintf("%.1f",100*$fixedterm_drivers/$total_drivers);
+
+echo "<tr $col1><td colspan=$cols>&nbsp;</td></tr>";
+echo "<tr><td $col1># Fixed-Term drivers on system</td><td ><center><B>$fixedterm_drivers</b> <i>($fix_perc%)</td><td $col2><center>+ 5% Fat</td><td $col2><center>+ 10% Fat</td><td $col2><center>+ 15% Fat</td></tr>";
+echo "<Tr><Td $col1># Fixed-Term drivers needed</td><td><center>$fixedterm_needed</td>";
+
+$fat1 = round($fixedterm_needed * 1.05);
+$fat2 = round($fixedterm_needed * 1.1);
+$fat3 = round($fixedterm_needed * 1.15);
+
+echo "<td><center>$fat1</td>";
+echo "<td><center>$fat2</td>";
+echo "<td><center>$fat3</td>";
+
+
+echo "</tr>";
+$diff=$fixedterm_drivers-$fixedterm_needed;
+echo "<tr><Td $col1>Difference</td><td><center>";
+
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td>";
+
+
+echo "<td><center>";
+$diff=$fixedterm_drivers-$fat1;
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td><td><center>";
+
+
+$diff=$fixedterm_drivers-$fat2;
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td><td><center>";
+
+$diff=$fixedterm_drivers-$fat3;
+if ($diff<0)
+        echo abs($diff)." more needed";
+elseif ($diff==0)
+        echo "0";
+else echo "$diff less needed";
+
+echo "</td>";
+
+
+
+echo "</tr>";
+
+echo "<tr $col1><td colspan=$cols>&nbsp;</td></tr>";
+
+
+
+
+
+echo "</table></div>";
+
+if (getenv("REMOTE_USER")=="Keith")
+echo "<input type=button onclick=\"document.getElementById('hidden_debug$run_number').style='display: block';  \" value='Show Details for $depot'>";
+
+echo "<div id=hidden_debug$run_number style='display: none'>";
+
+echo "Forecast Route Hours:<br><table border=1 cellspacing=0>";
+ksort($fc_hours_debug,SORT_NUMERIC);
+foreach ($fc_hours_debug as $key => $val)
+	echo $val;
+echo "</table><hr>";
+
+
+echo "Standby: <br><table border=1 cellspacing=0>".$standby_debug."</table><hr>";
+
+echo "</div>";
+
+echo "<div style='clear:both'></div>";
+echo "<p><br><br><br><p>";
+
+
+
+} // function
+
+
+
+?>
+
+
+</form>
+</body>
+</html>
+<? close_oracle() ?>

@@ -1,4 +1,12 @@
 <?php
+
+ob_start();
+require_once ("/usr/local/www/pages/php3/oracle.inc");
+require_once ("/usr/local/www/pages/php3/misc.inc");
+require_once ("/usr/local/www/pages/php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+
 @header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
 @header("Cache-Control: no-cache, must-revalidate");
 @header("Pragma: no-cache");
@@ -14,35 +22,10 @@ if (isset($_GET['s']))
 	$screen_id = $_GET['s'];
 }
 
-function oci_conn()
-{
-	$host = 'localhost';
-	$port = '1521';
-	$sid = 'XE';
-	$username = 'SYSTEM';
-	$password = 'dontletmedown3';
-
-	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
-
-	if (!$conn) 
-	{
-		$e = oci_error();
-		exit;
-	} 
-	else 
-	{
-		// echo "Connection succeeded";
-	}
-
-	return $conn;
-}
-
 function get_stop_serial()
 {
-	global $stop_serial, $screen_id, $screen_layout, $screen_name;
+	global $conn, $stop_serial, $screen_id, $screen_layout, $screen_name;
 
-	$conn = oci_conn();
-	
 	$sql = "SELECT NAME, STOP_SERIAL FROM DEPARTURE_TVS WHERE SCREEN_ID = :screen_id";
 
 	$stid = oci_parse($conn, $sql);
@@ -63,10 +46,8 @@ function get_stop_serial()
 
 function get_layout()
 {
-	global $screen_id, $screen_layout;
+	global $conn, $screen_id, $screen_layout;
 
-	$conn = oci_conn();
-	
 	$sql = "SELECT * FROM DEPARTURE_TV_SETTINGS WHERE SCREEN_ID = :screen_id";
 
 	$stid = oci_parse($conn, $sql);
@@ -178,7 +159,7 @@ get_layout();
 </body>
 </html>
 <script>
-baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/";
+baseUrl = window.location.protocol + "//" + window.location.hostname + "/move/";
 screenLayout = <?php echo $screen_layout; ?>;
 let fetchInterval;
 let fetchSplitInterval;

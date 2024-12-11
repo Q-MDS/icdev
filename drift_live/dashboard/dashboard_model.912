@@ -15,8 +15,8 @@ class Dashboard_model
 	public function __construct()
 	{
 		global $conn;
-		$this->conn = $conn;
 		$this->depot_totals = array();
+		$this->conn = $conn;
 	}
 
 	public function getDepotTotals($month, $depot_list)
@@ -61,7 +61,6 @@ class Dashboard_model
 					'CLASS_TRAINING' => 0,
 					'INTERVIEW' => 0,
 					'CVS' => 0,
-					'K53' => 0,
 					'FOUND'	=> 0
 				);
 				$result[] = $depot;
@@ -397,6 +396,27 @@ class Dashboard_model
 
 		$conn = $this->conn;
 		
+		// $sql = "SELECT DISTINCT
+		// 	DEPOT,
+		// 	COUNT(*) DORMANT_DRIVERS
+		// FROM HC_PEOPLE A
+		// LEFT JOIN 
+		// 	(SELECT DISTINCT
+		// 		SERIAL_NO
+		// 	FROM OPS_INFO 
+		// 	WHERE ENTRY_TYPE = 'o'
+		// 		AND TO_DATE(RUNDATE,'YYYYMMDD') > SYSDATE - 3
+		// 		AND TO_DATE(RUNDATE,'YYYYMMDD') <= SYSDATE) B
+		// 	ON A.PERSON_SERIAL = B.SERIAL_NO
+		// WHERE 
+		// 	ACTIVE != 'N'
+		// 	AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%'
+		// 	AND DEPOT != 'GON'
+		// 	AND DEPOT != 'INC'
+		// 	AND DEPOT != 'XXX'
+		// 	AND B.SERIAL_NO IS NULL
+		// GROUP BY DEPOT";
+
 		$sql = "SELECT
 			DEPOT,
 			COUNT(*) DORMANT_DRIVERS
@@ -436,23 +456,17 @@ class Dashboard_model
 
 		oci_close($conn);
 
-		// Test data
-		// $data = array(
-		// 	array('DEPOT' => 'CA', 'DORMANT_DRIVERS' => 230),
-		// 	array('DEPOT' => 'WHK', 'DORMANT_DRIVERS' => 14),
-		// );
-
 		foreach ($depot_list as $depot)
 		{
-			$result = $this->find_depot($depot, $data);
+			$found = false;
 
-			if ($result !== null)
+			foreach ($data as $row)
 			{
-				$dormant_drivers[] = $result;
-			}
-			else
-			{
-				$dormant_drivers[] = 0;
+				if ($row['DEPOT'] == $depot)
+				{
+					$found = true;
+					$dormant_drivers[] = $row['DORMANT_DRIVERS'];
+				}
 			}
 		}
 		$total = array_sum($dormant_drivers);
@@ -471,12 +485,8 @@ class Dashboard_model
 				{
 					$driver = $row['DRIVER'];
 					$string .= $driver . ', ';
-				} 
-				else 
-				{
-					$string .= '';
+					// $hover[$depot] = $driver;
 				}
-				
 			}
 			$hover[$depot] = $string;
 		}
@@ -487,25 +497,44 @@ class Dashboard_model
 		return $ret;
 	}
 
-	private function find_depot($depot, $data)
-	{
-		foreach ($data as $item) {
-			if ($item['DEPOT'] === $depot) {
-				return $item['DORMANT_DRIVERS'];
-			}
-		}
-		return null;
-	}
-
 	private function getDormantDriversHover()
 	{
 		$data = array();
 
 		$conn = $this->conn;
 		
-		$sql = "SELECT DISTINCT 
+		// $sql = "SELECT DISTINCT
+		// 	DEPOT,
+		// 	UPPER(STAFFNO || ' - ' || NAME || ' ' || SURNAME) DRIVER,
+		// 	TO_DATE(MAX_RUNDATE,'YYYYMMDD') LAST_SCHEDULED
+		// FROM HC_PEOPLE A
+		// LEFT JOIN 
+		// 	(SELECT DISTINCT
+		// 		SERIAL_NO
+		// 	FROM OPS_INFO 
+		// 	WHERE ENTRY_TYPE = 'o'
+		// 		AND TO_DATE(RUNDATE,'YYYYMMDD') > SYSDATE - 3
+		// 		AND TO_DATE(RUNDATE,'YYYYMMDD') <= SYSDATE) B
+		// 	ON A.PERSON_SERIAL = B.SERIAL_NO
+		// LEFT JOIN
+		// 	(SELECT
+		// 		SERIAL_NO,
+		// 		MAX(RUNDATE) MAX_RUNDATE
+		// 	FROM OPS_INFO
+		// 	WHERE ENTRY_TYPE = 'o'
+		// 	GROUP BY SERIAL_NO) C
+		// 	ON A.PERSON_SERIAL = C.SERIAL_NO
+		// WHERE 
+		// 	ACTIVE != 'N'
+		// 	AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%'
+		// 	AND DEPOT != 'GON'
+		// 	AND DEPOT != 'INC'
+		// 	AND DEPOT != 'XXX'
+		// 	AND B.SERIAL_NO IS NULL";
+
+		$sql = "SELECT DISTINCT
 			DEPOT,
-			UPPER(STAFFNO || ' - ' || NAME || ' ' || SURNAME || ' - ' || TO_DATE(MAX_RUNDATE,'YYYYMMDD')) DRIVER
+			UPPER(STAFFNO || ' - ' || NAME || ' ' || SURNAME) DRIVER
 		FROM HC_PEOPLE A
 		LEFT JOIN
 			(SELECT DISTINCT
@@ -515,14 +544,6 @@ class Dashboard_model
 				AND TO_DATE(RUNDATE,'YYYYMMDD') > SYSDATE - 3
 				AND TO_DATE(RUNDATE,'YYYYMMDD') <= SYSDATE) B
 			ON A.PERSON_SERIAL = B.SERIAL_NO
-		LEFT JOIN
-			(SELECT
-				SERIAL_NO,
-				MAX(RUNDATE) MAX_RUNDATE
-			FROM OPS_INFO
-			WHERE ENTRY_TYPE = 'o'
-			GROUP BY SERIAL_NO) C
-			ON A.PERSON_SERIAL = C.SERIAL_NO
 		WHERE
 			ACTIVE != 'N'
 			AND UPPER(ORG_UNIT) LIKE '%OPS DRIVER%'
@@ -540,14 +561,6 @@ class Dashboard_model
 		{
 			$data[] = $row;
 		}
-
-		// Test data
-		// $data = array(
-		// 	array('DEPOT' => 'CA', 'DRIVER' => 'Bob'),
-		// 	array('DEPOT' => 'CA', 'DRIVER' => 'Harry'),
-		// 	array('DEPOT' => 'WHK', 'DRIVER' => 'John'),
-		// 	array('DEPOT' => 'WHK', 'DRIVER' => 'Smools'),
-		// );
 
 		oci_free_statement($stid);
 

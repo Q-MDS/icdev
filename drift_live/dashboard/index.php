@@ -1,5 +1,5 @@
 <?php
-require('dashboard_model.php');
+require('Dashboard_model.php');
 $dashboard_model = new Dashboard_model();
 
 /**
@@ -177,6 +177,7 @@ $class_training[] = array_sum($class_training);
  /**
  * Line 25: K53
  */
+// $k53 = array(0, 10, 0, 0, 0, 0, 0, 10, 3, 0, 5);
 $k53 = array();
 foreach ($depot_totals as $depot_total) 
 {
@@ -204,14 +205,14 @@ foreach ($depot_totals as $depot_total)
 }
 $cvs[] = array_sum($cvs);
 
-// function arr_last_updated()
-// {
-// 	global $dashboard_model, $month;
+function arr_last_updated()
+{
+	global $dashboard_model, $month;
 
-// 	$data = $dashboard_model->getLastUpdated($month);
+	$data = $dashboard_model->getLastUpdated($month);
 
-// 	return $data;
-// }
+	return $data;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -389,8 +390,9 @@ $cvs[] = array_sum($cvs);
 					echo '</select>';
 				echo '</div>';
 				?>
-				<div><input type="submit" value="SUBMIT" style="background-color: #EC7A31; padding: 7px 10px; color: white; border-radius: 5px; border: 0;" /></div>
+				<div><input type="submit" value="SUBMIT" style="background-color: #EC7A31; padding: 7px 10px; color: white; border-radius: 5px; border: 0; cursor: pointer" /></div>
 				<div style="flex: 1"><?php echo $manual_input_msg; ?></div>
+				<div style="background-color: #EC7A31; padding: 7px 10px; color: white; border-radius: 5px; border: 0; cursor: pointer" onclick="hideDepotTotals()">Hide Depot Totals</div>
 			</div>
 			</form>
 
@@ -417,7 +419,7 @@ $cvs[] = array_sum($cvs);
 				<div class="row_title bt br cell" style="border-left: 2px solid #454545;">TOTAL</div>
 
 				<!-- Active drivers -->
-				<div class="row bt bl heading">Active Drivers</div>
+				<div class="row bt bl heading">Skilled Drivers</div>
 				<?php
 				foreach ($active_drivers as $index => $ad)
 				{
@@ -433,7 +435,7 @@ $cvs[] = array_sum($cvs);
 				?>
 				
 				<!-- Training -->
-				<div class="row bt bl heading">Training</div>
+				<div class="row bt bl heading">Drivers on Training Trips</div>
 				<?php
 				foreach ($training as $index => $t)
 				{
@@ -445,133 +447,142 @@ $cvs[] = array_sum($cvs);
 					{
 						echo '<div class="row bt cell">' . $t . '</div>';
 					}
-					
 				}
 				?>
 
 				<!-- Old contracts -->
-				<div class="row bt bl heading">Old Contracts</div>
-				<?php
-				foreach ($old_contracts as $index => $oc)
-				{
-					if ($index == count($active_drivers) - 1)
+				<div id="dt_old_contracts" style="display: contents">
+					<div class="row bt bl heading">Old Contracts</div>
+					<?php
+					foreach ($old_contracts as $index => $oc)
 					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $oc . '</div>';
-					}
-					else
-					{
-						if ($index < 11)
+						if ($index == count($active_drivers) - 1)
 						{
-							$this_depot = $depot[$index];
-							if (in_array($this_depot, $result))
+							echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $oc . '</div>';
+						}
+						else
+						{
+							if ($index < 11)
 							{
-								echo '<div class="row bt cell orange">' . $oc . '</div>';
-							}
-							else 
-							{
-								echo '<div class="row bt cell">' . $oc . '</div>';
+								$this_depot = $depot[$index];
+								if (in_array($this_depot, $result))
+								{
+									echo '<div class="row bt cell orange">' . $oc . '</div>';
+								}
+								else 
+								{
+									echo '<div class="row bt cell">' . $oc . '</div>';
+								}
 							}
 						}
 					}
-				}
 				?>
+				</div>
 
 				<!-- Completed Training/Passed -->
-				<div class="row bt bl heading">Completed Training/Passed</div>
-				<?php
-				foreach ($completed_training as $index => $ct)
-				{
-					if ($index == count($active_drivers) - 1)
+				<div id="dt_completed" style="display: contents">
+					<div class="row bt bl heading">Completed Training/Passed</div>
+					<?php
+					foreach ($completed_training as $index => $ct)
 					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $ct . '</div>';
-					}
-					else
-					{
-						if ($index < 11)
+						if ($index == count($active_drivers) - 1)
 						{
-							$this_depot = $depot[$index];
-							if (in_array($this_depot, $result))
+							echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $ct . '</div>';
+						}
+						else
+						{
+							if ($index < 11)
 							{
-								echo '<div class="row bt cell orange">' . $ct . '</div>';
-							}
-							else 
-							{
-								echo '<div class="row bt cell">' . $ct . '</div>';
+								$this_depot = $depot[$index];
+								if (in_array($this_depot, $result))
+								{
+									echo '<div class="row bt cell orange">' . $ct . '</div>';
+								}
+								else 
+								{
+									echo '<div class="row bt cell">' . $ct . '</div>';
+								}
 							}
 						}
 					}
-				}
-				?>
+					?>
+				</div>
 
 				<!-- Dismissed -->
-				<div class="row bt bl heading">Dismissed</div>
-				<?php
-				foreach ($dismissed as $index => $d)
-				{
-					if ($index == count($active_drivers) - 1)
+				<div id="dt_dismissed" style="display: contents">
+					<div class="row bt bl heading">Dismissed</div>
+					<?php
+					foreach ($dismissed as $index => $d)
 					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $d . '</div>';
-					}
-					else
-					{
-						if ($index < 11)
+						if ($index == count($active_drivers) - 1)
 						{
-							$this_depot = $depot[$index];
-							if (in_array($this_depot, $result))
+							echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $d . '</div>';
+						}
+						else
+						{
+							if ($index < 11)
 							{
-								echo '<div class="row bt cell orange">' . $d . '</div>';
-							}
-							else 
-							{
-								echo '<div class="row bt cell">' . $d . '</div>';
+								$this_depot = $depot[$index];
+								if (in_array($this_depot, $result))
+								{
+									echo '<div class="row bt cell orange">' . $d . '</div>';
+								}
+								else 
+								{
+									echo '<div class="row bt cell">' . $d . '</div>';
+								}
 							}
 						}
 					}
-				}
-				?>
+					?>
+				</div>
 
 				<!-- Resigned -->
-				<div class="row bt bl heading">Resigned</div>
-				<?php
-				foreach ($resigned as $index => $r)
-				{
-					if ($index == count($active_drivers) - 1)
+				<div id="dt_resigned" style="display: contents">
+					<div class="row bt bl heading">Resigned</div>
+					<?php
+					foreach ($resigned as $index => $r)
 					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $r . '</div>';
-					}
-					else
-					{
-						if ($index < 11)
+						if ($index == count($active_drivers) - 1)
 						{
-							$this_depot = $depot[$index];
-							if (in_array($this_depot, $result))
+							echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $r . '</div>';
+						}
+						else
+						{
+							if ($index < 11)
 							{
-								echo '<div class="row bt cell orange">' . $r . '</div>';
-							}
-							else 
-							{
-								echo '<div class="row bt cell">' . $r . '</div>';
+								$this_depot = $depot[$index];
+								if (in_array($this_depot, $result))
+								{
+									echo '<div class="row bt cell orange">' . $r . '</div>';
+								}
+								else 
+								{
+									echo '<div class="row bt cell">' . $r . '</div>';
+								}
 							}
 						}
 					}
-				}
-				?>
+					?>
+				</div>
 
 				<!-- Able to schedule: TC -->
-				<div class="row_title bt bl heading">Able To Schedule</div>
-				<?php
-				foreach ($tot_able_to_schedule as $index => $tot)
-				{
-					if ($index == count($active_drivers) - 1)
+				 <div style="display: none">
+					<div class="row_title bt bl heading">Able To Schedule</div>
+					<?php
+					foreach ($tot_able_to_schedule as $index => $tot)
 					{
-						echo '<div class="row_title bt cell" style="border-left: 2px solid #454545;">' . $tot . '</div>';
+						if ($index == count($active_drivers) - 1)
+						{
+							echo '<div class="row_title bt cell" style="border-left: 2px solid #454545;">' . $tot . '</div>';
+						}
+						else
+						{
+							echo '<div class="row_title bt cell">' . $tot . '</div>';
+						}
 					}
-					else
-					{
-						echo '<div class="row_title bt cell">' . $tot . '</div>';
-					}
-				}
-				?>
+					?>
+				</div>
 
 				<!-- Not scheduled in 72 hours: TC -->
 				<div class="row_title bt bl heading">Not scheduled in 72 hours</div>
@@ -655,7 +666,7 @@ $cvs[] = array_sum($cvs);
 				$tot_still_need_min = 0;
 				for ($i = 0; $i < 11; $i++)
 				{
-					$tot = $tot_able_to_schedule[$i] - $min_drivers_needed[$i];
+					$tot = $active_drivers[$i] - $min_drivers_needed[$i];
 					$tot_still_need_min += $tot;
 					$still_need_min[] = $tot;
 
@@ -772,31 +783,33 @@ $cvs[] = array_sum($cvs);
 				?>
 
 				<!-- Class training: TC -->
-				<div class="row_title bt bl heading">Class Training</div>
-				<?php
-				foreach ($class_training as $index => $ct)
-				{
-					if ($index == count($active_drivers) - 1)
+				<div id="dt_class_training" style="display: contents">
+					<div class="row_title bt bl heading">Class Training</div>
+					<?php
+					foreach ($class_training as $index => $ct)
 					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $ct . '</div>';
-					}
-					else
-					{
-						if ($index < 11)
+						if ($index == count($active_drivers) - 1)
 						{
-							$this_depot = $depot[$index];
-							if (in_array($this_depot, $result))
+							echo '<div class="row_title bt cell" style="border-left: 2px solid #454545;">' . $ct . '</div>';
+						}
+						else
+						{
+							if ($index < 11)
 							{
-								echo '<div class="row bt cell orange">' . $ct . '</div>';
-							}
-							else 
-							{
-								echo '<div class="row bt cell">' . $ct . '</div>';
+								$this_depot = $depot[$index];
+								if (in_array($this_depot, $result))
+								{
+									echo '<div class="row_title bt cell orange">' . $ct . '</div>';
+								}
+								else 
+								{
+									echo '<div class="row_title bt cell">' . $ct . '</div>';
+								}
 							}
 						}
 					}
-				}
-				?>
+					?>
+				</div>
 
 				<!-- Status - MIN -->
 				<div class="row bt bl heading">Status - MIN</div>
@@ -926,88 +939,120 @@ $cvs[] = array_sum($cvs);
 				}
 				?>
 
+				<div id="hide_div" style="display: none; grid-column: span 13; border-top: 1px solid #a9a9a9">&nbsp;</div>
+
 				<!-- K53 -->
-				<div class="row bt2 bl heading">K53</div>
-				<?php
-				foreach ($k53 as $index => $k)
-				{
-					if ($index == count($active_drivers) - 1)
+				<div id="dt_k53" style="display: contents">
+					<div class="row bt2 bl heading">K53</div>
+					<?php
+					foreach ($k53 as $index => $k)
 					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $k . '</div>';
-					}
-					else
-					{
-						if ($index < 11)
+						if ($index == count($active_drivers) - 1)
 						{
-							$this_depot = $depot[$index];
-							if (in_array($this_depot, $result))
+							echo '<div class="row bt2 cell" style="border-left: 2px solid #454545;">' . $k . '</div>';
+						}
+						else
+						{
+							if ($index < 11)
 							{
-								echo '<div class="row bt cell orange">' . $k . '</div>';
-							}
-							else 
-							{
-								echo '<div class="row bt cell">' . $k. '</div>';
+								$this_depot = $depot[$index];
+								if (in_array($this_depot, $result))
+								{
+									echo '<div class="row bt2 cell orange">' . $k . '</div>';
+								}
+								else 
+								{
+									echo '<div class="row bt2 cell">' . $k. '</div>';
+								}
 							}
 						}
 					}
-				}
-				?>
+					?>
+				</div>
 
 				<!-- Interview -->
-				<div class="row bt bl heading">Interview</div>
-				<?php
-				foreach ($interview as $index => $i)
-				{
-					if ($index == count($active_drivers) - 1)
+				<div id="dt_interview" style="display: contents">
+					<div class="row bt bl heading">Interview</div>
+					<?php
+					foreach ($interview as $index => $i)
 					{
-						echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $i . '</div>';
-					}
-					else
-					{
-						if ($index < 11)
+						if ($index == count($active_drivers) - 1)
 						{
-							$this_depot = $depot[$index];
-							if (in_array($this_depot, $result))
+							echo '<div class="row bt cell" style="border-left: 2px solid #454545;">' . $i . '</div>';
+						}
+						else
+						{
+							if ($index < 11)
 							{
-								echo '<div class="row bt cell orange">' . $i . '</div>';
-							}
-							else 
-							{
-								echo '<div class="row bt cell">' . $i. '</div>';
+								$this_depot = $depot[$index];
+								if (in_array($this_depot, $result))
+								{
+									echo '<div class="row bt cell orange">' . $i . '</div>';
+								}
+								else 
+								{
+									echo '<div class="row bt cell">' . $i. '</div>';
+								}
 							}
 						}
 					}
-				}
-				?>
+					?>
+				</div>
 
 				<!-- CVs in hand -->
-				<div class="row bt bl bb heading">CVs in hand</div>
-				<?php
-				foreach ($cvs as $index => $c)
-				{
-					if ($index == count($active_drivers) - 1)
+				<div id="dt_cvs" style="display: contents">
+					<div class="row bt bl bb heading">CVs in hand</div>
+					<?php
+					foreach ($cvs as $index => $c)
 					{
-						echo '<div class="row bt bb cell" style="border-left: 2px solid #454545;">' . $c . '</div>';
-					}
-					else
-					{
-						if ($index < 11)
+						if ($index == count($active_drivers) - 1)
 						{
-							$this_depot = $depot[$index];
-							if (in_array($this_depot, $result))
+							echo '<div class="row bt bb cell" style="border-left: 2px solid #454545;">' . $c . '</div>';
+						}
+						else
+						{
+							if ($index < 11)
 							{
-								echo '<div class="row bt cell orange">' . $c . '</div>';
-							}
-							else 
-							{
-								echo '<div class="row bt cell">' . $c . '</div>';
+								$this_depot = $depot[$index];
+								if (in_array($this_depot, $result))
+								{
+									echo '<div class="row bt bb cell orange">' . $c . '</div>';
+								}
+								else 
+								{
+									echo '<div class="row bt bb cell">' . $c . '</div>';
+								}
 							}
 						}
 					}
-				}
-				?>
+					?>
 			</div>	
+
 		</div>
     </div>
+	<script>
+		function hideDepotTotals()
+		{
+			let dt_old_contracts = document.getElementById('dt_old_contracts');
+			let dt_completed = document.getElementById('dt_completed');
+			let dt_dismissed = document.getElementById('dt_dismissed');
+			let dt_resigned = document.getElementById('dt_resigned');
+			let dt_class_training = document.getElementById('dt_class_training');
+			let dt_k53 = document.getElementById('dt_k53');
+			let dt_interview = document.getElementById('dt_interview');
+			let dt_cvs = document.getElementById('dt_cvs');
+			let hide_div = document.getElementById('hide_div');
+			
+			if (dt_old_contracts.style.display === 'none') { dt_old_contracts.style.display = 'contents'; } else {dt_old_contracts.style.display = 'none'; }
+			if (dt_completed.style.display === 'none') { dt_completed.style.display = 'contents'; } else {dt_completed.style.display = 'none'; }
+			if (dt_dismissed.style.display === 'none') { dt_dismissed.style.display = 'contents'; } else {dt_dismissed.style.display = 'none'; }
+			if (dt_resigned.style.display === 'none') { dt_resigned.style.display = 'contents'; } else {dt_resigned.style.display = 'none'; }
+			if (dt_class_training.style.display === 'none') { dt_class_training.style.display = 'contents'; } else {dt_class_training.style.display = 'none'; }
+			if (dt_k53.style.display === 'none') { dt_k53.style.display = 'contents'; } else {dt_k53.style.display = 'none'; }
+			if (dt_interview.style.display === 'none') { dt_interview.style.display = 'contents'; } else {dt_interview.style.display = 'none'; }
+			if (dt_cvs.style.display === 'none') { dt_cvs.style.display = 'contents'; } else {dt_cvs.style.display = 'none'; }
+			if (hide_div.style.display === 'none') { hide_div.style.display = 'grid'; } else {hide_div.style.display = 'none'; }
+		}
+	</script>
 </body>
 </html>

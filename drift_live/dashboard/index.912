@@ -1,5 +1,5 @@
 <?php
-require('Dashboard_model.php');
+require('dashboard_model.php');
 $dashboard_model = new Dashboard_model();
 
 /**
@@ -996,11 +996,11 @@ $cvs[] = array_sum($cvs);
 							$this_depot = $depot[$index];
 							if (in_array($this_depot, $result))
 							{
-								echo '<div class="row bt bb cell orange">' . $c . '</div>';
+								echo '<div class="row bt cell orange">' . $c . '</div>';
 							}
 							else 
 							{
-								echo '<div class="row bt bb cell">' . $c . '</div>';
+								echo '<div class="row bt cell">' . $c . '</div>';
 							}
 						}
 					}
