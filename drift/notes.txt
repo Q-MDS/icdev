@@ -46,6 +46,11 @@ WHERE
   - Is it all 4 totals
 8. On the summary tab can we please show Permanent and Fixed term split, not just the totals
 - which total must be split? Drivers on sops, minimum drivers needed?
+URL: https://secure.intercape.co.za/booking/drift_report.phtml?date_range_serial=506
+URL TEST: http://192.168.10.239/booking/drift_report_qqq.phtml?date_range_serial=506
+
+SQL to get percentage splits for SOPS effects
+SELECT A.scenario_no, B.PERCENTAGE_FIXEDTERM, B.PERCENTAGE_LEARNERSHIP, B.PERCENTAGE_PERMANENT FROM DRIFT_RUN A, DRIFT_PARAMETERS B WHERE A.run_id = '53572' AND a.scenario_no = b.parameter_serial
 
 
 https://www.youtube.com/shorts/UoMpuAj3l3c

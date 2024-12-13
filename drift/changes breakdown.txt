@@ -1,0 +1,34 @@
+Drift Changes Breakdown
+~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Created new folder(s) on 192.168.10.239
+• /move/drift/dashboard
+• /move/drift/depot_totals
+
+2. Changed the following files in 192.168.10.239/booking
+• /booking/drift_parameters.phtml
+• /booking/drift.phtml
+• /booking/drift_report.phtml
+
+3. Database change
+• Created a new table: DRIFT_PARAMETERS_CHANGES
+- No sequence was created
+- Columns:
+PARAMETER_SERIAL -> number
+PREVIOUS_DATA -> vc2 (500) Can probably make it less than 500)
+UPDATE_BY -> number
+UPDATE_DATE -> number
+
+4. Database change
+• Created a new VIEW: OPERATORS_ORG
+- Based on OPERATORS
+- Probably easiest to get the sql from the Oracle Dev server
+
+5. Database change
+• DRIFT_DEPOT_TOTALS_HISTORY
+- No sequence was created
+- Columns:
+LINK_ID -> number
+PREVIOUS_DATA -> vc2 (255)
+UPDATE_DATE -> number
+UPDATE_BY -> vc2 (35)

@@ -56,7 +56,7 @@ echo "<a href=drift_report.phtml?csv=Y&date_range_serial=$date_range_serial>Down
 echo "<div id=tablediv style='width: 70%'>";
 echo "<table id=mytable border=1 cellspacing=0 width='100%'>";
 echo "<thead>";
-echo "<tr bgcolor=#BBBBBB><td><B>Scenario</td><td align=right><b>Depot</td><td align=right><b>Last Generated</td><td align=right><b>Heading</td><td align=right><b>Permanent</b></td><td align=right><b>Fixed</b></td><td align=right><b>Total</td><td align=right><b>+5%</td><td align=right><b>+10%</td><td align=right><b>+15%</td></tr>";
+echo "<tr bgcolor=#BBBBBB><td><B>Scenario</td><td align=right><b>Depot</td><td align=right><b>Last Generated</td><td align=right><b>Heading</td><td align=right><b>Value</td><td align=right><b>+5%</td><td align=right><b>+10%</td><td align=right><b>+15%</td></tr>";
 echo "</thead><tbody>";
 
 if ($csv=="Y") {
@@ -65,9 +65,9 @@ if ($csv=="Y") {
         header( "Content-Disposition: inline; filename=\"$thisname.csv\"");
         header( "Content-Type: application/download; filename=\"$thisname.csv\"");
 
-	echo "Scenario,Depot,Last Generated,Heading,Permanent,Fixed,Value,+5%,+10%,+15%\n";
+	echo "Scenario,Depot,Last Generated,Heading,Value,+5%,+10%,+15%\n";
 }
-ora_parse($cursor,"select C.parameter_name, R.depot, R.last_generated, A.name, A.value as permenant, A.value as fixed, A.value as total, R.run_id from drift_output_lines A, drift_date_ranges B, drift_parameters C, drift_run R where R.run_id in (select max(run_id) from drift_run Y, drift_parameters Z where Y.time_period=$date_range_serial and Y.scenario_no=Z.parameter_serial and Z.active='Y' group by Y.depot) and R.scenario_no=C.parameter_serial and R.time_period=B.date_range_serial and R.run_id=A.run_id order by R.depot,B.date_range_name,A.name");
+ora_parse($cursor,"select C.parameter_name, R.depot, R.last_generated, A.name, A.value from drift_output_lines A, drift_date_ranges B, drift_parameters C, drift_run R where R.run_id in (select max(run_id) from drift_run Y, drift_parameters Z where Y.time_period=$date_range_serial and Y.scenario_no=Z.parameter_serial and Z.active='Y' group by Y.depot) and R.scenario_no=C.parameter_serial and R.time_period=B.date_range_serial and R.run_id=A.run_id order by R.depot,B.date_range_name,A.name");
 ora_exec($cursor);
 $totals=array();
 
@@ -91,84 +91,35 @@ $lastdepot="";
  * Date: 11-12-2024
  * Desc: Split SOPS and Mimimum into permanent and fixed
  */
-$tot_sops_perm = 0;
-$tot_sops_fixed = 0;
-$tot_min_perm = 0;
-$tot_min_fixed = 0;
-
 while (ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC)) 
 {
-	$totals[$data["NAME"]] += $data["TOTAL"];
-	$run_id = $data['RUN_ID'];
-	$get_value = $data["TOTAL"];
-
-	$pct_perm = 0;
-	$pct_learn = 0;
-	$pct_fixed = 0;
-
-	$cur2 = ora_open($conn);
-	$sql_split = "SELECT A.scenario_no, B.PERCENTAGE_FIXEDTERM, B.PERCENTAGE_LEARNERSHIP, B.PERCENTAGE_PERMANENT FROM DRIFT_RUN A, DRIFT_PARAMETERS B WHERE A.run_id = '$run_id' AND a.scenario_no = b.parameter_serial";
-	
-	ora_parse($cur2, $sql_split);
-	ora_exec($cur2);
-
-	if (ora_fetch($cur2)) 
-	{
-		$get_pct_fixed = getdata($cur2, 1);
-		$get_pct_learn = getdata($cur2, 2);
-		$get_pct_perm = getdata($cur2, 3);
-		
-		$pct_fixed = $data["TOTAL"] * ($get_pct_fixed / 100);
-		$pct_learn = $data["TOTAL"] * ($get_pct_learn / 100);
-		$pct_perm = $data["TOTAL"] * ($get_pct_perm / 100);
+	$totals[$data["NAME"]] += $data["VALUE"];
+	if (strstr($data["NAME"],"Needed")) {
+		$data["FIVEPERC"] = round($data["VALUE"] * 1.05);
+		$data["TENPERC"] = round($data["VALUE"] * 1.1);
+		$data["FIFTEENPERC"] = round($data["VALUE"] * 1.15);
 	}
-
-	ora_close($cur2);
-
-
-	unset($data['RUN_ID']);
-	
-	
-	if (strstr($data["NAME"],"Needed")) 
-	{
-		$data['PERMENANT'] = round($pct_perm);
-		$data['FIXED'] = round($pct_fixed);
-		$data["FIVEPERC"] = round($data["TOTAL"] * 1.05);
-		$data["TENPERC"] = round($data["TOTAL"] * 1.1);
-		$data["FIFTEENPERC"] = round($data["TOTAL"] * 1.15);
-		$tot_min_perm += $pct_perm;
-		$tot_min_fixed += $pct_fixed;
-	}
-	else 
-	{
-		$data['PERMENANT'] = round($pct_perm);
-		$data['FIXED'] = round($pct_fixed);
+	else {
 		$data["BLANK1"] = "";
 		$data["BLANK2"] = "";
 		$data["BLANK3"] = "";
-		if (strstr($data["NAME"],"SOPS")) 
-		{
-			$tot_sops_perm += $pct_perm;
-			$tot_sops_fixed += $pct_fixed;
-		}
 	}
+	if ($csv=="Y") {
 
-	if ($csv=="Y") 
-	{
 		foreach ($data as $key=>$val) 
 			echo '"'.$val.'",';
 		echo "\n";
 
 	} else {
-		if ($data["DEPOT"]!=$lastdepot) 
-		{
+		if ($data["DEPOT"]!=$lastdepot) {
 			$col++;
 			$color=$colours[$col];
-			/*
+/*
 			$col1=sprintf("%02X",100+mt_rand()%155);
 			$col2=sprintf("%02X",100+mt_rand()%155);
 			$col3=sprintf("%02X",100+mt_rand()%155);
-			*/
+
+*/
 			$lastdepot=$data["DEPOT"];
 		}
 		echo "<tr bgcolor=#$color>";
@@ -180,50 +131,21 @@ while (ora_fetch_into($cursor, $data, ORA_FETCHINTO_ASSOC))
 	unset($data);
 }
 
-foreach ($totals as $name=>$value) 
-{
-	if (strstr($name,"Needed")) 
-	{
-		$a = round($tot_min_perm);
-		$b = round($tot_min_fixed);
-		$value5 = round($value*1.05);
-		$value10 = round($value*1.1);
-		$value15 = round($value*1.15);
-		$value5 = "";
-	} 
-	else 
-	{
-		if (strstr($name, "SOPS")) 
-		{
-			$a = round($tot_sops_perm);
-			$b = round($tot_sops_fixed);
-		} 
-		else 
-		{
-			$a = "";
-			$b = "";
-		}
-		$value10 = "";
-		$value15 = "";
-	}
+foreach ($totals as $name=>$value) {
+       if (strstr($name,"Needed")) {
+                        $value5 = round($value*1.05);
+                        $value10 = round($value*1.1);
+                        $value15 = round($value*1.15);
+       } else {
+                        $value5 = "";
+                        $value10 = "";
+                        $value15 = "";
+       }
 
 	if ($csv=="Y") {
-		echo '"Total","All","","'.$name.'",' .$a  . ',' . $b . ','.$value.','.$value5.','.$value10.','.$value15."\n";	
+		echo '"Total","All","","'.$name.'",'.$value.','.$value5.','.$value10.','.$value15."\n";	
 	} else {
-		// echo "<tr><td><b>Total</td><td align=right><b>All</td><td></td><td align=right>$name</td><td align=right>1</td><td align=right>2</td><td align=right>$value</td><td align=right>$value5</td><td align=right>$value10</td><td align=right>$value15</td></tR>";
-		echo "
-		<tr>
-			<td><b>~Total</b></td>
-			<td align=right><b>All</b></td>
-			<td></td>
-			<td align=right>$name</td>
-			<td align=right>$a</td>
-			<td align=right>$b</td>
-			<td align=right>$value</td>
-			<td align=right>$value5</td>
-			<td align=right>$value10</td>
-			<td align=right>$value15</td>
-		</tr>";
+		echo "<tr><td><b>Total</td><td align=right><b>All</td><td></td><td align=right>$name</td><td align=right>$value</td><td align=right>$value5</td><td align=right>$value10</td><td align=right>$value15</td></tR>";
 	}
 }
 if ($csv=="Y") {

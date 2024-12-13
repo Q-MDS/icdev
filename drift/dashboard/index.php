@@ -46,6 +46,11 @@ $sctive_drivers_data = $dashboard_model->getActiveDriversData($depot_list);
  * Line 1: Last Updated
  */
 $last_updated = $drift_data['last_updated'];
+// echo "XXX: " . count($get_last_updated);
+if (count($last_updated) > 11)
+{
+	$last_updated = array_slice($last_updated, 0, 11);
+}
 
 /**
  * Line 2: Depot => Static
@@ -123,6 +128,11 @@ $not_scheduled_in_72_hover = $dormant_drivers_data['dormant_drivers_hover'];
  * Line 11: Minimum drivers needed
  */
 $min_drivers_needed = $drift_data['min_drivers_needed'];
+if (count($min_drivers_needed) > 11)
+{
+	$min_drivers_needed = array_unique($min_drivers_needed, SORT_REGULAR);
+	$min_drivers_needed = array_values($min_drivers_needed);
+}
 
 /**
  * Line 12: Minimum drivers needed - 5%
@@ -155,6 +165,11 @@ foreach ($min_drivers_needed as $value)
  * Line 15: Total trips
  */
 $total_trips = $drift_data['total_trips'];
+if (count($total_trips) > 11)
+{
+	$total_trips = array_unique($total_trips, SORT_REGULAR);
+	$total_trips = array_values($total_trips);
+}
 
 /**
  * Line 16 - 19: Data generated/calculated
@@ -354,6 +369,12 @@ function arr_last_updated()
 		.content .orange {
 			background-color: #f17d3226;
 			border-top: 1px solid #a9a9a9;
+			border-right: 1px solid #a9a9a9;
+		}
+
+		.content .orange_k53 {
+			background-color: #f17d3226;
+			border-top: 2px solid #454545; 
 			border-right: 1px solid #a9a9a9;
 		}
 
@@ -958,7 +979,7 @@ function arr_last_updated()
 								$this_depot = $depot[$index];
 								if (in_array($this_depot, $result))
 								{
-									echo '<div class="row bt2 cell orange">' . $k . '</div>';
+									echo '<div class="row cell orange_k53">' . $k . '</div>';
 								}
 								else 
 								{
