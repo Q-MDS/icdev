@@ -99,11 +99,11 @@ class Dashboard_model
 		$min_drivers_needed = array();
 		$total_trips = array();
 
-		// $depot = array("BLM", "CA", "CBS", "DBN", "GAB", "MAP", "MTH", "PE", "PTA", "UPT", "WHK");
+		$depots = array("BLM", "CA", "CBS", "DBN", "GAB", "MAP", "MTH", "PE", "PTA", "UPT", "WHK");
 
 		$conn = $this->oci_conn();
 		
-		$sql = "SELECT A.DEPOT, A.LAST_GENERATED, B.DATE_RANGE_NAME, C.NAME, C.VALUE FROM DRIFT_RUN A LEFT JOIN DRIFT_DATE_RANGES B ON A.TIME_PERIOD = B.DATE_RANGE_SERIAL LEFT JOIN DRIFT_OUTPUT_LINES C ON A.RUN_ID = C.RUN_ID LEFT JOIN  (SELECT DEPOT, DATE_RANGE_NAME, MAX(A.LAST_GENERATED) LAST_GENERATED FROM DRIFT_RUN A LEFT JOIN DRIFT_DATE_RANGES B ON A.TIME_PERIOD = B.DATE_RANGE_SERIAL WHERE B.IS_CURRENT = 'Y' GROUP BY DEPOT, DATE_RANGE_NAME) D ON B.DATE_RANGE_NAME = D.DATE_RANGE_NAME AND A.LAST_GENERATED = D.LAST_GENERATED AND A.DEPOT = D.DEPOT WHERE B.IS_CURRENT = 'Y' AND D.DATE_RANGE_NAME IS NOT NULL";
+		$sql = "SELECT A.run_id, A.DEPOT, A.LAST_GENERATED, B.DATE_RANGE_NAME, C.NAME, C.VALUE FROM DRIFT_RUN A LEFT JOIN DRIFT_DATE_RANGES B ON A.TIME_PERIOD = B.DATE_RANGE_SERIAL LEFT JOIN DRIFT_OUTPUT_LINES C ON A.RUN_ID = C.RUN_ID LEFT JOIN  (SELECT DEPOT, DATE_RANGE_NAME, MAX(A.LAST_GENERATED) LAST_GENERATED FROM DRIFT_RUN A LEFT JOIN DRIFT_DATE_RANGES B ON A.TIME_PERIOD = B.DATE_RANGE_SERIAL WHERE B.IS_CURRENT = 'Y' GROUP BY DEPOT, DATE_RANGE_NAME) D ON B.DATE_RANGE_NAME = D.DATE_RANGE_NAME AND A.LAST_GENERATED = D.LAST_GENERATED AND A.DEPOT = D.DEPOT WHERE B.IS_CURRENT = 'Y' AND D.DATE_RANGE_NAME IS NOT NULL";
 
 		$stid = oci_parse($conn, $sql);
 
@@ -141,160 +141,212 @@ class Dashboard_model
 			{
 				$value = null;
 			}
-			// $name = $row['NAME'];
-			$last_generated = $row['LAST_GENERATED'];
 			
 			if ($drn == $date_range_name)
 			{
-				
 				if ($depot == 'BLM')
 				{
+					$last_generated = $row['LAST_GENERATED'];
+					
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'BLM', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'BLM', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'CA')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'CA', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'CA', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'CBS')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'CBS', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'CBS', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'DBN')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'DBN', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'DBN', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'GAB')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'GAB', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'GAB', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'MAP')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'MAP', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'MAP', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'MTH')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'MTH', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'MTH', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'PE')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'PE', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'PE', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'PTA')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'PTA', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'PTA', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'UPT')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'UPT', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'UPT', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 				if ($depot == 'WHK')
 				{
+					$last_generated = $row['LAST_GENERATED'];
 					if ($name == 'Total Trips')
 					{
-						$total_trips[] = $value;
+						$total_trips[] = array('depot' => 'WHK', 'run_id' => $row['RUN_ID'], 'tot' => $value, "last_generated" => $last_generated);
 					}
 					if ($name == 'Minimum Drivers Needed')
 					{
-						$min_drivers_needed[] = $value;
-						$last_updated[] = $last_generated;
+						$min_drivers_needed[] = array('depot' => 'WHK', 'run_id' => $row['RUN_ID'], 'tot' => $value);
 					}
 				}
 			}
 		}
-		// $total_trips[] = 999;
-		// $min_drivers_needed[] = 888;
-		// print_r($total_trips);
-		// print_r($min_drivers_needed);
+
+		// Process min_drivers_needed
+		$filtered_min = array();
+
+		foreach ($depots as $depot)
+		{
+			$x = 0;
+			
+			foreach ($min_drivers_needed as $row)
+			{
+				if ($row['depot'] == $depot)
+				{
+					$run_id = $row['run_id'];
+					if ($run_id > $x)
+					{
+						$filtered_min[$depot] = $row['tot'];
+						$x = $run_id;
+					}
+				}
+			}
+		}
+		$fin_min_drivers_needed = array();
+		foreach ($filtered_min as $key => $value)
+		{
+			$fin_min_drivers_needed[] = $value;
+		}
+
+		// Process total trips
+		$filtered_trips = array();
+
+		foreach ($depots as $depot)
+		{
+			$x = 0;
+			
+			foreach ($total_trips as $row)
+			{
+				if ($row['depot'] == $depot)
+				{
+					$run_id = $row['run_id'];
+					if ($run_id > $x)
+					{
+						$filtered_trips[$depot] = array('tot' => $row['tot'], 'last_updated' => $row['last_generated']);
+						// $filtered_trips[$depot] = $row['tot'];
+						$x = $run_id;
+					}
+				}
+			}
+		}
+		$fin_total_trips = array();
+
+		// foreach ($filtered_trips as $key => $value)
+		foreach ($filtered_trips as $row)
+		{
+			$tot = $row['tot'];
+			$last_generated = $row['last_updated'];
+			$fin_total_trips[] = $tot;
+			$last_updated[] = $last_generated;
+		}
+
+		// print_r($filtered_trips);
+		// print_r($fin_total_trips);
 		// print_r($last_updated);
-		
 		// die();
-
-		$ret['last_updated'] = $last_updated;
-		$ret['min_drivers_needed'] = $min_drivers_needed;
-		$ret['total_trips'] = $total_trips;
-
 		
-		// return array("2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20", "2024-11-20");
+		$ret['last_updated'] = $last_updated;
+		$ret['min_drivers_needed'] = $fin_min_drivers_needed;
+		$ret['total_trips'] = $fin_total_trips;
+
 		return $ret;
 	}
 
