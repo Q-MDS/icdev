@@ -1,0 +1,133 @@
+
+<html>
+<body xoncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+$pid=getmypid();
+
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("DEVELOPERS")) { Exit; };
+$kcur=ora_open($conn);
+get_colors(getenv("REMOTE_USER"));
+
+ora_parse($cursor,"alter session set nls_date_format='YYYY/MM/DD HH24:MI'");
+ora_exec($cursor);
+
+/*
+
+NOTE:  Locked objects:
+
+To see locked objects - in sqldeveloper / sqlplus:
+
+SELECT O.OBJECT_NAME, S.SID, S.SERIAL#, P.SPID, S.PROGRAM,S.USERNAME,
+S.MACHINE,S.PORT , S.LOGON_TIME,SQ.SQL_FULLTEXT 
+FROM V$LOCKED_OBJECT L, DBA_OBJECTS O, V$SESSION S, 
+V$PROCESS P, V$SQL SQ 
+WHERE L.OBJECT_ID = O.OBJECT_ID 
+AND L.SESSION_ID = S.SID AND S.PADDR = P.ADDR 
+AND S.SQL_ADDRESS = SQ.ADDRESS
+
+or
+
+ select (select username from v$session where sid=a.sid) blocker, a.sid, ' is blocking ', (select username from v$session where sid=b.sid) blockee, b.sid from v$lock a, v$lock b where a.block = 1 and b.request > 0 and a.id1 = b.id1 and a.id2 = b.id2 ");
+
+
+to kill the session , use SID,SERIAL , eg: 
+alter system kill session '170,27177'; // sid,serial
+
+*/
+
+ora_parse($cursor," select s.username,s.osuser,s.status,lockwait,s.program,s.logon_time, p.program,si.physical_reads,si.block_gets,si.consistent_gets,si.block_changes, si.consistent_changes,s.process,p.spid,p.pid,s.serial#,si.sid from sys.v_\$sess_io si,sys.v_\$session s, sys.v_\$process p where s.username is not null and si.sid(+)=s.sid and p.addr(+)=s.paddr order by si.consistent_gets+si.block_gets desc"); 
+ora_exec($cursor);
+echo "<table cellpadding=0 cellspacing=0 border=1>";
+echo "<tr bgcolor=lightblue><td>Page</td><td>User</td><td>OSUser</td><td>Status</td><td>LockWt</td><Td>Prog</td><td>Logon@</td><td>prog</td><td>phys reads</td><td>Block gets</td><td>Cons gets</td><td>Block Chg</td><td>cons chg</td><Td>Proc</td><td>SPID</td><td>PID</td><td>Ser#</td><td>SID</td></tr>";
+while (ora_fetch_into($cursor,$data))
+{
+	if ($data[2]=="ACTIVE")
+	if (!($data[1]=="oracle" && $data[12]==$pid)) {	
+	if ($data[1]=="oracle" && is_numeric($data[12]))
+	{
+		$last=`grep -w $data[12] ../php_all.log | tail -1`;
+	}
+	else
+		$last="";
+	if ($data[0]=="ICAPE")
+	$last.="<br><a href=kill_sess.phtml?sid=$data[16]&ses=$data[15]>Kill</a>";
+	echo "<tr><td><font size=2>$last</td>";
+	for ($a=0;$a<20;$a++) {
+		echo "<td";
+		if (is_numeric($data[$a]))
+			echo " align=right";
+		echo "><font size=2>";
+		if ($data[$a]>20000 && $a<12)
+			echo "<font color=red>";
+		echo "$data[$a]</td>";
+	}
+	echo "</tr>";
+		ora_parse($kcur,"select s.sql_text from v\$sql s, v\$session u where s.hash_value = u.sql_hash_value and u.sid=$data[16] and u.serial#=$data[15]");
+//		echo "select s.sql_text from v\$sql s, v\$session u where s.hash_value = u.sql_hash_value and u.sid=$data[16] and u.serial#=$data[15]";
+		
+		ora_exec($kcur);
+		if (ora_fetch($kcur)) {
+			$sql=getdata($kcur,0);
+			$sql=str_replace(",",", ",$sql);
+			echo "<tr><td colspan=20><font size=2><i>$sql</td></tr>";
+
+		}
+
+		
+	} // oracle
+	unset($data);
+}
+echo "</table>";
+
+echo "<p>Items currently locked:<br><Table border=1><tr bgcolor=lightblue><td>Owner<td>Object<td>Type<td>SID<TD>Serial<td>Status<td>OS User<td>Machine</tr>";
+ora_parse($cursor,'select
+   c.owner,
+   c.object_name,
+   c.object_type,
+   b.sid,
+   b.serial#,
+   b.status,
+   b.osuser,
+   b.machine
+from
+   v$locked_object a ,
+   v$session b,
+   dba_objects c
+where
+   b.sid = a.session_id
+and
+   a.object_id = c.object_id');
+
+ora_exec($cursor);
+while (ora_fetch_into($cursor,$data)) {
+	echo "<tr><td>";
+	echo implode ("</td><td>",$data);
+	echo "</td><td>";
+	echo "<a href=kill_sess.phtml?sid=$data[3]&ses=$data[4]>Kill session</a>";
+	echo "</td></tr>";
+
+}
+echo "</table>";
+
+
+
+$time=time();
+echo "<a href=db.phtml?time=$time>Refresh</a>";
+echo "<hr><iframe src=check_locks.phtml width=100% height=70></iframe>";
+echo "<iframe src='http://127.0.0.1/health.phtml?pre=Y' width=100% height=800></iframe>";
+
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>

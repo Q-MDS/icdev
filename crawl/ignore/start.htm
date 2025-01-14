@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Capture</title>
+</head>
+<body>
+    <form id="captureForm">
+        <label for="from">From:</label>
+        <input type="text" id="from" name="from" required><br><br>
+        <label for="to">To:</label>
+        <input type="text" id="to" name="to" required><br><br>
+        <label for="date">Date:</label>
+        <input type="date" id="date" name="date" required><br><br>
+        <input type="submit" value="Run Capture">
+    </form>
+
+    <script>
+        document.getElementById('captureForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const from = document.getElementById('from').value;
+            const to = document.getElementById('to').value;
+            const date = document.getElementById('date').value;
+
+            const response = await fetch('http://localhost:3000/run-capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ from, to, date })
+            });
+
+            const result = await response.text();
+            console.log(result);
+        });
+    </script>
+</body>
+</html>

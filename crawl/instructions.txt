@@ -1,0 +1,7 @@
+1. Load a terminal in the folder
+2. Run: node server
+3. Load index.htm in a browser
+4. Enter from, to & date -> click Run Capture
+
+Notes: 
+- Current run_capture.php returns an array with the resulting data so the console log will show an error. With run_capture_old.php does an echo json_encode which will be console friendly.

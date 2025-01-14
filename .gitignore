@@ -1,3 +1,5 @@
 Pushnoti.php
 Pushnoti_002.php
 Pushnoti_qqq.php
+# Ignore the node_modules directory in icdev/crawl
+node_modules/

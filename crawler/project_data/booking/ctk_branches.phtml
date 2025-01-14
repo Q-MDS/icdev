@@ -1,0 +1,255 @@
+<html>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+
+$debug=false;
+
+ set_time_limit(60);
+
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+require_once ("../php3/opstimes.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+
+
+//require_once("../disclaimer.phtml");
+
+
+echo "<form> Start: <input name=startd value='$startd' size=8 maxlength=8> End: <input name=endd value='$endd' size=8 maxlength=8> <input type=submit value=Go><br>";
+echo "Compare to:  Start: <input name=startd2 value='$startd2' size=8 maxlength=8> End: <input name=endd2 value='$endd2' size=8 maxlength=8> </form>";
+
+if (!is_numeric($startd) || !is_numeric($endd))
+	exit;
+
+ora_parse($cursor,"select fepbeplu,transaction_type,sum(total),count(*) from cashup_export where user_serial='2122109184'  and passport>=$startd and passport<=$endd group by fepbeplu,transaction_type");
+ora_exec($cursor);
+while (ora_fetch($cursor)) {
+	$term=getdata($cursor,0);
+	$type=getdata($cursor,1);
+	switch ($type) {
+		case 1: //sale
+			$terms[$term][0]+=getdata($cursor,2); // revenue sold
+                        $terms[$term][1]+=getdata($cursor,3); // tix sold
+			break;
+		case 2: // refund
+			$terms[$term][2]+=getdata($cursor,2); // revenue cancelled
+			$terms[$term][3]+=getdata($cursor,3); // tix cancelled
+			break;
+
+	} // switch
+}
+
+if (is_numeric($startd2) && is_numeric($endd2)) {
+$compare=true;
+ora_parse($cursor,"select fepbeplu,transaction_type,sum(total),count(*) from cashup_export where user_serial='2122109184'  and passport>=$startd2 and passport<=$endd2 group by fepbeplu,transaction_type");
+ora_exec($cursor);
+while (ora_fetch($cursor)) {
+        $term=getdata($cursor,0);
+        $type=getdata($cursor,1);
+        switch ($type) {
+                case 1: //sale
+                        $terms[$term][10]+=getdata($cursor,2); // revenue sold
+                        $terms[$term][11]+=getdata($cursor,3); // tix sold
+                        break;
+                case 2: // refund
+                        $terms[$term][12]+=getdata($cursor,2); // revenue cancelled
+                        $terms[$term][13]+=getdata($cursor,3); // tix cancelled
+                        break;
+
+        } // switch
+}
+
+
+
+}
+else $compare=false;
+
+ 
+
+ora_parse($cursor,"select * from computicket_terminals");
+ora_exec($cursor);
+while (ora_fetch($cursor))
+{
+	$id=getdata($cursor,0);
+	$name[$id]=getdata($cursor,1);
+	$branch[$id]=getdata($cursor,2);
+}
+
+
+ora_parse($cursor,"select contactid, ctk_branch_id,  firstname||' '||lastname, company from agent_details where active='Y' and billinginformation='2000' and ctk_branch_id is not null");
+ora_exec($cursor);
+unset($data);
+while (ora_fetch_into($cursor,$data)) {
+	if (trim($data[2])=="")
+		$data[2]=$data[3];
+	if (trim($data[2]==""))
+		$data[2]="No Name";
+	$binfo[$data[1]].="<a href=/booking/usermanage/manageagents.phtml?stage=1&serial=$data[0]>$data[2]</a> | ";
+	unset($data);
+} // while
+
+
+
+ora_parse($cursor,"select max(branch_id) from computicket_branches");
+ora_exec($cursor);
+ora_Fetch($cursor);
+$maxbranch=getdata($cursor,0);
+
+
+
+
+reset($terms);
+echo "<table border=1 cellspacing=0>";
+$header="<tr class=#$table_title><td>Terminal</td><td>R sold</tD><td>Tix Sold</td><td>R Canc</td><td>Tix Canc</td><td>R total</td><td>Tix Total</td><td>Ave day</td>";
+if ($compare) {
+	$header.= "<td bgcolor=#EEEEEE>R sold</tD><td bgcolor=#EEEEEE>Tix Sold</td><td bgcolor=#EEEEEE>R Canc</td><td bgcolor=#EEEEEE>Tix Canc</td><td bgcolor=#EEEEEE>R total</td><td bgcolor=#EEEEEE>Tix Total</td><td bgcolor=#EEEEEE>Ave day</td>";
+	$days2=round( (vgetdate($endd2)-vgetdate($startd2))/86400)+1;
+}
+ $days1=round((vgetdate($endd)-vgetdate($startd))/86400)+1;
+
+$header.= "<td>CRM Contacts</td></tr>";
+while (list($key,$val)=each($terms)) {
+	if (!is_numeric($val[0]))
+		$val[0]=0;
+        if (!is_numeric($val[1]))
+                $val[1]=0;
+        if (!is_numeric($val[2]))
+                $val[2]=0;
+        if (!is_numeric($val[3]))
+                $val[3]=0;
+	if ($compare) {
+	  if (!is_numeric($val[10]))
+                $val[10]=0;
+          if (!is_numeric($val[11]))
+                $val[11]=0;
+          if (!is_numeric($val[12]))
+                $val[12]=0;
+          if (!is_numeric($val[13]))
+                $val[13]=0;
+	  $val[10]=round($val[10]);
+          $val[12]=round($val[12]);
+	}
+	$val[0]=round($val[0]);
+	$val[2]=round($val[2]);
+	
+	if (!isset($name[$key]))
+	{
+		$name[$key]="Unknown ($key)";
+		$kw.=$key."<bR>";
+		$unknown=true;
+	}
+	else
+		$unknown=false;
+
+	
+	$line= "<tr bgcolor=lavender><td>".$name[$key]." ($key)</td><td align=right>$val[0]</td><td align=right>$val[1]</td>";
+	$line.= "<td align=right>$val[2]</td><td align=right>$val[3]</td><td align=right>";
+	$sum1= $val[0]-$val[2];
+	
+	$line.= "$sum1</td><td align=right>";
+	$sum2=$val[1]-$val[3];
+	$line.= "$sum2</td>";
+
+	$ave=sprintf("%.1f",$sum2/$days1);
+	$line.= "<td align=right><B>$ave</td>";
+
+	if ($compare) {
+		$line.="<td align=right  bgcolor=#EEEEEE>$val[10]</td><td align=right  bgcolor=#EEEEEE>$val[11]</td>";
+	        $line.= "<td align=right bgcolor=#EEEEEE>$val[12]</td><td align=right  bgcolor=#EEEEEE>$val[13]</td><td align=right bgcolor=#EEEEEE>";
+       		$sum11= $val[10]-$val[12];
+
+	        $line.= "$sum11</td><td align=right  bgcolor=#EEEEEE>";
+       		$sum12=$val[11]-$val[13];
+	        $line.= "$sum12</td>";
+		
+	        $ave2=sprintf("%.1f",$sum12/$days2);
+		if ($ave2<=0)
+			$line.= "<td align=right bgcolor=#FF8888 ><b>$ave2</td>";
+		elseif ($ave2<($ave/2))
+			$line.= "<td align=right bgcolor=#FFBBBB ><b>$ave2</td>";
+		else
+	       		$line.= "<td align=right bgcolor=#EEEEEE ><b>$ave2</td>";
+
+	} // compare
+
+	$line.="<td>";
+
+	if (is_numeric($branch[$key])) {
+
+		if (isset($binfo[$branch[$key]])) 
+			$line.=$binfo[$branch[$key]];
+		else
+			$line.= "No contacts for this branch yet";
+
+	} elseif (!$unknown) {
+		$line.= "NO BRANCH SET... FIXING!<br>";	
+		$thename=$name[$key];
+		$loop=0;
+		while ($loop<50 && is_numeric($thename[strlen($thename)-1]))
+		{
+			$thename=substr($thename,0,-1);
+			$loop++;
+		}
+		$thename=trim($thename);
+		ora_parse($cursor,"select branch_id, branch_name from computicket_branches where branch_name='$thename'");
+		ora_exec($cursor);
+		unset($bfound);
+		if (ora_fetch_into($cursor,$bfound)) {
+			echo "<br><b>$thename ($name[$key]) could be $bfound[0]/$bfound[1]<br>";
+		} else { // create branch 
+			$maxbranch++;
+			echo "Insert $maxbranch/$thename<br>";
+			ora_parse($cursor,"insert into computicket_branches values ($maxbranch,'$thename')");
+			ora_exec($cursor);
+			$bfound[0]=$maxbranch;
+		}
+		ora_parse($cursor,"update computicket_terminals set branch_id=$bfound[0] where terminal_id=$key and branch_id is null");
+                ora_Exec($cursor);
+                $line.= $binfo[$bfound[0]];
+		
+	}
+
+	$line.= "</td></tr>";
+
+	$total=$val[0]-$val[2];
+	$lines[$line]=$total;	
+
+	unset($name[$key]);
+}
+
+arsort($lines);
+reset($lines);
+$disp=0;
+while (list($key,$val)=each($lines))
+{
+	if ($disp%20==0)
+		echo $header;
+	$disp++;
+	echo $key;
+}
+reset($name);
+while (list($key,$val)=each($name)) {
+	if (substr($val,0,8)!="internet" && substr($val,0,12)!="ctk internet" && substr($val,0,11)!="call centre")
+		echo "<tr bgcolor=#$table_alt><td>$val</td><td colspan=20>No activity</td></tR>";
+
+}
+
+echo "</table>";
+
+
+echo "<hr>Names to find: <bR>$kw";
+
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>

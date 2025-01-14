@@ -1,0 +1,312 @@
+<?
+
+if ($included!="Y") {
+
+?>
+<html>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+} // included
+
+if (!isset($cursor))
+	$cursor=ora_open($conn);
+
+set_time_limit(0);
+
+require_once("pricing.phtml");
+
+
+$kcur=ora_open($conn);
+
+
+if ($stage==2) {
+	echo "doing...<bR>";
+	update_ctk(23093);
+	exit;
+
+}
+
+if ($ignore!="Y") {
+ora_parse($kcur,"select distinct price_group_serial from computicket_queue order by 1 desc");
+ora_exec($kcur);
+$fetched=0;
+if (!is_numeric($maxfetch))
+	$maxfetch=10;
+while (ora_fetch($kcur) && $fetched<$maxfetch) {
+	$pgs=getdata($kcur,0);
+	$fetched++;
+	echo "Processing $pgs ";
+	ora_parse($cursor,"delete from computicket_queue where price_group_serial=$pgs");
+	ora_exec($cursor);
+	if (update_ctk($pgs))
+	{
+		ora_commit($conn);
+		echo "*<br>";
+	}
+	else echo "!<bR>";
+//	sleep(10);
+
+}
+
+} // ignore
+
+if ($stage==1) {
+
+	echo "<hr>Updating missing data...<Br>";
+	$today=date("Ymd");
+
+	ora_parse($kcur,"select distinct price_group_serial from price_group where valid_to>=$today minus select price_group_serial from computicket_prices");
+	ora_exec($kcur);
+	while (ora_fetch($kcur)) {
+		$ps=getdata($kcur,0);
+		echo "($ps)";
+		if (update_ctk($ps))
+		{
+			ora_parse($cursor,"insert into computicket_prices values ($ps,'NONE','NONE',0)");
+			ora_exec($cursor);
+			ora_commit($conn);
+			echo "* ";
+		}
+		else echo "! ";
+
+	} // fetch
+	echo "Update done<hr>";
+
+
+} // stage 1
+
+function update_ctk($pgs) { // NB: always do an ora_commit before calling this function
+
+	global $cursor,$conn, $stage;
+
+		$ps=array();
+
+		if (!is_numeric($pgs))
+		{
+			echo "<font color=red><b>Computicket price export failed - no price serial!</b></font><br>";
+			return false;
+		}
+		ora_parse($cursor,"delete from computicket_prices where price_group_serial=$pgs");
+		ora_exec($cursor);
+
+		$today=date("Ymd");
+		if ($stage==2)
+			echo "select valid_to,route_serial,valid_from from price_group where price_group_serial=$pgs and valid_to>=$today<br>";
+		ora_parse($cursor,"select valid_to,route_serial,valid_from from price_group where price_group_serial=$pgs and valid_to>=$today");
+                ora_exec($cursor);
+                while (ora_Fetch($cursor)) {
+                        if (!isset($rs))
+                                $rs=getdata($cursor,1);
+                        $ps[$rs][getdata($cursor,0)]=getdata($cursor,2);
+			if ($stage==2)
+				echo "Got (".getdata($cursor,0)."/".getdata($cursor,2)." rs $rs<Br>";
+                }
+
+		
+		unset($stops);
+                ora_parse($cursor,"select stop_order,short_name from route_stops where route_serial='$rs' order by stop_order");
+//                echo "select stop_order,short_name from route_stops where route_serial='$rs' order by stop_order<bR>($rsdate=$rs)";
+                ora_exec($cursor);
+                while (ora_fetch($cursor)) {
+                        $stops[ora_getcolumn($cursor,0)]=chop(ora_getcolumn($cursor,1));
+			if ($stage==2)
+				echo "Got ".getdata($cursor,0). " ".getdata($cursor,1)."<bR>";
+                }
+
+		$coachrs=$rs;
+
+
+//		print_r($stops);
+		$getspecial=false;
+		// new: fake routes for computicket:
+		if (!isset($stops)) {
+			echo "Getting stops";
+			$getspecial=true;
+			
+			ora_parse($cursor,"select sub_route_one,sub_route_two,crossover from route_details where route_serial='$rs'");
+			ora_exec($cursor);
+			unset($route);
+			ora_fetch_into($cursor,$route);
+			$coachrs=chop($route[0]);
+
+                        $found=false;
+                        $stoporder=0;
+			ora_parse($cursor,"select stop_order,short_name from route_stops where route_serial='$route[0]' order by stop_order");
+                        ora_exec($cursor);
+                        while (ora_fetch_into($cursor,$data)) if (!$found){
+                                if ($data[1]==$route[2]) { // crossover
+                                        $found=true;
+                                } elseif (!$found) {
+                                        $stoporder++;
+                                        $data[1]=trim($data[1]);
+					$stops[$stoporder]=$data[1];
+                                }
+                                unset($data);
+                        }
+                        $found=false;
+                        ora_parse($cursor,"select stop_order,short_name from route_stops where route_serial='$route[1]' order by stop_order");
+                        ora_exec($cursor);
+                        while (ora_fetch_into($cursor,$data))  {
+                                if ($data[1]==$route[2]) { // crossover
+                                        $found=true;
+                                }
+                                if ($found) {
+                                        $stoporder++;
+                                        $data[1]=trim($data[1]);
+					$stops[$stoporder]=$data[1];
+                                }
+                                unset($data);
+                        }
+			print_r($stops);
+		}
+
+
+                $stops2=$stops;
+
+		if (!is_array($ps[$rs]))
+			$ps[$rs]=array();
+
+                reset($ps[$rs]);
+                while (list($validto,$validfrom)=each($ps[$rs])) 
+			if (!isset($pgsdone[$pgs])){
+		                $pgsdone[$pgs]=true;
+
+		if ($stage==2)
+	                echo "looping stops for $pgs valid to $validto on route serial $rs<BR>";
+	
+		// just in case the valid to price date falls on a date the coach is not running !!!
+		if ($stage==2)
+			echo "select run_date from open_coach where route_serial='$rs' and run_date &lt;= $validto order by run_date desc<BR>";
+		ora_parse($cursor,"select run_date from open_coach where route_serial='$rs' and run_date<=$validto order by run_date desc");
+		ora_exeC($cursor);
+		if (ora_fetch($cursor))
+			$validto=getdata($cursor,0);
+
+                // check_oracle_gets();
+
+                if (is_array($stops)) {
+                reset($stops);
+                while (list($stopno,$stopname)=each($stops)) {
+                        reset($stops2);
+                        while (list($stopno2,$stopname2)=each($stops2))
+                                if ($stopno2>$stopno) {
+                                        // get price...
+					
+					if ($validto!=$validfrom)
+						$ctkexport=true;
+							
+				
+				    if ($getspecial)
+						$pricedata[0]=99;
+				   else {
+	     		            $pricedata=getcost("S.A. Rand",$rs,$stopname,$stopname2,$validto,true,"","",2);
+
+                                    $pricefound=false;
+				   $useclass="C"; // default
+				if (isset($rangeclass[$validto]))
+					$useclass=$rangeclass[$validto];
+				else {
+				  ora_parse($cursor,"select use_price from computicket_price_level where date_from<=$validto and date_to>=$validto");
+//				  echo "select use_price from computicket_price_level where date_from<=$validto and date_to>=$validto";
+				  ora_exec($cursor);
+				  if (ora_fetch($cursor)) {
+					$useclass=getdata($cursor,0);	
+					$season=$validto;
+					echo "( NEW ) ";
+
+				  } else {
+					
+                                    $season=substr($validto,4,4);
+					
+/*
+                                         if ($season>=1215 && $season <=1231)
+                                                 $useclass="A";
+                                         elseif ($season>=1201 || $season<=115)
+                                                $useclass="B";
+                                        elseif ($season>=502 && $season<=621)
+                                                $useclass="E";
+                                        else
+*/
+                                                 $useclass="C";
+				  }
+			
+  				  $rangeclass[$validto]=$useclass;	
+
+				} // rangeclass not set
+					
+
+					echo "Season $season, class $useclass. . .  ";
+
+                                        if (is_array($pricedata[8])) {
+                                                reset($pricedata[8]);
+                                                while (list($key,$val)=each($pricedata[8]))
+                                                        while (list($key2,$val2)=each($val)) {
+                                                             reset($val2);
+//                                                           while (list($key3,$val3)=each($val2))
+//                                                            echo "$key/$key2/$key3=$val3<br>";
+                                                              if (is_array($val2["$useclass"]) && is_numeric($val2["$useclass"][8])) {
+                                                                 $pricefound=true;
+                                                                 $pricedata[0]=round($val2["$useclass"][8]);
+                                                                 $pricedata[5]=round($val2["$useclass"][8]); // TODO: Work out return price
+                                                                 $pserial=$val2["$useclass"][0];
+                                                              }
+
+                                                        }
+						if ($stage==2)
+							echo "Got $pricedata[0] from $stopname to $stopname2<bR>";
+                                        } elseif ($stage==2)
+						echo "No price from $stopname to $stopname2 for $validto<BR>";
+                                        if (!$pricefound) {
+                                                $pserial=$pgs;
+                                        }
+
+					} // special
+			
+                                        if (is_numeric($pricedata[0])) {
+						ora_parse($cursor,"insert into computicket_prices values ($pgs,'$stopname','$stopname2','$pricedata[0]')");
+						echo " insert  $pgs,'$stopname','$stopname2','$pricedata[0]'<bR>\n";
+						if (!ora_Exec($cursor)) {
+							ora_rollback($conn);
+							echo "<font color=red><b>Error updating price serial $pgs to computicket</b></font>";
+							return false;
+			
+						}
+                           //                     $string.="\n$rs|$pserial|$stopname|$stopname2|$pricedata[0]|S.A. Rand|$pricedata[5]||";
+                                        }
+					else 
+						echo "Not a number $stopname to $stopname2 ($ppricedata[0]  ps $pgs<bR>\n";
+                                }
+                }
+
+                } // is array
+                } // while
+
+	echo "<b>(CUP)</b>";
+
+	return true;
+
+} // update_ctk
+
+
+
+
+
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>
+
+

@@ -1,0 +1,316 @@
+<html>
+<body xoncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<?// require("../php3/context.inc"); ?>
+<?
+
+if ($info=="Y") {
+	echo "<pre>";
+	$names=explode("\n",`cd /usr/local/www/pages/booking/ctk/files; ls Carrier*`);
+	reset($names);
+	while (list($key,$val)=each($names)) {
+		$val=str_replace("_"," ",$val);
+		$len=strlen($val)-1;
+		$code=$val[$len];
+		$val=substr($val,8,$len-8);
+		if (trim($code)!="")
+		echo "$code = $val<bR>";
+		
+	}
+	exit;
+} elseif ($onlyroute!="") {
+
+	$names=explode("\n",`cd /usr/local/www/pages/booking/ctk/files; ls Carrier*`);
+        reset($names);
+        while (list($key,$val)=each($names)) {
+                $val=str_replace("_"," ",$val);
+                $len=strlen($val)-1;
+                $code=$val[$len];
+                $val=substr($val,8,$len-8);
+                if (trim($code)!="" && $val!="")
+               		$codes[$code]=$val;
+
+        }
+
+
+}
+require("../php3/oracle.inc");
+require("../php3/colors.inc");
+require("../php3/logs.inc");
+require("../php3/misc.inc");
+require("../php3/sec.inc");
+require("../php3/opstimes.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+if ($generate=="Y") {
+	if ($continue!="Y") {
+		echo "<b>Please Wait...</b>";
+		reset($_GET);
+		$url="";
+		while (list($key,$val)=each($_GET)) {
+			$val=urlencode($val);
+			$url.="&$key=$val";
+		}
+		echo "\n<script> window.location='ctk_info.phtml?continue=Y$url'; </script>\n";
+
+		exit;
+	}
+	$from=str_replace("'","",$from);
+	$to=str_replace("'","",$to);
+	$froma=explode("(",$from);
+	$from=trim($froma[0]);
+	$toa=explode("(",$to);
+	$to=trim($toa[0]);
+
+	$from=str_replace(" DEPOT","",$from);
+	$to=str_replace(" DEPOT","",$to);
+	$from=str_replace(" BEACH","",$from);
+        $to=str_replace(" BEACH","",$to);
+
+
+	ora_parse($cursor,"select stop_number from ctk_stops where upper(stop_name)='$from'");
+	ora_exec($cursor);
+	if (!ora_fetch($cursor)) {
+		echo "No CTK Stop for $from found";
+		exit;
+	}
+	$fromstop=getdata($cursor,0);
+	ora_parse($cursor,"select stop_number from ctk_stops where upper(stop_name)='$to'");
+        ora_exec($cursor);
+        if (!ora_fetch($cursor)) {
+                echo "No CTK Stop for $to found";
+                exit;
+        }
+        $tostop=getdata($cursor,0);
+	$from=ucwords($from);
+	$to=ucwords($to);
+	$days=0;
+	$today=date("Ymd");
+	$test=$today;
+	while ($test<$onlydate) {
+		$days++;
+		$test=nextdate($test);
+		if ($days==100) {
+			echo "$onlydate is too far ahead of $today (gave up at $test<bR>";
+			exit;
+		}
+	}
+	$myuname=getenv("REMOTE_USER");
+	$debug=`ctk/getctk BUS~$fromstop BUS~$tostop $days  "$from" "$to" $onlyroute "" 1 $myuname`;
+
+} // generate
+
+
+if (is_numeric($onlydate))	
+{
+	$today=$onlydate;
+	$datex=" and depart_time<=to_date('$today"."235959','YYYYMMDDHH24MISS')";
+	$nodays=1;
+}
+else
+{
+	$today=date("Ymd");
+	$datex="";
+	$nodays=14;
+}
+$back=date("YmdHis",time()-8*60*60);
+
+if ($onlyroute=="")
+	echo "<a href=ctk_info.phtml?info=Y>Click here to see abbrieviations</a><Br>";
+
+if (is_numeric($onlyroute))
+	$routex=" and route_no=$onlyroute ";
+else
+	$routex="";
+ora_parse($cursor,"select from_stop,to_stop,to_char(depart_time,'YYYYMMDD'),search_date,to_char(date_logged,'YYYY/MM/DD HH24:MI'),position,carrier, price,to_char(depart_time,'HH24:MI'),route_no from ctk_log where date_logged>to_date('$back','YYYYMMDDHH24MISS') and depart_time>to_date('$today"."000000','YYYYMMDDHH24MISS') $datex  $routex ");
+//echo "select from_stop,to_stop,to_char(depart_time,'YYYYMMDD'),search_date,to_char(date_logged,'YYYY/MM/DD HH24:MI'),position,carrier, price,to_char(depart_time,'HH24:MI'),route_no from ctk_log where date_logged>to_date('$back','YYYYMMDDHH24MISS') and depart_time>to_date('$today"."000000','YYYYMMDDHH24MISS') $datex  $routex<br>";
+ora_exec($cursor);
+unset($data);
+while (ora_fetch_into($cursor,$data)) {
+	$dt=$data;
+	unset($dt[0]);
+	unset($dt[1]);
+	if ($dt[2]!=$dt[3])
+		$dt[8].="*";
+	unset($dt[2]);
+	unset($dt[3]);
+	$alldata[$data[0]][$data[1]][$data[3]][$data[5]]=$dt;
+	unset($data);
+} // while
+
+if ($onlydate=="") {
+echo "Note: Some liners stop at multiple stops in a city, so multiple listings does not mean multiple busses (eg Perridgevale + PE Station)<bR>";
+echo "\"*\" Means departure is for another date (route doesnt run on that date, but computicket quotes for next available departure)<br>";
+}
+echo "<table border=1 cellspacing=0 cellpadding=0>";
+
+
+if ($onlyroute=="")
+{
+	$headline= "<tr bgcolor=lightpink><td>From</td><td>To</td>";
+   $date=$today;
+   for ($a=0;$a<$nodays;$a++) {
+	$headline.= "<td>".afrikdate($date)."</td>";	
+	$date=nextdate($date);
+  }
+ 
+  $headline.= "</tr>\n";
+
+}
+//else
+//        $headline="<tr bgcolor=lightpink><td>#</td><td>Carrier</td><td>Price</td><td>Dep</td></tr>";
+
+$ctr=0;
+
+$nowtime=date("H:i");
+$nowtime2=date("H:i",time()-60);
+
+if (!is_array($alldata)) {
+	echo "No Recent CTK Info found";
+	exit;
+}
+
+
+
+ksort($alldata);
+reset($alldata);
+while (list($key,$val)=each($alldata)) {
+	ksort($val);
+	reset($val);
+	while (list($key2,$val2)=each($val)) {
+		if ($ctr%3==0)
+			echo $headline;
+		$ctr++;
+		if ($onlyroute=="") {
+			echo "<tr bgcolor=lavender>";
+			echo "<td>$key</td><td>$key2</td>";
+		} //else 
+		//	echo "<tr><td colspan=4>&nbsp;</td></tr><Tr><Td colspan=4><b><u>$key - $key2</u></b></td></tr>";
+		$date=$today;
+		for ($a=0;$a<$nodays;$a++) {
+			 if ($onlyroute=="")
+			        echo "<td nowrap valign=top>";
+			if (is_array($val2[$date])) {
+			ksort($val2[$date],SORT_NUMERIC);
+			reset($val2[$date]);
+			
+			if (substr($val2[$date][1][4],0,10)==date("Y/m/d"))
+				$val2[$date][1][4]=substr($val2[$date][1][4],10,10);
+			
+			
+			$when= "<font size=1><i>@";
+			if ($onlyroute=="")
+				$when="<br>".$when;
+			$val2[$date][1][4]=trim($val2[$date][1][4]);
+			if ($val2[$date][1][4]==$nowtime || $val2[$date][1][4]==$nowtime2)
+				$val2[$date][1][4]="<font color=green><b>".$val2[$date][1][4]."</b></font>";	
+
+		
+			$findctr=2;
+			while ($val2[$date][1][4]=="" && $findctr<20) {
+				if ($val2[$date][$findctr][4]!="")
+					$val2[$date][1][4]=$val2[$date][$findctr][4];
+				else
+					$findctr++;
+			}	
+			$when.= $val2[$date][1][4];
+			$when.="</font></i>";
+
+			$highestnon=0;
+			$highestic=0;
+			$routeno="";
+
+			if ($onlyroute!="")
+			 echo "<Tr><Td colspan=4><b><u><font size=2>$key - $key2</u></b> $when</td></tr>";
+
+			
+			while (list($key3,$val3)=each($val2[$date])) {
+				unset($val3[4]);
+				if ($routeno=="" && $val3[9]!="")
+					$routeno=$val3[9];
+				unset($val3[9]);
+
+				if ($onlyroute=="")
+					$codes[$val3[6]]=$val3[6];
+
+				$orig6=$val3[6];
+				if ($val3[6]=="M" || $val3[6]=="S")
+				{
+					if ($key3==1)
+						$highestic=$val3[7];
+					else {	
+					  if ($val2[$date][1][6]!="M" && $val2[$date][1][6]!="S") {
+						$val3[6]="<font size=2 color=red>".$codes[$val3[6]];
+					  }
+
+					}
+					if (isset($codes[$val3[6]]))
+	                                        $val3[6]="<font size=2>".$codes[$val3[6]];
+					$val3[6]="<b><font size=2>$val3[6]";
+				}
+				elseif ($highestnon==0 && $highestic>0) {
+					$highestnon=$key3;
+					if ($val3[7]>$highestic+10)
+						$val3[6]="<font size=2 color=magenta>".$codes[$val3[6]];
+
+				}
+					
+				if (isset($codes[$val3[6]]))
+					$val3[6]="<font size=2>".$codes[$val3[6]];
+						
+				$val3[8]="</font></b><font size=1>$val3[8]</font>";
+				if ($onlyroute=="") 
+					echo implode(" ",$val3)."<br>";
+				else {
+					echo "<Tr bgcolor=lavender><td>$val3[5]</td><td>$val3[6]</td><td align=right><font size=2>$val3[7]</td><td align=right>$val3[8]</td></tr>\n";
+				}
+//				print_r($val3);
+			}
+			}
+			$av="";
+			if ($routeno==0 || $routeno=="0000")
+				unset($routeno);
+			if ($routeno>0) {
+	
+				$routeno=sprintf("%04d",$routeno);
+				ora_parse($cursor,"select coach_serial from open_coach where route_no='$routeno' and run_date=$date order by is_open desc");
+				ora_exec($cursor);
+				if (ora_fetch($cursor)) {
+					$cs=getdata($cursor,0);
+					$av=availseats($cs,$key,$key2)."<font size=1> ";
+					
+	
+				}
+				else $av="N/B<font size=1> ";
+	
+			}
+			if ($onlyroute=="")
+				echo "$when $av$routeno</td>";
+//			else  
+//				$tail= "$when $av$routeno</td>";
+
+			$when="&nbsp;";
+	       		$date=nextdate($date);
+			$routeno="";
+		}
+		if ($onlyroute!="")
+			echo "</tr><tr><td colspan=5>&nbsp;</td></tr>\n";
+	} // while
+} // while 
+echo "</table><p>\n";
+
+if ($generate=="Y")
+	echo file_get_contents("ctk/files/ctk5$myuname");
+
+if (getenv("REMOTE_USER")=="Keith")
+	echo "<p><font size=1><pre>$debug";
+
+
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>

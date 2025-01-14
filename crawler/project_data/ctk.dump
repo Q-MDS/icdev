@@ -1,0 +1,24 @@
+GET /mobile/ HTTP/1.0
+Host: www.computicket.mobi
+
+.....m..P+/.!g...P...8...GET /mobile/travel?nocache=13067465954de35ee32dae3 HTTP/1.0
+Host: www.computicket.mobi
+Referer: http://www.computicket.mobi/mobile/
+Cookie2: $Version="1"
+Cookie: Computicket=unv4jvpr0j5fq2d8onjtephlk7
+
+POST /mobile/bus-tickets?nocache=13067466044de35eec9aaed HTTP/1.0
+Host: www.computicket.mobi
+Cookie2: $Version="1"
+Cookie: Computicket=unv4jvpr0j5fq2d8onjtephlk7
+data%5BDeparturePoint%5D=BUS%7E8317
+
+POST /mobile/bus-tickets?nocache=13067466044de35eec9aaed HTTP/1.0
+Host: www.computicket.mobi
+Cookie2: $Version="1"
+Cookie: Computicket=unv4jvpr0j5fq2d8onjtephlk7
+data%5BDeparturePoint%5D=BUS%7E8317&data%5BDepartureDate%5D=Tue%2C+31+May+2011&data%5BArrivalPoint%5D=BUS%7E6409&data%5BReturnDate%5D=No+Return+Trip&data%5BSelectRoute%5D=Select+Bus+Route
+
+GET /mobile/bus-tickets/carriers/departing/f0c9f55f4565c4ae9d946697b06ad0968ebe25d82599a018447837fbe3cc82191700d5c618516f2cb85562d9d3bdacfad0955d23fbe78fb92d6b26099bef04dfa241e2fc7aa4dcafbf75ac859edd37128729e0af12a66332bd12f2fe2877e97426fc2cbd654cb2dbdf207ee750f43d4921bc6aefdffa14e8e217510d96c68c77c5a3bc43b9a0927cdc0982a14c726420bc2468a8ccd82924e880c3dc2083c4f42492979ffbebc2a843d04a09194811def04b7630c215c439089dd038d7efede2c78aaf6f7b25dc3886c78f5ed826/1?nocache=13067466424de35f1231dd6 HTTP/1.0
+Cookie2: $Version="1"
+Cookie: Computicket=unv4jvpr0j5fq2d8onjtephlk7

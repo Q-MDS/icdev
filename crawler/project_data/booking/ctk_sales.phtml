@@ -1,0 +1,51 @@
+<html>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+set_time_limit(600);
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+
+$data=explode("\n",`grep Computicket /usr/local/www/pages/transaction.Jan2* | grep Sold`);
+
+reset($data);
+while (list($key,$val)=each($data)) {
+	$slash=explode("/",$val);
+	$term=trim($slash[8]);	
+	if (strlen($term)!=4)
+		echo "TERM? $val<bR>";
+	else {
+		$tix=explode("#",$val);
+		while (list($key2,$val2)=each($tix)) {
+			$tn=explode(" ",$val2);
+			if (strlen($tn[0])==15) {
+				ora_parse($cursor,"update cashup_export set fepbeplu='$term' where ticketno='$tn[0]' and transaction_type=1");
+				ora_Exec($cursor);
+				$num+=ora_numrows($cursor);
+			//	echo "$tn[0]=$term<Br>";
+			} //else echo "Not a ticket: $tn[0]<bR>";
+		}
+
+	}
+	$ctr++;
+	if ($ctr%200==0)
+		ora_commit($conn);
+
+}
+
+
+echo "$ctr loops, $num updated<bR>";
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>

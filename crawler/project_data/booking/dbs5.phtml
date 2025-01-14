@@ -1,0 +1,90 @@
+<? /* require_once ("../php3/context.inc"); */  
+
+
+require_once ("../php3/oracle.inc");
+/*require_once ("../php3/colors.inc");
+
+require_once ("../php3/logs.inc");
+*/
+require_once ("../php3/misc.inc");
+
+/*require_once ("../php3/sec.inc");
+*/
+require_once ("../php3/checkdate.inc");
+
+
+function goback($msg)
+{
+        echo "$msg<br>";
+        echo "<form>";
+        echo "<input type=button value='Go Back' onclick='history.back();'>";
+        echo "</form>";
+        exit;
+
+}
+
+
+if (!open_oracle()) { Exit; };
+/*if (!AllowedAccess("SEARCH_BOOKING")) { Exit; };
+*/
+
+
+	if (!checkday($day,$month,$year)) { goback("The Day is incorrect."); };
+	if (!checkmonth($month)) { goback("The Month is incorrect."); };
+	if (!checkyear($year)) { goback("The Year is incorrect."); };
+
+	$rundate = $year.$month.$day;
+	$qry="select count(coach_serial) from open_coach A where run_date='$rundate' and exists (select 1 from route_details B where B.route_serial=A.route_serial and route_no='$routeno' and carrier_code='$carrier')";
+	ora_parse($cursor,$qry);
+	ora_exec($cursor);
+	if (!@ora_fetch($cursor)):
+		$cnt=0;
+	else:
+		$cnt=getdata($cursor,0);
+	endif;
+
+	if ($cnt==0):
+		$msg ="Coach $routeno($carrier) doesn't run on ";
+		$msg.= "$day/$month/$year";
+		goback($msg);
+	endif;
+
+	$qry="select coach_serial from open_coach A where run_date='$rundate' and exists (select 1 from route_details B where B.route_serial=A.route_serial and route_no='$routeno' and carrier_code='$carrier')";
+	ora_parse($cursor,$qry);
+	ora_exec($cursor);
+	if ($cnt>1):
+		echo "There is more than one coach on $day/$month/$year<br>";
+		echo "on route $routeno ($carrier)<br>";
+		echo "Please select a Departure Time<br><br>";
+		echo "<table border=0 bgcolor='$table_bg'>";
+
+		$tcur = ora_open($conn);
+		while (@ora_fetch($cursor)):
+			$cs   = getdata($cursor,0);
+
+			$qry = "select depart_time from route_stops A where stop_order=1 and exists (select 1 from open_coach  B where B.route_serial=A.route_serial and coach_serial='$cs')";
+			ora_parse($tcur,$qry);
+			ora_exec($tcur);
+			echo "<tr bgcolor='$table_cell'>";
+			echo "<td>";
+				echo "<A href='dbsearch_4.phtml?searchfor=$cs&searchfield=95'>";
+				echo getdata($tcur,0);
+				echo "</a>";
+			echo "</td>";
+			echo "</tr>";
+		endwhile;
+		ora_close($tcur);	
+		echo "</table>";
+		exit;
+	else: 
+		ora_fetch($cursor); 
+		$cs=getdata($cursor,0); 
+	/*	echo "<a href=dbsearch_4.phtml?searchfor=$cs&searchfield=95>Click here</a><br> \n"; 
+*/
+
+
+        header("location:dbsearch_4.phtml?searchfor=$cs&searchfield=95");
+
+
+endif;
+?>

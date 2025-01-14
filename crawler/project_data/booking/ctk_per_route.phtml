@@ -1,0 +1,67 @@
+<html>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<?php require_once ("../php3/context.inc"); ?>
+<?php
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+if (!is_numeric($daysback))
+	$daysback=7;
+$when=date("Ymd",time()-86400*$daysback);
+
+$alldata=array();
+ora_parse($cursor,"select distinct route_no from open_coach where run_date>=$when and is_open='Y' and max_seats>0");
+ora_exec($cursor);
+$data=array();
+$data[1]=0;
+$data[2]="Not recently";
+while (ora_fetch($cursor)) {
+	$data[0]=getdata($cursor,0);
+	$alldata[getdata($cursor,0)]=$data;
+	$dataindex[$data[0]]=0;
+}
+
+ora_parse($cursor,"select  routeno,count(*),max(A.passport) from cashup_Export A, passenger_info B  where A.passport>=$when and A.user_serial='2122109184' and A.transaction_type=1 and A.ticketno=B.ticket_no group by A.routeno order by 2");
+ora_exec($cursor);
+while (ora_fetch_into($cursor,$data)) {
+	$alldata[chop($data[0])]=$data;
+	$dataindex[chop($data[0])]=$data[1];
+}
+
+
+asort($dataindex,SORT_NUMERIC);
+reset($dataindex);
+echo "Looking back $daysback days:<br>";
+echo "<Table border=1>";
+echo "<tr><td>Route<td>Pax<td>Last Booked</tr>";
+
+while (list($key,$amt)=each($dataindex)) {
+	$data=$alldata[$key];
+	echo "<tr><Td>$data[0]</td><td align=right>$data[1]</td><td>$data[2]</td></tr>";
+}
+echo "</table>";
+
+
+
+/*
+select routeno,count(*),max(A.passport) from cashup_Export A, passenger_info B  where A.passport>=$when and A.user_serial='2122109184' and A.transaction_type=1 and A.ticketno=B.ticket_no group by A.routeno order by 2;
+
+select distinct route_no from open_coach where run_date>=$when and is_open='Y' and max_seats>0;
+
+*/
+
+
+
+?>
+</form>
+</body>
+</html>
+<?php close_oracle() ?>

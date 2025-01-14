@@ -1,0 +1,195 @@
+<html>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("MODIFY_ROUTE")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+
+reset($_POST);
+while (list($key,$val)=each($_POST)) {
+
+  $action=substr($key,0,2);
+  if ($action =="nf") {
+        $srl=substr($key,2,999);
+        $other=$_POST["nt$srl"];
+        if (is_numeric($srl) && is_numeric($val) && is_numeric($other)) {
+//              echo "Adding $srl/$val/$other<br>";
+                $qry="insert into ctk_compare values ($val,$other,$srl)";
+                ora_parse($cursor,$qry);
+                ora_exec($cursor);
+        }
+//      else echo "bad data: $srl/$val/$other<bR>";
+  } // action
+} // while
+//else echo "Ignoring $key<bR>";
+
+if (is_numeric($newroute) && is_numeric($newfrom) && is_numeric($newto) && is_numeric($newfrom2) && is_numeric($newto2)) {
+
+                $qry="insert into ctk_compare values ($newfrom,$newto,$newroute,$newfrom2,$newto2)";
+                ora_parse($cursor,$qry);
+                ora_exec($cursor);
+
+
+
+}
+
+unset($newroute);
+unset($newfrom);
+unset($newto);
+unset($newfrom2);
+unset($newto2);
+
+unset($srl);
+unset($key);
+unset($other);
+
+
+$dbstops=array();
+ora_parse($cursor,"select * from ctk_stops");
+ora_exec($cursor);
+while (ora_fetch($cursor)) {
+	$dbstops[getdata($cursor,0)]=getdata($cursor,1);
+} // while
+
+$ctemp=json_decode(file_get_contents("/usr/local/www/ctk/ctk2"));
+
+$ctk_stops=array();
+$ctk_stops["NONE"]="Please select...";
+
+
+
+//echo "Del is $del<bR>";
+if (isset($del)) {
+	$srl=explode("_",$del);
+//	echo "Checking $srl[0]/$srl[1]/$srl[2]<bR>";
+        if (is_numeric($srl[0])&&is_numeric($srl[1])&&is_numeric($srl[2])) {
+                ora_parse($cursor,"delete from ctk_compare where route=$srl[0] and stop_from=$srl[1] and stop_to=$srl[2]");
+                ora_exec($cursor);
+        }
+}
+//else echo "Del is $del<br>";
+
+
+
+/*
+
+,{"description":"Wilderness","id":"BUS~6948"},
+*/
+reset($ctemp->cities);
+while (list($key,$val)=each($ctemp->cities)) {
+		$bits=explode("~",$val->id);
+		$ctk_stops[$bits[1]]=$val->description;
+		if (!isset($dbstops[$bits[1]]))  {
+			ora_parse($cursor,"insert into ctk_stops values ($bits[1],'$val->description')");
+			echo "Add $bits[1] = $val->description<br>";
+			ora_exec($cursor);
+		}
+} //while
+
+
+if (sizeof($ctk_stops)<3) {
+	// missing the file, so we read from the database instead
+	asort($dbstops);
+	reset($dbstops);
+	while (list($key,$val)=each($dbstops)) {
+		$ctk_stops[$key]=$val;
+	}
+
+
+}
+
+
+$flightsite_stops=array();
+$flightsite_stops["NONE"]="Please Select";
+$flightsite_stops["0"]="Do not check";
+ora_parse($cursor,"select * from flightsite_stops order by 2");
+ora_exec($cursor);
+while (ora_fetch($cursor)) 
+	$flightsite_stops[getdata($cursor,0)]=getdata($cursor,1);
+
+$routesetup=array();
+
+ora_parse($cursor,"select * from ctk_compare");
+ora_Exec($cursor);
+while (ora_fetch_into($cursor,$data)) 
+{
+	$routesetup[$data[2]][$data[0]][$data[1]]=$data;
+	
+}
+
+$now=date("Ymd");
+ora_parse($cursor,"select distinct route_no from open_coach where run_date>='$now' and max_seats>0 and is_open='Y'");
+ora_exec($cursor);
+while (ora_fetch_into($cursor,$data)) {
+	$data[0]=sprintf("%d",chop($data[0]));
+//	echo "working with $data[0]<bR>";
+	if (!isset($routesetup[$data[0]])) {
+//		echo "Blank $data[0]<br>";
+		$routesetup[$data[0]]=array();
+		$newroute[$data[0]]=true;
+	} // if
+
+} // while
+
+ora_parse($cursor,"select route_no, nvl (shortdesc,description) from route_details where date_to>'$now' order by date_to");
+ora_Exec($cursor);
+while (ora_fetch($cursor)) {
+	$rn=getdata($cursor,0);
+	if (!isset($rname[$rn]))
+		$rname[$rn]=getdata($cursor,1);
+}
+
+
+echo "This page defines which trips to crawl on Computicket's site and the corresponding Intercape route numbers.<br>(NOTE: For trips that have MULTIPLE Intercape routes, use route code 0)<br>";
+echo "<input type=submit value='Update'><br>";
+echo "<table border=1><form method=post>";
+echo "<tr><td>Route</td><td>CTK From Stop</td><td>CTK To Stop</td><td>F/Site FROM</td><td>F/Site TO</td></tr>";
+$counter=array();
+ksort($routesetup,SORT_NUMERIC);
+reset($routesetup);
+while (list($key,$val)=each($routesetup)) {
+	$keydisp=sprintf("%04d",$key);
+	if (!$newroute[$key]) {
+
+//		echo "Checking out $key<bR>";
+		reset($val);
+		while (list($key2,$val2)=each($val)) {
+			while (list($key3,$val3)=each($val2))
+			{
+				echo "<tr><td>$keydisp<font size=1> $rname[$keydisp]</td><td>".$ctk_stops[$key2]."</td><td>".$ctk_stops[$key3]."</td><td>".$flightsite_stops[$val3[3]]."</td><td>".$flightsite_stops[$val3[4]]."</td><td><a href=ctk_info_setup.phtml?del=$key"."_$key2"."_$key3><font color=red>x</font></a></td></tr>";
+				$counter["$key2|$key3"]++;
+			}
+
+		} // while
+	} else 
+		echo "<tr><td>$keydisp<font size=1> $rname[$keydisp]</td><td><select name=nf$key>".makeselect2($ctk_stops)."</select></td><td><select name=nt$key>".makeselect2($ctk_stops)."</select></td></tr>";
+
+} // while
+echo "<tr><td>New:<input name=newroute size=4 maxlength=4></td><td><select name=newfrom>".makeselect2($ctk_stops)."</select></td><td><select name=newto>".makeselect2($ctk_stops)."</select></td>";
+echo "<td><select name=newfrom2>".makeselect2($flightsite_stops)."</select></td><td><select name=newto2>".makeselect2($flightsite_stops)."</select></td>";
+
+echo "</tr>";
+echo "</table><br><input type=submit value='Update'>";
+echo "<p>";
+reset($counter);
+while (list($key,$val)=each($counter)) if ($val>1){
+
+	$bits=explode("|",$key);
+	echo "<font color=red>WARNING!  $val routes selected for ".$ctk_stops[$bits[0]]." to ".$ctk_stops[$bits[1]]."<BR>";
+}
+
+
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>

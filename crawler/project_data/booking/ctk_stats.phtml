@@ -1,0 +1,109 @@
+<html>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/colors.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+get_colors(getenv("REMOTE_USER"));
+
+$start=time()-124*24*60*60;
+echo "Using Original booking date From ".date("H:m d M Y",$start).": to now...<br>";
+
+ora_parse($cursor,"select distinct A.ticket_serial,A.ticketno,A.rundate,A.transaction_type,A.total,B.rundate from cashup_export A, cashup_export B where A.user_serial='2122109184' and A.ticket_serial=B.ticket_serial and B.rundate>$start and B.paid='N' order by A.rundate");
+ora_exec($cursor);
+unset($data);
+while (ora_fetch_into($cursor,$data)) {
+		$value[$data[0]][$data[1]]=$data[4];
+		$reserved[$data[0]]=$data[5];
+		if ($data[3]==2) { // cancel
+			$cancelled[$data[0]]=$data[2];
+		} else {
+			$paid[$data[0]]=$data[2];	
+		}
+	unset($data);
+} // while
+
+reset($value);
+while (list($ts,$tix)=each($value)) {
+	reset($value[$ts]);
+	$tval=0;
+	$thetix="";
+	while (list($key,$v)=each($value[$ts]))
+	{
+		$tval+=$v;
+		$thetix.=$key." ";
+	}
+	$thetix.="= R $tval";
+	if (isset($cancelled[$ts])) {
+		if ($paid[$ts]>$cancelled[$ts]) {
+			$repaid++;
+			$repaidval+=$tval;
+			$timeval=round(($paid[$ts]-$reserved[$ts])/3600);
+	                $paidv[$timeval]++;
+			$timeval=round(($paid[$ts]-$cancelled[$ts])/60);
+	                $repaidv[$timeval]++;
+
+		} else {
+			$canc++;
+                        $cancval+=$tval;
+                        $timeval=round(($cancelled[$ts]-$paid[$ts])/60);
+                        $cancv[$timeval]++;
+			$canctix.=$thetix." ($timeval mins after paid)<bR>";
+		}
+	} else {
+		$paidonly++;
+		$paidonlyval+=$tval;
+		$timeval=round(($paid[$ts]-$reserved[$ts])/3600);
+		$paidv[$timeval]++;
+
+	}
+} // while
+
+echo "<b>Stats:<br>$paidonly Paid (R$paidonlyval)<br>$canc Cancelled (R$cancval)<br>$repaid Paid, Then cancelled, then paid (R$repaidval)</b><bR>";
+echo "Minutes from payment to cancellation:<br><table  border=1><tr><td>Minutes</td><td>Number</td><td>Percentage</td><td>Combined Percentage</td></tr>";
+ksort($cancv,SORT_NUMERIC);
+reset($cancv);
+$myt=0;
+while (list($key,$val)=each($cancv)) {
+	$myt+=$val;
+	$pval=sprintf("%.1f",100*$val/$canc)."%";	
+	$mypval=sprintf("%.1f",100*$myt/$canc)."%";
+
+        echo "<tr><Td align=right>$key</td><td align=right>$val</td><td align=right>$pval</td><td align=right>$mypval</td></tr>";
+} // while
+echo "</table><p>";
+
+echo "Minutes from cancelllation to Payment:<br><table  border=1><tr><td>Minutes</td><td>Number</td><td>Percentage</td></tr>";
+ksort($repaidv,SORT_NUMERIC);
+reset($repaidv);
+while (list($key,$val)=each($repaidv)) {
+	$pval=sprintf("%.1f",100*$val/$repaid)."%";
+        echo "<tr><Td align=right>$key</td><td align=right>$val</td><td align=right>$pval</td></tr>";
+} // while
+echo "</table><p>";
+
+
+
+ksort($paidv,SORT_NUMERIC);
+reset($paidv);
+echo "Hours from reservation to booking:<br><table border=1><tr><td>Hours</td><td>Number</td><td>Percentage</td></tr>";
+reset($paidv);
+while (list($key,$val)=each($paidv)) {
+	$pval=sprintf("%.1f",100*$val/($paidonly+$repaid))."%";
+	echo "<tr><Td align=right>$key</td><td align=right>$val</td><td align=right>$pval</td></tr>";
+} // while
+echo "</table><p><b>Cancelled Tickets</b><br>$canctix";
+
+
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>

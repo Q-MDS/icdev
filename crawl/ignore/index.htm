@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Crawler</title>
+</head>
+<body>
+    <h1>Web Crawler</h1>
+    <input type="text" id="url" placeholder="Enter URL">
+    <button onclick="crawl()">Crawl</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function crawl() {
+            const url = document.getElementById('url').value;
+            const response = await fetch(`webcrawler.php?url=${encodeURIComponent(url)}`);
+            const content = await response.text();
+            document.getElementById('result').textContent = content;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<html>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/logs.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+
+$tix=explodE("\n",file_get_contents("tickets.txt"));
+reset($tix);
+while (list($key,$val)=each($tix)) {
+	ora_parse($cursor,"select ticket_serial from passenger_info where ticket_no='$val'");
+	ora_exec($cursor);
+	if (ora_fetch($cursor))
+		$sn[getdata($cursor,0)]=true;
+}// while
+
+reset($sn);
+while (list($key,$val)=each($sn))
+		echo "./z $key\n"; 
+
+
+
+?>
+</form>
+</body>
+</html>
+<? close_oracle() ?>
