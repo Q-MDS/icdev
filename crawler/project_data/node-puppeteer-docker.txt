@@ -1,0 +1,41 @@
+It sounds like Puppeteer is having trouble finding the Chrome executable in your Docker setup. Here are a few steps you can try to resolve this issue:
+
+1. Install Chrome: Make sure you have installed Chrome in your Docker container. You can do this by adding the necessary commands to your Dockerfile. For example:
+
+Dockerfile
+----------
+FROM node:latest
+RUN apt-get update && apt-get install -y wget
+RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+RUN apt-get install -y ./google-chrome-stable_current_amd64.deb
+
+2.Set the Cache Path: Ensure that the cache path for Puppeteer is correctly configured. You can set the cache path in your Puppeteer script:
+
+Javascript
+----------
+const puppeteer = require('puppeteer');
+puppeteer.launch({ 
+  executablePath: '/usr/bin/google-chrome',
+  cachePath: '/path/to/cache' 
+});
+
+3. Verify Installation: Check if Chrome is installed correctly in your Docker container by running:
+
+Sh
+--
+google-chrome --version
+This should return the version of Chrome installed.
+
+4. Permissions: Ensure that the user running the Docker container has the necessary permissions to access the Chrome executable and cache path.
+
+
+
+
+
+
+
+
+
+
+
+

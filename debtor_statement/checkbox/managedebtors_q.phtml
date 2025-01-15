@@ -1,0 +1,1255 @@
+<html>
+	<head><link type="text/css" rel="stylesheet" href="agentstyle.css"><title>Debtors Management</title></head>
+	
+	<body>
+	<?
+/*
+
+alter table debtors_info add ( 
+inv_cutoff varchar2(40),
+terms number,
+credit_limit number,
+payment_date varchar2(10),
+cutoff_day number,  payment_day number);
+*/
+
+	require("../php3/oracle.inc");
+	require("../php3/sec.inc");
+	require("../php3/trans.inc");
+	require("../php3/misc.inc");
+	//require('../php3/colors.inc');
+
+	if (!open_oracle()) { Exit; };
+	if (!AllowedFlag("DEVELOPERS"))
+	if (!AllowedAccess("DEBTORS")) { Exit; };
+
+	require( "usermenu.inc" );
+
+	if ($stage>0)
+	       require_once("../sage/debtors_master.phtml");
+
+	
+	array( $results );
+
+	
+        unset($stateways);
+        $stateways["N"]="None (Are you sure?)";
+        $stateways["E"]="Email Only";
+        $stateways["p"]="Post Only";
+        $stateways["P"]="Post and Email";
+        $stateways["h"]="Hand Deliver Only";
+        $stateways["H"]="Hand Deliver and Email";
+        $stateways["d"]="Docex Only";
+        $stateways["D"]="Docex and Email";
+        $stateways["f"]="Fax Only";
+        $stateways["F"]="Fax and email";
+
+	if( $stage==0 ) {
+		$tcur = ora_open( $conn );
+		
+		if( !isset( $order1 ) ) $order1 = "A.account_code";
+		if( !isset( $order2 ) ) $order2 = "";
+
+?>
+<link href="/select2/dist/css/select2.min.css" rel="stylesheet" />
+        <script src="/select2/jquery-3.1.1.min.js"></script>
+        <script src="/select2/dist/js/select2.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function() {
+  $(".js-example-basic-single").select2();
+});
+
+$(".js-example-placeholder-single").select2({
+  placeholder: "Please Select one",
+  allowClear: true
+});
+
+</script>
+<?
+
+		
+		print "<a href=\"managedebtors.phtml?stage=1\">Add a new Debtor</a>&nbsp;&nbsp;&nbsp;";
+
+		print "<a href=\"managebranch.phtml\">Manage Branches</a>&nbsp;&nbsp;&nbsp;";
+		print "<a target=_new href=\"../branch_report.phtml\">Old Branch & User Report</a>&nbsp;&nbsp;&nbsp;";
+		print "<a href=\"suspend.phtml?stage=0\">Suspend Individual Users</a> &nbsp;&nbsp;&nbsp;";
+		print "<a href=\"../pdf_month.phtml\">Print PDF tickets for a month</a>  &nbsp;&nbsp;&nbsp;";
+
+		print "<a href=managedebtors.phtml?stage=100>Debtor Audit (list)</a><br><br>";
+//		print "<a href=\"../suspend.phtml\">Old Suspend</a><br><br>";
+		
+		print "<form action=managedebtors.phtml method=post><input type=hidden name=stage value=0>";
+		print "<table>";
+		print "<tr class=cell>";
+		print "<td>Order by <select name=order1>";
+		print "<option value='A.company_name'"; if( $order1=="A.company_name" ) print " selected"; print ">Debtor Name";
+		print "<option value='A.account_code'"; if( $order1=="A.account_code" ) print " selected"; print ">Account Code";
+		print "</select> and then ";
+		print "<select name=order2>";
+		print "<option value='' selected>Nothing";
+		print "<option value='A.company_name'"; if( $order2=="A.company_name" ) print " selected"; print ">Debtor Name";
+		print "<option value='A.account_code'"; if( $order2=="A.account_code" ) print " selected"; print ">Account Code";
+		print "</select>";
+		print "<input type=checkbox name=tsus value='Y'"; if( $tsus=="Y" ) print " checked"; print ">Show Only Suspended? ";
+		print "<select name=swho>";
+		print "<option slected value=''>Anybody";
+		
+		ora_parse( $cursor, "SELECT DISTINCT( A.user_serial ), A.username FROM USER_DETAILS A, SUSPENDED_ACCOUNTS B WHERE A.user_serial=B.done_by GROUP BY A.user_serial, A.username ORDER BY A.username" );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			$tus = trim( ora_getColumn( $cursor, 0 ) );
+			$tun = trim( ora_getColumn( $cursor, 1 ) );
+			
+			if( $tus==$swho )
+				print "<option value='$tus' selected>$tun";
+			else print "<option value='$tus'>$tun";
+		}
+		
+		print "</select> Include Deleted: <input type=checkbox name=showdelete value=Y";
+		if ($showdelete=="Y")
+			echo " CHECKED";
+		echo ">";
+		echo " Show last debtors transaction: <input type=checkbox name=showlast value=Y";
+		if ($showlast=="Y")
+			echo " CHECKED";
+		print "></td>";
+		print "<td width=60 align=right><input type=submit value='Reorder Results'>";
+		print "</td></tr>";
+		print "</table>";
+		print "</form>";
+		
+		$rowdisp=0;
+		print "<form method=get action=managedebtors.phtml><input type=hidden name=stage value=1>";
+		print "<select name=acode  class='js-example-basic-single' style='width: 80%' >";
+//		print "<tr class=title><td>Debtor Name</td><td>Agent Type</td><td width=100>Account Code</td><td width=50 align=right>Comm</td><td width=50>&nbsp;</td><td width=50>&nbsp;</td><td>&nbsp;</td></tr>";
+
+		if ($showlast=="Y") {
+			ora_parse($cursor,"select account_no,to_char(max(entry_date),'DD Mon YYYY') from debtors group by account_no");
+			ora_exec($cursor);
+			while (ora_fetch($cursor))
+				$last_txn[getdata($cursor,0)]=getdata($cursor,1);
+
+		}
+		
+		$flag = true;
+		$qry  = "SELECT A.company_name, A.is_dealer, A.account_code, null, A.commission, A.is_current, A.debtor_type FROM DEBTORS_INFO A  ";
+		if ($showdelete!="Y")
+			$qry.=" WHERE is_current='Y' ";
+		$qry .= "ORDER BY $order1";
+		if( $order2!="" ) $qry .= ", $order2";
+		
+//		echo "$qry<Br>";
+		ora_parse( $cursor, $qry );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			$branch = ora_getColumn( $cursor, 0 );
+			$acode = ora_getColumn( $cursor, 2);
+			
+			$dtype=ora_getColumn( $cursor, 6);
+                                if (ora_getColumn($cursor, 5)!="Y")
+                                        $s="(DELETED) ";
+                                else
+                                        $s="";
+
+			
+			ora_parse( $tcur, "SELECT A.username, B.suspended_from, B.reason, B.type, B.done_by, A.is_current FROM USER_DETAILS A, SUSPENDED_ACCOUNTS B WHERE B.account_code='$acode' AND A.user_serial=B.done_by" );
+			ora_exec( $tcur );
+			if( ora_fetch( $tcur ) ) {
+				( $flag ) ? $extra = "<tr class=cell>" : $extra = "<tr class=altcell>";
+				
+				$type = ora_getColumn( $tcur, 3 );
+				$susb = trim( ora_getColumn( $tcur, 4 ) );
+			
+				if ($s=="")		
+					$extra .= "<td><b>Suspended by " . trim( ora_getColumn( $tcur, 0 ) ) . "</b>";
+				else
+					$extra .= "<td><b><font color=red>Deleted</font> by " . trim( ora_getColumn( $tcur, 0 ) ) . "</b>";
+
+				
+				switch( $type ) {
+					case "N": $extra .= " (no longer agent)"; break;
+					case "T": $extra .= " (temporary suspension)"; break;
+					default : $extra .= " (unknown)"; break;
+				}
+				
+				$extra .=  date( "d/m/Y", ora_getColumn( $tcur, 1 ) )." ";
+				$extra .= ora_getColumn( $tcur, 2 ) ." ";
+				$suspended = true;
+			}
+			else {
+				$extra = $extra2 = "";
+				
+				$suspended = false;
+				$font = $unfont = "";
+			}
+			
+			if( $tsus=="Y" && !$suspended )
+				continue;
+				
+			if( $swho!="" && $swho!=$susb ) {
+				continue;
+			}
+			
+			$isdealer = ora_getColumn( $cursor, 1 );
+			$account = ora_getColumn( $cursor, 2 );
+			$comm = ora_getColumn( $cursor, 4);
+			if (!is_numeric($comm))
+				$comm=0;
+			print "<option value='$acode'>$acode: ";	
+			print $extra2;
+			print "$branch ";
+			print "$isdealer - ";
+			switch ($dtype) {
+				case "O": echo "Office"; break;
+				case "C": echo "Debtor (Charter/Freight)"; break;
+				case "X": echo "Other"; break;
+				case "D": echo "DCAI"; break;
+				default : echo "Debtor (Bus)"; break;
+
+			}
+			print " ".$last_txn[$account]." ";
+			if ($comm!=0)
+			print "$comm"."% ";
+		
+//			print "<form  action=managedebtors.phtml  method=post><input type=hidden name=stage value=4><input type=hidden name=serial value='$acode'><td><!input type=submit value='Rename'></td></form>";
+//			print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=3><input type=hidden name=acode value='$acode'>";
+//			
+//			if( $suspended )
+//				print "<input type=hidden name=action value=reinstate><td><input type=submit value=Reinstate></td>";
+//			elseif ($dtype!="O") print "<input type=hidden name=action value=suspend><td><input type=submit value=Suspend></td>";
+//			else print "<td>&nbsp;</td>";
+			
+//			print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=1><input type=hidden name=acode value='$acode'><td><input type=submit value=Edit></td></form>";
+			print $extra;
+			
+			$flag = !$flag;
+		}
+		
+		print "</select><br><input type=submit value='Edit'></form>";
+		ora_close( $tcur );
+	}
+	elseif( $stage==1 ) {
+		print "<a href=\"managedebtors.phtml?stage=0\">List Debtors</a> - or -  <a href=managedebtors.phtml?stage=100>Debtor Audit (list)</a><br><br>";
+		if( isset( $acode ) ) {	//Editing
+
+			$acode=str_replace("'","",$acode);
+			echo "<font color=magenta>";
+			ora_parse($cursor,"select max(entry_date) from debtors where account_no='$acode'");
+			ora_exec($cursor);
+			if (ora_fetch($cursor))
+				if (getdata($cursor,0)!="")
+					echo "<center>LAST DEBTORS TRANSACTION: ".getdata($cursor,0)."</center><br>";
+
+			ora_parse( $cursor, "SELECT * FROM DEBTORS_INFO WHERE account_code='$acode'" );
+			ora_exec( $cursor );
+			if (ora_fetch_into( $cursor, $results )) {
+
+			print "<form  action=managedebtors.phtml  method=post><input type=hidden name=stage value=2>";
+                        print "<input type=hidden name=action value=edit>";
+                        print "<input type=hidden name=acode value='$acode'>";
+
+			if ($results[24]!="")
+				echo "<Center><b>CREATED $results[24]</b></center><br>";
+
+			echo "</font>";
+
+			for( $i=0; $i<sizeof( $results ); $i++ )
+				$results[$i] = chop( $results[$i] );
+
+			$stdetail=$results[22];
+
+			ora_parse( $cursor, "SELECT COUNT(*) FROM SUSPENDED_ACCOUNTS WHERE account_code='$acode'" );
+			ora_exec( $cursor );
+			( ora_getColumn( $cursor, 0 )>0 ) ? $suspend = true : $suspend = false;
+
+			if ($results[18]!="Y")
+				print "<b><font color=red>This debtors has been DELETED</b></font><br>";
+
+			if( $suspend ) {
+				if ($results[18]=="Y")
+					print "<b><font color=red>This branch has been SUSPENDED</b></font><br>";
+				print "<a href=\"managedebtors.phtml?stage=3&action=view&acode=" . urlencode( $acode ) . "\">Click here</a> to see details of this branches suspension";
+			}
+		
+			
+			print "<table >";
+			print "<tr class=title><td colspan=2><b>Edit a Debtor</b></td></tr>";
+			}
+			else {
+				$prefill=$acode;
+				unset($acode);
+			}
+
+		}
+
+		if (!isset($acode)) {					//Adding
+			print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=2>";
+			print "<input type=hidden name=action value=add>";
+			print "<table width=80%>";
+			$results[9]="S.A. Rand";
+			$results[1]="Y";
+			print "<tr class=title><td colspan=2><b><font size=4 style='background: yellow'>Adding a new Debtor</font></b></td></tr>";
+			$showspecial=true;
+		} else {
+			ora_parse($cursor,"select 'x' from tour_customers where customer_code='$acode' and active='Y'");
+			ora_exec($cursor);
+			if (ora_fetch($cursor))
+				$showspecial=true;
+
+		}
+
+		print "<tr class=cell>";
+		print "<td>Debtor Name</td>";
+		print "<td><input type=text name=send[0] size=70 maxlength=70 value=\"$results[0]\"></td>";
+		print "</tr>";
+	
+		print "<tr class=altcell>";
+		print "<td>Is this an agent?</td>";
+		print "<td><input type=checkbox name=send[1] value=Y "; if( $results[1]=="Y" ) print "checked"; print "></td>";
+		print "</tr>";
+
+                print "<tr class=altcell>";
+                print "<td>Which SITE ?</td>";
+                print "<td><select name=sage_site onchange=\"console.log(this.options[this.selectedIndex].value); if (this.options[this.selectedIndex].value=='IFL01') { console.log('show'); document.getElementById('flonly1').style.display='block';  document.getElementById('flonly2').style.display='block';   } else { console.log('hide');  document.getElementById('flonly1').style.display='none'; document.getElementById('flonly2').style.display='none';  }  \"><option value=''>Default for their country</option>";
+		ora_parse($cursor,"select site_id,site_name from sites order by site_id");
+		ora_Exec($cursor);
+		while (ora_Fetch_into($cursor,$siteinfo)) {
+			echo "<option value='$siteinfo[0]'";
+			if ($siteinfo[0]==$results[28])
+				echo  " SELECTED";
+			echo ">$siteinfo[0]: $siteinfo[1]</option>\n";
+		}
+
+                print "</select></td></tr>";
+
+	ora_parse($cursor,"select master_serial, name from tour_master_names where (company=5 and in_use='Y') ");
+	ora_exec($cursor);
+	$masters["null"]="Not Set Yet";
+	while (ora_fetch($cursor))
+	        $masters[getdata($cursor,0)]=getdata($cursor,1);
+
+	ora_parse($cursor,"select serial,name,in_use from tour_segments where company=5 order by name");
+	ora_Exec($cursor);
+	unset($sdata);
+	unset($segments);
+        $segments["null"]="Not Set Yet";
+	while (ora_fetch_into($cursor,$sdata)) {
+	        if ($sdata[2]=="Y" || $data[17]==$sdata[0])
+	                $segments[$sdata[0]]=$sdata[1];
+	        unset($sdata);
+	} // while
+
+	if (trim($results[42])=="") {
+          if ($data[25]=="Y")
+                $typeof="RELAT";
+          elseif ($data[25]=="I")
+                $typeof="INTCO";
+          elseif ($data[20]=="C")
+                $typeof="CHART";
+          elseif ($data[20]=="D")
+                $typeof="OTHER";
+          elseif ($data[20]=="O")
+                $typeof="OFFCE";
+          elseif ($data[20]=="X")
+                $typeof="OTHER";
+          else
+                $typeof="AGENT";
+	  $results[42] = $typeof;
+	}
+
+	$sage_types["AGEN7"] = "Agents 7 Days";
+	$sage_types["AGENT"] = "Agents";
+	$sage_types["AGNT3"] = "Agents 30 Days";
+	$sage_types["AGNTD"] = "AGent Discount";
+	$sage_types["AGT14"] = "Agents 14 Days";
+	$sage_types["BSK07"] = "CHARTERS BIGSKY 07 DAYS";
+	$sage_types["BSK30"] = "CHARTERS BIGSKY 30 DAYS";
+	$sage_types["BSKY"]  = "CHARTERS BIGSKY";
+	$sage_types["CH07"]  = "Charters 07 Days";
+	$sage_types["CH30"]  = "Charters 30 Days";
+	$sage_types["CHART"] = "Charters";
+	$sage_types["INTCO"] = "Intercompany Debtors";
+	$sage_types["OFFCE"] = "Internal Offices";
+	$sage_types["OTHER"] = "Other";
+	$sage_types["RELAT"] = "Related Parties";
+
+
+		echo "<tr ><td  id=flonly1 style='display: none' colspan=2>Default Rate: (IFL only): <select name=master>".makeselect2($masters,$data[11])."</select></td></tr>";
+		echo "<tr ><td  id=flonly2 style='display: none' colspan=2>Market Segment (IFL only): <select name=segment>".makeselect2($segments,$data[17])."</select></td></tr>";
+
+
+		print "<tr class=cell>";
+                print "<td>What type of agent?</td>";
+                print "<td>Bus Ticket/Other:<input type=radio name=dtype value=B "; if( $results[20]!="C" && $results[20]!="O" && $results[20]!="X" && $results[20]!="D" ) print "checked"; print "> / Charters&Freight:<input type=radio name=dtype value=C "; if ($results[20]=="C") echo " CHECKED"; echo "> / Office: <input type=radio name=dtype value=O "; if ($results[20]=="O") print "checked"; print ">  / DCAI: <input type=radio name=dtype value=D";  if ($results[20]=="D") echo " CHECKED"; echo "> / Other:<input type=radio name=dtype value=X "; if ($results[20]=="X") echo " CHECKED"; echo "></td>";
+                print "</tr>";
+
+		print "<tr class=cell bgcolor=lightpink>";
+		print "<td>SAGE Debtor type</td>";
+		echo "<td><select name=sage_dtype>";
+		echo makeselect2($sage_types, $results[42]);
+		echo "</selecT> <font color=red><b>*** NEW</b></font>";
+		echo "</td>";
+		echo "</tr>";
+		print "<tr class=altcell>";
+                print "<td>Is this a related company to Intercape?</td>";
+                print "<td><input type=radio name=related value=N ";
+                if ($results[25]!="Y" && $results[25]!="I")
+                        echo "CHECKED";
+                echo "> NO (most debtors)<Br><input type=radio name=related value=Y ";
+		if ($results[25]=="Y")
+			echo "CHECKED";
+		echo "> YES (Non-Intercape, but related to us)<Br>";
+		echo "<input type=radio name=related value=I ";
+                if ($results[25]=="I")
+                        echo "CHECKED";
+                echo ">INTERNAL (An Intercape company)</td></tr>";
+
+		print "<tr class=cell>";
+                print "<td>Billing Cycle</td>";
+                print "<td>Monthly:<input type=radio name=btype value=M "; if( $results[21]!="W" ) print "checked"; print "> / Weekly:<input type=radio name=btype value=W "; if ($results[21]=="W") echo " CHECKED"; echo "></td>";
+                print "</tr>";
+?>
+<script>
+    function bpreview(val) {
+//                let val = document.getElementById('orf_'+ctr).value;
+
+                if (val.length > 3) {
+                        document.getElementById('minfo').style.width='300px';
+                        document.getElementById('minfo').src='../bp_find.phtml?free=Y&imp='+val;
+                }
+                else console.log(val.length);
+
+        }
+</script>
+
+<?
+
+		print "<tr class=altcell>";
+		print "<td>Account Code</td>";
+		if ($acode=="" && $prefill!="")
+			$acode=$prefill;
+		print "<td><input type=text name=newacode onkeyup=\"bpreview(this.value)  \" size=6 maxlength=6 value=\"$acode\"> <iframe id=minfo height='22px' width='150px'></iframe>";
+		print "</td>";
+		print "</tr>";
+		print "<tr class=altcell>";
+                print "<td>Credit Card Account Code</td>";
+                if ($acode=="" && $prefill!="")
+                        $acode=$prefill;
+                print "<td><input type=text name=send[29] size=6 maxlength=6 value=\"$results[29]\"> <i>The debtor code to move all credit card transactions into (Only for agents or offices who have an Intercape card machine)</i>";
+                print "</td>";
+                print "</tr>";
+
+
+		$controllers[]="A";
+		$controllers[]="B";
+		$controllers[]="C";
+		$controllers[]="Z";
+		print "<tr class=cell>";
+                print "<td>Controller</td>";
+                print "<td><select name=send[15]>".makeselect($controllers,$results[15])."</select>";
+                print "</td>";
+                print "</tr>";
+		print "<tr class=altcell>";
+                print "<td>Statement Detail</td>";
+                print "<td><input type=checkbox name=sdetails value=Y";
+		if ($stdetail=="Y")
+			echo " CHECKED";
+		print "> <font size=2>(Tick to include full invoices with each statement <b>ONLY FOR BUS TICKETS</b>)";
+                print "</td>";
+                print "</tr>";
+
+		print "<tr class=cell>";
+                print "<td>Accounts Contact Person</td>";
+                print "<td><input name=send[16] size=20 maxlength=30 value='$results[23]'></td>";
+                print "</tr>";
+	
+		print "<tr class=altcell>";
+		print "<td>Postal Address<bR>(For Statements)</td>";
+		print "<td><textarea name=send[3] rows=6 cols=40 maxlength=200>$results[3]</textarea></td>";
+		print "</tr>";
+
+		print "<tr class=cell>";
+                print "<td>Fax Number<bR>(For Statements)</td>";
+                print "<td><input name=send[5] size=20 maxlength=20 value='$results[5]'></td>";
+                print "</tr>";
+
+		print "<tr class=altcell>";
+                print "<td>Email Address<bR>(For Statements)</td>";
+                print "<td><input name=send[4] size=80 maxlength=200 value='$results[4]'></td>";
+                print "</tr>";
+
+
+		print "<tr class=cell>";
+                print "<td>Statement Delivery Method</td>";
+                print "<td><select name=send[6]>".makeselect2($stateways,$results[6])."</select></td>";
+                print "</tr>";
+	
+		ora_parse($cursor,"select name from currency_info order by name");
+		unset($currs);
+		ora_exec($cursor);
+		while (ora_fetch($cursor))
+			$currs[]=ora_getcolumn($cursor,0);
+
+		print "<tr class=altcell>";
+                print "<td>Statement Currency</td>";
+                print "<td><select name=send[9]>".makeselect($currs,$results[9])."</select></td>";
+                print "</tr>";
+
+		// NB: IF YOU ADD TO THIS, FIRST ADD IT AS AN OPTION IN SAGE X3:
+		$commo=array();
+		$commo[0]=0;
+		$commo[3]=3;
+		$commo[4.5]=4.5;
+		$commo[5]=5;
+		$commo[7]=7;
+		$commo[8]=8;
+		$commo["9.12"]=9.12;
+		$commo["9.2"]=9.2;
+                $commo[10]=10;
+                $commo[11]=11;
+		$commo["11.0055"]=11.0055;
+                $commo["11.4"]=11.4;
+		$commo["11.5"]=11.5;
+                $commo[12]=12;
+                $commo[13]=13;
+		$commo[15]=15;
+                $commo[20]=20;
+                $commo[40]=40;
+
+		$results[7]=chop($results[7]);
+		$results[13]=chop($results[13]);
+		$results[14]=chop($results[14]);
+
+
+		print "<tr class=cell>";
+                print "<td>Commission BUS TICKETS (%)</td>";
+		if ($results[7]>0)
+			$commo[$results[7]]=$results[7];
+                print "<td><select  name=send[7]>".makeselect2($commo,$results[7])."</select>% <font color=red></td>";
+                print "</tr>";
+
+                print "<tr class=altcell>";
+                print "<td>Commission BAGGAGE (%)</td>";
+		if ($results[30]>0)
+			$commo[$results[30]]=$results[30];
+                print "<td><select  name=send[30]>".makeselect2($commo,$results[30])."</select>%</td>";
+
+                print "</tr>";
+
+/*
+		print "<tr class=altcell>";
+                print "<td>Commission Budgetliner $results[13](%)</td>";
+		print "<td><select  name=send[13]>".makeselect2($commo,$results[13])."</select>%</td>";
+
+                print "</tr>";
+
+		print "<tr class=cell>";
+                print "<td>Commission Sleepliner $results[14](%)</td>";
+		print "<td><select  name=send[14]>".makeselect2($commo,$results[14])."</select>%</td>";
+
+                print "</tr>";
+*/
+
+
+		print "<tr class=altcell>";
+                print "<td>Days to pay</td>";
+                print "<td><input name=send[8] size=5 maxlength=5 value='$results[8]'></td>";
+                print "</tr>";
+
+	 	print "<tr class=cell>";
+                print "<td>Country</td>";
+                print "<td><select name=send[10]>";
+		$countries["S"]="South Africa";
+		$countries["N"]="Namibia";
+		$countries["B"]="Botswana";
+		$countries["I"]="Zimbabwe";
+		$countries["M"]="Mozambique";
+		$countries["A"]="Zambia";
+		$countries["W"]="Malawi";
+		$countries["T"]="International";
+		echo makeselect2($countries,$results[16]);
+                print "</selecT></td></tr>";
+
+		echo "<tr class=altcell><td>VAT No</td>";
+		echo "<td><input name=vatno size=20 maxlength=20 value='$results[19]'> <font color=red>IMPORTANT!</font></td></tr>";
+		echo "<tr class=cell><td>Cutoff for invoicing</td><td>Day of month:<input name=cutoffday value='$results[35]' size=2 maxlength=2>(1-31), Text Description:<input name=cutoff size=40 maxlength=40 value='$results[31]'></td></tr>";
+		echo "<tr class=altcell><td>Terms:</td><td><input name=terms type=number size=3 maxlength=3 value='$results[32]'> days</td></tr>";
+		echo "<tr class=cell><td>Credit Limit:</td><td>R<input name=credit_limit type=number size=10 maxlength=13 value='$results[33]'></td></tr>";
+		echo "<tr class=altcell><td>Payment Date:</td><td>Day of month:<input name=payment_day size=2 value='$results[36]' maxlength=2>(1-31), Text Description:<input name=payment_date size=10 maxlength=10 value='$results[34]'></td></tr>";
+
+		$managers=array();
+		$managers[-100]="Please Select...";
+		if (!is_numeric($results[37]))
+			$results[37]=-100;
+		ora_parse($cursor,"select person_serial, username from user_details where user_serial=$results[37] or (is_current='Y' and user_serial=person_serial and  user_serial in (select user_serial from user_pages where page_name='BUDGET')) order by username");
+		ora_exec($cursor);
+		while (ora_fetch($cursor))
+			$managers[getdata($cursor,0)]=getdata($cursor,1);	
+
+		echo "<tr class=altcell><td>Credit Limit Approved By</td><td><select name=approved_who>".makeselect2($managers,$results[37])."</select></td></tr>";
+		echo "<tr class=cell><td>Special Credit Limit:</td><td><input name=special_credit size=6 value='$results[38]'> Expires <input name=special_expiry size=8 maxlength=8 value='$results[40]'></td>";
+		$managers=array();
+                $managers[-100]="Please Select...";
+                if (!is_numeric($results[39]))
+                        $results[39]=-100;
+                ora_parse($cursor,"select person_serial, username from user_details where user_serial=$results[39] or (is_current='Y' and user_serial=person_serial and  user_serial in (select user_serial from user_pages where page_name='BUDGET')) order by username");
+                ora_exec($cursor);
+                while (ora_fetch($cursor))
+                        $managers[getdata($cursor,0)]=getdata($cursor,1);
+		echo "<tr class=altcell><td>Special Credit Limit Approved By</td><td><select name=special_who>".makeselect2($managers,$results[39])."</select></td></tr>";
+		print "</table><br>";
+		
+		if( isset( $acode ) ) {
+			print "<table width=100%><tr>";
+
+			print "<td width=150><input type=submit value=Update></td></form>";
+			print "<form  action=managedebtors.phtml  method=post><input type=hidden name=stage value=3><input type=hidden name=acode value='$acode'>";
+			
+			if( $suspend )
+				print "<input type=hidden name=action value=reinstate><td><input type=submit value=Reinstate></td>";
+			else print "<input type=hidden name=action value=suspend><td><input type=submit value=Suspend></td>";
+
+			// INSERT DELETE HERE
+		       if ($results[18]=="Y") {
+				$whenback=date("Ymd",time()-90*24*60*60);
+                                ora_parse ($cursor,"select entry_Date from debtors where (account_no='$acode' or account_no='$acode2') and entry_date>to_date('$whenback','YYYYMMDD')");
+               //                 echo "select 'x' from debtors where (account_no='$acode' or account_no='$acode2') and entry_date>to_date('$whenback','YYYYMMDD')<br>";
+                                ora_Exec($cursor);
+                                if (!ora_fetch($cursor)) {
+                                                        print "</form><form  action=managedebtors.phtml  method=post><input type=hidden name=stage value=3><input type=hidden name=acode value='$acode'><input type=hidden name=action value=suspend><td><input name=delete type=submit onclick=\"return confirm('Click OK to delete this debtor, Cancel to change your mind');\" value='Delete Debtor'></td>";
+                                }
+                                else
+                                        echo "<td>Cannot delete: ".getdata($cursor,0)."</td>";
+			}
+
+			
+			print "</form>";
+			
+			print "</tr></table>";
+			ora_parse($cursor,"select title,firstname,lastname,company,businesscity,physicalcity,'Fax '||businessfax,businessphone,mobilephone,email from agent_details where billinginformation='$acode' or billinginformation='$acode2'");
+			ora_exec($cursor);
+			echo "<b>Contact Info from Agent CRM:</u><br><table border=1 cellspacing=0 cellpadding=0>";
+			while (ora_fetch_into($cursor,$data,ORA_FETCHINTO_NULLS))
+				echo "<tr><td><font size=2>".implode("</td><td><font size=2>",$data)."</td></tr>";
+
+			echo "</table>";
+			 echo "<b>Notes for $acode:</b><iframe src='debtors_notes.phtml?acode=$acode' width=100% height=280></iframe>";
+			echo "<br>";
+		        echo "<b><u>FILES</u></b>";
+		         echo "<iframe topmargin=0 src='../file_upload_frame2.phtml?cust=$acode' width=100% height=620></iframe><br>";
+
+
+
+		}
+		else print "<input type=submit value=Add> <font color=red><B>NB: When adding an office, make sure the sales team add it under OUTLET MANAGEMENT on the sales stats system</b></font></form>";
+	}
+	elseif( $stage==2 ) {
+		if( $send[1]!="Y" ) $send[1] = "N";
+		$send[3] = str_replace( "\'", "''", $send[3] );
+		 $sage_dtype=trim(str_replace("'","",$sage_dtype));
+
+			
+		if (!is_numeric($send[7]))
+			$send[7]=0;
+		if (!is_numeric($send[8]))
+			$send[8]="null";
+		if (!is_numeric($send[13]))
+                        $send[13]=0;
+		if (!is_numeric($send[14]))
+                        $send[14]=0;
+		$send[16]=str_replace("'","",$send[16]);
+		$send[29]=trim(str_replace("'","",$send[29]));
+		
+		if ($btype!="W")
+			$btype="M";
+
+		if ($dtype!="C" && $dtype!="O" && $dtype!="X" && $dtype!="D")
+			$dtype="B";
+		
+		if ($sdetails!="Y")
+			$sdetails="N";
+			
+		if ($dtype=="C")		
+			$sdetails="N";
+
+
+		if ($related!="Y" && $related!="I")
+			$related="N";
+
+		
+                if ($sage_site=="")
+                                $sage_site="null";
+                else
+                                $sage_site="'$sage_site'";
+
+
+		if (!is_numeric($send[30]))
+			$send[30]=$send[7];
+
+		if (!is_numeric($terms))
+			$terms="null";
+		if (!is_numeric($credit_limit))
+			$credit_limit="null";
+		$cutoff=str_replace("'","",$cutoff);
+		if (!is_numeric($cutoffday))
+			$cutoffday="null";
+		if (!is_numeric($payment_day))
+			$payment_day="null";
+
+		if (!is_numeric($approved_who))
+			$approved_who="null";
+		if (!is_numeric($special_credit))
+			$special_credit =0 ;
+		if (!is_numeric($special_expiry))
+			$special_expiry = 0;
+		if (!is_numeric($special_who))
+			$special_who="null";
+		
+
+		$payment_date=str_replace("'","",$payment_date);
+		
+		if( $action=="edit" ) {
+			ora_parse($cursor,"select * from debtors_info where account_code='$acode'");
+			ora_Exec($cursor);
+			ora_fetch_into($cursor,$old);
+			for ($a=0;$a<41;$a++)
+				if ($old[$a]=="")
+					$old[$a]="null";
+			$changes="";
+			$alertto=array();
+			if ($old[7]!=$send[7]) {
+				$changes.="Comm changed from $old[7] to $send[7]\n";
+			}
+			if ($old[30]!=$send[30]) {
+				$changes.="Baggage Comm changed from $old[30] to $send[30]\n";
+			}
+			if ($old[30]!=$send[30]) {
+                                $changes.="Baggage Comm changed from $old[30] to $send[30]\n";
+                        }
+			if ($old[32]!=$terms) {
+				$changes.="Terms changed from $old[32] to $terms\n";
+			}
+			if ($old[33]!=$credit_limit) {
+                                $changes.="Credit limit changed from $old[32] to $terms\n";
+                        }
+			if ($old[35]!=$cutoffday) {
+				$changes.="Cutoff day changed from $old[35] to $cutoffday\n";
+			}
+			if ($old[36]!=$payment_day) {
+                                $changes.="Cutoff day changed from $old[36] to $payment_day\n";
+                        }
+			if ($old[37]!=$approved_who) {
+				if (is_numeric($old[37]) && $old[37]>0) {
+					ora_parse($cursor,"select username, email from user_details where user_serial=$old[37]");
+					ora_exec($cursor);
+					ora_fetch($cursor);
+			 		$oldwho=getdata($cursor,0);	
+					$tempem=getdata($cursor,1);
+					if ($tempem!="")
+						$alertto[$tempem]=$tempem;
+				} else $oldwho="Nobody";
+				if (is_numeric($approved_who) && $approved_who>0) {
+					ora_parse($cursor,"select username, email from user_details where user_serial=$approved_who");
+                                        ora_exec($cursor);
+                                        ora_fetch($cursor);
+                                        $newwho=getdata($cursor,0);
+					$tempem=getdata($cursor,1);
+                                        if ($tempem!="")
+                                                $alertto[$tempem]=$tempem;
+				} else $newwho="Nobody";	
+                                $changes.="Credit Limit approval changed from $oldwho to $newwho\n";
+                        }
+			if ($old[39]!=$special_who) {
+                                if (is_numeric($old[39]) && $old[39]>0 ) {
+                                        ora_parse($cursor,"select username,email from user_details where user_serial=$old[39]");
+                                        ora_exec($cursor);
+                                        ora_fetch($cursor);
+                                        $oldwho=getdata($cursor,0);
+					$tempem=getdata($cursor,1);
+                                        if ($tempem!="")
+                                                $alertto[$tempem]=$tempem;
+                                } else $oldwho="Nobody";
+				if (is_numeric($special_who) && $special_who>0) {
+                                        ora_parse($cursor,"select username,email from user_details where user_serial=$special_who");
+                                        ora_exec($cursor);
+                                        ora_fetch($cursor);
+                                        $newwho=getdata($cursor,0);
+					$tempem=getdata($cursor,1);
+                                        if ($tempem!="")
+                                                $alertto[$tempem]=$tempem;
+                                } else $newwho="Nobody";
+
+                                $changes.="Special Credit Limit approval changed from $oldwho to $newwho\n";
+                        }
+			if ($old[38]!=$special_credit) {
+				$changes.="Special Credit limit changed from $old[38] to $special_credit\n";
+			}
+			if ($old[40]!=$special_expiry) {
+                                $changes.="Special Credit limit expiry changed from $old[40] to $special_expiry\n";
+                        }
+
+
+
+			// todo -- the rest.  $approved_who 37, $special_credit 38, $special_who 39, $special_expiry 40
+	
+
+
+			$qry  = "UPDATE DEBTORS_INFO SET ";
+			$qry .= "company_name='$send[0]', ";
+			$qry .= "is_dealer='$send[1]', ";
+			$qry .= "postal_address='$send[3]', ";
+			$qry .= "statement_Email='$send[4]', ";
+			$qry .= "statement_fax='$send[5]', ";
+			$qry .= "statement_delivery='$send[6]', ";
+			$qry .= "commission='$send[7]', ";
+			$qry .= "days_to_pay=$send[8], ";
+			$qry .= "m_currency='$send[9]', ";
+			$qry .= "country='$send[10]', ";
+			$qry .= "commission_budgetliner='$send[13]', ";
+			$qry .= "commission_sleepliner='$send[14]', ";
+			$qry .= "commission_baggage='$send[30]', ";
+			$qry .= "controller='$send[15]', ";
+			$qry .= "acc_contact_person='$send[16]', ";
+			$qry .= "statement_details='$sdetails', ";
+			$qry .= "vat_number='$vatno', ";
+			$qry .= "debtor_type='$dtype', ";
+			$qry .= "billing_period='$btype', ";
+			$qry .= "sage_site=$sage_site, ";
+			$qry .= "cc_account_no='$send[29]', ";
+			$qry .= "inv_cutoff='$cutoff', ";
+			$qry .= "terms=$terms, ";
+			$qry .= "credit_limit=$credit_limit, ";
+			$qry .= "payment_date='$payment_date', ";
+			$qry .= "cutoff_day=$cutoffday, ";
+			$qry .= "payment_day=$payment_day, ";
+			$qry .= "normal_limit_approved_by=$approved_who, ";
+			$qry .= "special_credit_limit=$special_credit, ";
+			$qry .= "special_limit_approved_by=$special_who, ";
+			$qry .= "special_limit_expiry_date=$special_expiry, ";
+			$qry .= "sage_debtors_type='$sage_dtype', ";
+			$qry .= "related_party='$related', last_updated=CURRENT_TIMESTAMP  ";
+			
+			$qry .= "WHERE account_code='$acode'";
+			//echo "$qry<bR>";
+			ora_parse( $cursor, $qry );
+			if (!ora_exec( $cursor )) {
+	
+				echo "ERROR! $qry<bR>";
+				exit;
+			} else {
+				if ($sage_site=="'IFL01'" && $dtype=="C") {
+                                        ora_parse($cursor,"select customer, company_name from tour_customers where customer_code='$newacode' and company=5 and active='Y'");
+                                        ora_exec($cursor);
+                                        if (!ora_fetch($cursor)) {
+                                                echo "Adding customer to Load system...<bR>";
+                                                if (!is_numeric($master))
+                                                        $master="null";
+                                                if (!is_numeric($segment))
+                                                        $segment="null";
+                                                ora_parse($cursor,"insert into tour_customers ( customer, company_name, active, company, postal_address, overdue, customer_code, vat_number, show_km, show_tons, default_master_serial, segment) values ( tour_cust_seq.nextval , '$send[0]', 'Y', 5, '$send[3]', 'N', '$newacode', '$vatno', 'N', 'Y', $master, $segment)");
+                                                ora_Exec($cursor);
+                                        }
+//					else echo "CFOUND: $newacode<BR>";
+                                }
+//				else echo "Check: $sage_site/$dtype<br>";
+
+			
+				ora_parse($cursor,"update tour_customers set vat_number='$vatno', postal_address='$send[3]', company_name='$send[0]' where customer_code='$acode' and company=5");
+				ora_exec($cursor);
+				if ($changes!="") {
+					$myus=getuserserial(false);
+					ora_parse($cursor,"insert into debtors_change_log (thetime, change_by, changes) values (CURRENT_TIMESTAMP, $myus, '$changes')");
+					ora_exec($cursor);
+					if (sizeof($alertto)>0) {
+					 	foreach ($alertto as $toemail => $toemail2) {
+							echo "Emailing $toemail<br>";
+							mail($toemail,"Debtor Updated","  ".getenv("REMOTE_USER")." Changed Debtor $acode ($send[0])\n$changes");
+						}
+					} 
+				}
+			}
+               echo "<br><textarea rows=10 readonly cols=100>SAGE: ";
+               $sage=sage_debtors_master($acode,"SAVE");
+                echo "</textarea><br>";
+
+			
+		}
+		if ($related!="Y" && $related!="I")
+			$related="N";
+		if( $action=="add" ) {
+			if ($btype!="W")
+	                        $btype="M";
+			if ($stdetail!="Y")
+				$stdetail="N";
+
+			if (is_numeric($newacode))
+				$newacode=sprintf("%04d",$newacode);
+		
+			$send[0]=str_replace("'","",$send[0]);
+
+			
+			$qry  = "INSERT INTO DEBTORS_INFO VALUES ( '$send[0]', '$send[1]', '$newacode', '$send[3]', '$send[4]', ";
+	        $qry .= "'$send[5]', '$send[6]', '$send[7]', $send[8], '$send[9]', null, null, null, $send[13], $send[14], '$send[15]', '$send[10]', 'Y', 'Y','$vatno','$dtype','$btype' ,'$stdetail', '$send[16]',CURRENT_TIMESTAMP,'$related', CURRENT_TIMESTAMP, null, $sage_site, '$send[29]', $send[30], '$cutoff', $terms, $credit_limit, '$payment_date', $cutoffday, $payment_day, $approved_who, $special_credit, $special_who, $special_expiry, 'N', '$sage_dtype' )";
+			ora_parse( $cursor, $qry );
+			if (!ora_exec( $cursor ))
+			{
+				ora_rollback($conn);
+				echo "ERROR! $qry<br>";
+				exit;
+			}
+			else {
+				echo "New Debtor has been added!";
+				ora_commit($conn);
+				$acode=$newacode;
+			        echo "<br><textarea rows=4 readonly cols=100>SAGE: ";
+       			        $sage=sage_debtors_master($acode,"SAVE");
+			        echo "</textarea><br>";
+				if ($sage_site=="'IFL01'" && $dtype=="C") {
+					ora_parse($cursor,"select customer, company_name from tour_customers where customer_code='$newacode' and company=5 and active='Y'");
+					ora_exec($cursor); 
+					if (ora_fetch($cursor)) {
+						echo "Customer exists on Load system - updating details (previous name ".getdata($cursor,1).")<bR>";
+					  	ora_parse($cursor,"update tour_customers set vat_number='$vatno', postal_address='$send[3]', company_name='$send[0]' where customer_code='$acode' and company=5");
+                              			ora_exec($cursor);
+
+					} else {
+						echo "Adding customer to Load system...<bR>";
+						if (!is_numeric($master))
+							$master="null";
+						if (!is_numeric($segment))
+							$segment="null";
+						ora_parse($cursor,"insert into tour_customers ( customer, company_name, active, company, postal_address, overdue, customer_code, vat_number, show_km, show_tons, default_master_serial, segment) values ( tour_cust_seq.nextval , '$send[0]', 'Y', 5, '$send[3]', 'N', '$newacode', '$vatno', 'N', 'Y', $master, $segment)");
+						ora_Exec($cursor);
+					}
+					
+				}
+			}
+		}
+
+		print "<form  action=managedebtors.phtml  method=post name=tempform><input type=hidden name=stage value=1><input type=hidden name=acode value='$acode'><input type=submit value='Click to here to continue'></form>";
+//   		print "<3script language=JavaScript> tempform.submit(); </script>";
+	}
+	elseif( $stage==3 ) {
+		if( $action=="suspend" ) {
+			if( isset( $perform ) && $perform=="go" ) {
+   				$now = time();
+   				$reason = str_replace( "'", "", $reason );
+
+				ora_parse( $cursor, "SELECT user_serial FROM USER_DETAILS WHERE username='$REMOTE_USER' AND is_current='Y'" );
+				ora_exec( $cursor );
+				$remoteserial = ora_getColumn( $cursor, 0 );
+   				
+				
+				ora_parse( $cursor, "INSERT INTO SUSPENDED_ACCOUNTS VALUES( -1, '$branch', $remoteserial, $now, '$reason', '$type', '$acode' )" );
+				ora_exec( $cursor );
+				
+				ora_parse( $cursor, "SELECT null,account_code FROM DEBTORS_INFO WHERE account_code='$acode'" );
+				ora_exec( $cursor );
+				if( ora_fetch( $cursor ) ) {
+					$acode = ora_getColumn( $cursor, 1);
+					//$extra1 = "OR (branch='IM Agents' AND user_serial='$un')";
+				//	$extra2 = "OR (staff_member='S' AND user_serial='$un')";
+				//	$extra3 = "OR (staff_no='$acode') ";
+			
+					$extra4 = "OR (staff_no='$acode' AND staff_member='S') ";
+				}
+				
+				if (is_numeric($acode)) {
+					if ($acode[0]!="0")
+						$acode2=sprintf("%04d",$acode);
+					else
+						$acode2=sprintf("%d",$acode);	
+				} else $acode2=$acode;
+
+				if ($delete=="Y") {
+					ora_parse($cursor,"update debtors_info set is_current='N', last_updated=CURRENT_TIMESTAMP  where account_code in ('$acode','$acode2')");
+					ora_exec($cursor);
+
+				}
+
+				$qry = "UPDATE USER_DETAILS SET staff_member='S' WHERE ( (staff_no='$acode' or staff_no='$acode2') AND (is_current='Y' or is_current='L')) $extra1 $extra3";
+				ora_parse( $cursor, $qry );
+				ora_exec( $cursor );
+				
+				print "<table width=90%>";
+				print "<tr class=title><td colspan=3>Suspended Users at $acode</td></tr>";
+				print "<tr class=head><td>Username</td><td colspan=2>Name</td></tr>";
+				
+				if (is_numeric($acode)) {
+                                        if ($acode[0]!="0")
+                                                $acode2=sprintf("%04d",$acode);
+                                        else
+                                                $acode2=sprintf("%d",$acode);
+                                } else $acode2=$acode;
+
+				$qry = "SELECT username, name, user_serial FROM USER_DETAILS WHERE ( (is_current='Y' or is_current='L') AND staff_member='S' AND (staff_no='$acode' or staff_no='$acode2')) $extra2 $extra4";
+				$flag = true;
+				ora_parse( $cursor, $qry );
+				ora_exec( $cursor );
+				while( ora_fetch( $cursor ) ) {
+					( $flag ) ? print "<tr class=cell>" : print "<tr class=altcell>";
+					
+					print "<td>" . ora_getColumn( $cursor, 0 ) . "</td>";
+					print "<td>" . ora_getColumn( $cursor, 1 ) . "</td>";
+					print "<form method=post action=manageusers.phtml><input type=hidden name=stage value=1><input type=hidden name=serial value=" . ora_getColumn( $cursor, 2 ) . "><td width=120><input type=submit value='Edit User'></td></form>";
+					print "</tr>";
+					
+					$flag = !$flag;
+				}
+				
+				print "</table>";
+				print "<hr>";
+				print "<table width=100><tr>";
+				print "<form  action=managedebtors.phtml  method=post><input type=hidden name=stage value=0><td><input type=submit value='List Debtors'></td></form>";
+				print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=1><input type=hidden name=acode value='$acode'><td><input type=submit value='Edit'></td></form>";
+				print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=3><input type=hidden name=action value=reinstate><input type=hidden name=acode value='$acode'><td><input type=submit value='Reinstate Debtor'></td></form>";
+				print "</tr></table>";
+				exit;
+			}
+
+			print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=3><input type=hidden name=perform value=go>";
+			print "<input type=hidden name=acode value='$acode'><input type=hidden name=action value='$action'>";
+			print "<table width=80%>";
+			print "<tr class=title><td>Suspend a Debtor</td></tr>";
+			//print_r($_POST);
+			if ($delete!="") 
+				print "<tr class=cell><td><font color=red>You are going to suspend <b>AND DELETE</b> <b>$acode</b></td></tr>";
+	
+			else
+				print "<tr class=cell><td><font color=red>You are going to suspend <b>$acode</b></td></tr>";
+			print "</td></tr>";
+			print "<tr class=cell><td>Reason (<b>you can select a common reason below</b> to fill this in automatically)<br><input type=text name=reason size=120 maxlength=200></td></tr>";
+			print "<tr class=altcell><td><b><font color=red>OR</font></b> Select a common reason instead<br><select onClick=' reason.value=this.value; ' >";
+			
+			ora_parse( $cursor, "SELECT COUNT( reason ), reason FROM SUSPENDED_ACCOUNTS GROUP BY reason ORDER BY COUNT( reason ) DESC" );
+			ora_exec( $cursor );
+			while( ora_fetch( $cursor ) ) {
+				$trea = ora_getColumn( $cursor, 1 );
+				print "<option value='$trea'>$trea";
+			}
+			
+			print "</select></td></tr>";
+			print "<tr class=cell><td><b>Extra Suspension Information</b><br>";
+			print "<input type=radio name=type value='N'>No longer an agent<br>";
+			print "<input type=radio name=type value='T' checked>Temporarily Suspended (non-payment etc)";
+			print "</td></tr>";
+			print "</table><br>";
+			if ($delete!="")
+				print "<input type=submit value='Suspend & Delete'><input type=hidden name=delete value=Y>";
+			else
+			{
+				  // INSERT DELETE HERE
+                                $whenback=date("Ymd",time()-90*24*60*60);
+                                ora_parse ($cursor,"select entry_Date from debtors where (account_no='$acode' or account_no='$acode2') and entry_date>to_date('$whenback','YYYYMMDD')");
+               //                 echo "select 'x' from debtors where (account_no='$acode' or account_no='$acode2') and entry_date>to_date('$whenback','YYYYMMDD')<br>";
+                                ora_Exec($cursor);
+                                if (!ora_fetch($cursor)) {
+                                        print "Click here to also DELETE the agent <input name=delete type=checkbox value=Y onclick=\"return confirm('Click OK to delete this debtor, Cancel to change your mind');\">";
+                                }
+                                else
+                                        echo "Cannot delete: ".getdata($cursor,0);
+
+				print "<p><input type=submit value=Suspend>";
+			}
+			print "</form>";
+		}
+		if( $action=="reinstate" ) {
+			if( isset( $perform ) && $perform=="go" ) {
+				if (is_numeric($acode)) {
+                                        if ($acode[0]!="0")
+                                                $acode2=sprintf("%04d",$acode);
+                                        else
+                                                $acode2=sprintf("%d",$acode);
+                                } else $acode2=$acode;
+
+				ora_parse( $cursor, "DELETE FROM SUSPENDED_ACCOUNTS WHERE account_code='$acode' or account_code='$acode2'" );
+				ora_exec( $cursor );
+				
+				$qry = "UPDATE USER_DETAILS SET staff_member='N' WHERE ( (staff_no='$acode' or staff_no='$acode2'  ) AND (is_current='Y' or is_current='L')) $extra1 $extra3";
+//				echo "$qry<br>";
+				ora_parse( $cursor, $qry );
+				ora_exec( $cursor );
+
+				print "<table width=90%>";
+				print "<tr class=title><td colspan=3>Reinstated Users at $acode</td></tr>";
+				print "<tr class=head><td>Username</td><td colspan=2>Name</td></tr>";
+				
+				$qry = "SELECT username, name, user_serial FROM USER_DETAILS WHERE ( (is_current='Y' or is_current='L') AND staff_member='N' AND (staff_no='$acode' or staff_no='$acode2')) $extra2 $extra4";
+				$flag = true;
+				ora_parse( $cursor, $qry );
+				ora_exec( $cursor );
+				while( ora_fetch( $cursor ) ) {
+					( $flag ) ? print "<tr class=cell>" : print "<tr class=altcell>";
+					
+					print "<td>" . ora_getColumn( $cursor, 0 ) . "</td>";
+					print "<td>" . ora_getColumn( $cursor, 1 ) . "</td>";
+					print "<form method=post action=manageusers.phtml><input type=hidden name=stage value=1><input type=hidden name=serial value=" . ora_getColumn( $cursor, 2 ) . "><td width=120><input type=submit value='Edit User'></td></form>";
+					print "</tr>";
+					
+					$flag = !$flag;
+				}
+				
+				print "</table>";
+				print "<hr>";
+				print "<table width=100><tr>";
+				print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=0><td><input type=submit value='List Debtors'></td></form>";
+				print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=1><input type=hidden name=acode value='$acode'><td><input type=submit value='Edit'></td></form>";
+				print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=3><input type=hidden name=action value=suspend><input type=hidden name=acode value='$acode'><input type=hidden name=branch value='$branch'><td><input type=submit value='Suspend Debtor'></td>";
+				print "</form>";
+				print "</tr></table>";
+				exit;
+			}
+			
+			print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=3><input type=hidden name=perform value=go>";
+			print "<input type=hidden name=acode value='$acode'><input type=hidden name=action value='$action'>";
+			print "<table width=80%>";
+			print "<tr class=title><td>Reinstate a Debtor</td></tr>";
+			print "<tr class=cell><td><font color=green>You are going to reinstate <b>$acode</b></td></tr>";
+			print "</select></td></tr>";
+			print "<tr class=cell><td>Reason <input type=text name=reason size=80 maxlength=200></td></tr>";
+			print "</table><br>";
+			print "<input type=submit value=Reinstate>xx";
+			print "</form>";
+		}
+		if( $action=="view" ) {
+   			print "<table width=100%>";
+   			print "<tr class=title><td colspan=5>Suspension reasons</td></tr>";
+   			print "<tr class=head><td>Suspended Account</td><td>Debtor</td><td>Suspened By</td><td>When</td><td>Reason</td></tr>";
+
+			$qry = "SELECT A.username, A.branch, B.username, C.reason, C.suspended_from FROM USER_DETAILS A, USER_DETAILS B, SUSPENDED_ACCOUNTS C WHERE C.account_code='$acode' AND C.branch=A.branch AND B.user_serial=C.done_by ORDER BY C.suspended_from";
+   			ora_parse( $cursor, $qry );
+   			ora_exec( $cursor );
+   			while( ora_fetch( $cursor ) ) {
+   				$account = ora_getColumn( $cursor, 0 );
+   				$branch = ora_getColumn( $cursor, 1 );
+   				$doneby = ora_getColumn( $cursor, 2 );
+   				$reason = ora_getColumn( $cursor, 3 );
+   				$when = strftime( "%d %b %Y", ora_getColumn( $cursor, 4 ) );
+   			
+   				($flag ) ? print "<tr class=cell>" : print "<tr class=altcell>";
+   				
+   				print "<td>$account</td>";
+   				print "<td>$branch</td>";
+   				print "<td>$doneby</td>";
+   				print "<td>$when</td>";
+   				print "<td><font size=-1>$reason</font></td>";
+   				print "</tr>";
+   				
+   				$flag = !$flag;
+   			}
+   			
+   			print "</table>";
+		}
+
+		print "<hr>";
+		print "<form  action=managedebtors.phtml method=post><input type=hidden name=stage value=1><input type=hidden name=acode value='$acode'><input type=submit value='Go Back'></form>";
+	}
+	elseif( $stage==4 ) {
+		if( !isset( $serial ) || $serial=="" ) {
+			print "You must select a branch";
+			exit;
+		}
+		
+		print "<form action='managedebtors.phtml' method=post><input type=hidden name=stage value=5><input type=hidden name=serial value='$serial'>";
+		print "<table width=80%>";
+		print "<tr class=title><td colspan=2>Rename <i>$serial</i> to</td></tr>";
+		print "<tr class=cell><td>New name</td><td><input name=rename type=text size=50 maxlength=50></td></tr>";
+		print "</table><br>";
+		print "<input type=submit value='Rename Debtor'>";
+		print "</form>";
+	}
+	elseif( $stage==5 ) {
+		print "<b>The following users are in branch: $serial</b><br><br>";
+		ora_parse( $cursor, "SELECT username FROM USER_DETAILS WHERE branch='$serial'" );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			print ora_getColumn( $cursor, 0 ) . "<br>";
+		}
+		
+		print "<hr>";
+		
+		$rename = chop( $rename );
+		ora_parse( $cursor, "SELECT * FROM DEBTORS_INFO WHERE branch_name='$rename'" );
+		ora_exec( $cursor );
+		if( ora_fetch( $cursor ) ) {
+			print "Sorry, <b>$rename</b> already exists. <a href='#' onClick='history.go(-1);'>Click here</a> to go back";
+			exit;
+		} else {
+			ora_parse( $cursor, "UPDATE DEBTORS_INFO SET branch_name='$rename', last_updated=CURRENT_TIMESTAMP WHERE branch_name='$serial'" );
+			ora_exec( $cursor );
+			
+			ora_parse( $cursor, "UPDATE SUSPENDED_ACCOUNTS SET branch='$rename' WHERE branch='$serial'" );
+			ora_exec( $cursor );
+			
+			ora_parse( $cursor, "UPDATE USER_DETAILS SET branch='$rename' WHERE branch='$serial'" );
+			ora_exec( $cursor );
+			
+			translog("Changed Debtor/Agent $serial to $rename");
+		}
+		
+		print "<b>The following users are now in branch: $rename</b><br><br>";
+		ora_parse( $cursor, "SELECT username FROM USER_DETAILS WHERE branch='$rename'" );
+		ora_exec( $cursor );
+		while( ora_fetch( $cursor ) ) {
+			print ora_getColumn( $cursor, 0 ) . "<br>";
+		}
+
+		print "<hr>The branch has been renamed from <b>$serial</b> to <b>$rename</b>";
+		print "<form  action=managedebtors.phtml  method=post><input type=hidden name=stage value=0><input type=submit value='Continue'></form>";
+	}
+	elseif ($stage==100) {
+		ora_parse($cursor,"select account_code from suspended_Accounts");
+		ora_exec($cursor);
+		while (ora_fetch($cursor)) {
+			$acode=getdata($cursor,0);
+			if (is_numeric($acode))
+				$acode=sprintf("%04d",$acode);
+			$susp[$acode]=true;
+		}
+		
+		echo "<table cellspacing=0 cellpadding=0 border=1>";
+		ora_parse($cursor,"select * from debtors_info order by account_code");
+		ora_exec($cursor);
+		unset($data);
+		echo "<tr class=title><td>A/C</td><td>Name</td><td>Comm</td><td>Delivery</td><td>Postal Address</td><td>Email</td><td>Fax</td><td>Country</td><td>VAT</td></tr>";
+		$stateways[""]="<font color=red>None - Are you sure?";
+		  $stateways["N"]="<font color=red>None (Are you sure?)";
+
+		while (ora_fetch_into($cursor,$data)) {
+			if (is_numeric($data[2]))
+				$data[2]=sprintf("%04d",$data[2]);
+			if ($susp[$data[2]])
+				$data[0]="(SUSP) ".$data[0];
+			echo "<tr class=cell>";
+			echo "<td align=right><a href=managedebtors.phtml?stage=1&acode=$data[2]>$data[2]</a></td><td>$data[0]</td>";
+			if (!is_numeric($data[7]))
+				$data[7]="<font size=2 color=red>None";
+			echo "<td align=center>$data[7]</td>";
+			echo "<td>".$stateways[$data[6]]."</td>";	
+			echo "<td><font size=2>$data[3]</td><td><font size=2>$data[4]</td><td><font size=2>$data[5]</td><td>";
+			if ($data[16]=="S")
+				echo "RSA";
+			elseif ($data[16]=="N")
+				echo "NAM";
+			elseif ($data[16]=="B")
+				echo "BOT";
+			else
+				echo $data[16];
+
+			echo "</td><td>";
+			if (trim($data[19])!="")
+				echo "GOT";
+			else
+				echo "None";
+			
+	
+			echo "</td></tr>";
+			unset($data);
+		} // while
+
+		echo "</table>";
+	} // stage 100
+	?>
+	</body>
+</html>

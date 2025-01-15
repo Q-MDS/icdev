@@ -124,3 +124,8 @@ Bulletin
 √ Active drivers
 √ Training
 - Not scheduled in 72 hours with hover data
+
+
+Checkbox: debtors_info
+
+statements...
