@@ -1,13 +1,4 @@
 <?php
-namespace Intercape\AgentPortalMailer;
-
-/**
- * Author: Quintin
- * Decription: Fetch data from DEBTORS_INFO where STATEMENT REMINDER = Y and send email to the email address in the DEBTORS_INFO table
- * Other: Update mail code
- */
-// Step 1: Fetch records
-
 function oci_conn()
 {
 	$host = 'localhost';
@@ -68,6 +59,7 @@ function get_statement_list()
 	return $files;
 }
 
+// Util to create files for testing. Not used in live
 function make_files()
 {
 	$fl = array("0834IFM_Statement_20250114.pdf",
@@ -219,141 +211,83 @@ function make_files()
     }
 }
 
+function get_to_send($email_list, $statement_list)
+{
+	$to_send = [];
+
+	foreach ($email_list as $email) {
+		$account_code = $email['ACCOUNT_CODE'];
+
+		foreach ($statement_list as $statement) {
+			$statement_name = pathinfo($statement, PATHINFO_FILENAME);
+
+			if (strpos($statement_name, $account_code) !== false) {
+				$to_send[] = $email;
+				break;
+			}
+		}
+	}
+
+	return $to_send;
+}
+
+function send_email($to_send)
+{
+	// require_once("class.html.mime.mail.inc");
+	$agent_portal_link = 'https://secure.intercape.co.za/booking/invoices.phtml';
+
+	$contents = "<p style='font-family: 'Georgia', serif; font-size: 18px; letter-spacing: 0.5px; line-height: 1.6; color: #333; margin: 20px 0; padding: 10px;'>Good day
+	<br><br>
+	Hope you are well. 
+	<br><br>
+	Please note that your weekly statement can now be downloaded from the agent portal with link<br>
+	<a href='{$agent_portal_link}'>Agent Portal Link.</a>
+	<br><br>
+	Kindly email your proof of payment and remittance to <a href='mailto:debtors@intercape.co.za'>debtors@intercape.co.za</a>.
+	<br><br>
+	Please do not reply to this mail.
+	<br><br>
+	Kind regards,<br>
+	Intercape Debtors Controllers</p>";
+
+	$textversion = "
+	Good day
+
+	Hope you are well.
+
+	Please note that your weekly statement can now be downloaded from the agent portal with the link below:
+	Agent Portal Link: {$agent_portal_link}
+
+	Kindly email your proof of payment and remittance to debtors@intercape.co.za.
+
+	Please do not reply to this mail.
+
+	Kind regards,
+	Intercape Debtors Controllers
+	";
+
+	// Send emails
+	/*$mail = new html_mime_mail('X-Mailer: Html Mime Mail Class');
+	$mail->add_html($contents, $textversion);
+	$mail->build_message();*/
+	// $from = $noreply_email;
+	$from = 'noreply@intercape.co.za';
+
+	foreach ($to_send as $recipient) 
+	{
+		$account_code = $recipient['ACCOUNT_CODE'];
+		$email_address = $recipient['STATEMENT_EMAIL'];
+		$subject = "{$account_code} - Weekly Statement";
+
+		echo "Run this: mail--->smtp_send($from, $subject, $email_address)<br>";
+		// $mail->smtp_send($from, $subject, $email_address);
+	}
+}
+
+// Collect data
 $email_list = get_email_list();
 $statement_list = get_statement_list();
+$to_send = get_to_send($email_list, $statement_list);
 
-print_r($statement_list);
-
-die();
-
-/*
-
-
-define('FPATH', dirname(__FILE__).DIRECTORY_SEPARATOR);
-
-require_once("../php3/oracle.inc");
-open_oracle();
-
-/**
- * Parses a csv file into a multidimensional array
- * where $data[''headers'] is the headers, and $data['rows'] is the rows
- * 
- * @param string $filename - The csv file, this must be full path of the file
- * @return array multidimensional array with 'headers' and 'rows'
-*/
-/*
-function parseCSV($filename){
-    $data = [
-        'headers' => null,
-        'rows' => []
-    ];
-
-    if (($handle = fopen($filename, "r")) !== FALSE) {
-        
-        $data['headers'] = fgetcsv($handle, 1000, ",");
-
-        while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
-            $data['rows'][] = $row;
-        }
-
-        fclose($handle);
-    }
-
-    return $data;
-}*/
-/*
-class Mail{
-    public $from;
-    public $to = [];
-    public $cc = [];
-    public $subject;
-    public $message;
-    public $attachments = [];
-
-    private $body;
-
-    function add_attachment($filename, $attachment_name){
-        $this->attachments[$attachment_name] = $filename;
-    }
-
-    function send_disabled(){
-        $this->body .= "--boundary\r\n";
-        $this->body .= "Content-Type: text/html; charset=utf-8\r\n";
-        $this->body .= "Content-Transfer-Encoding: base64\r\n\r\n";
-        $this->body .= chunk_split(base64_encode($this->message));
-
-        foreach ($this->attachments as $attachment_name => $filename){
-            $attachment = chunk_split(base64_encode(file_get_contents($filename)));
-            $ext = pathinfo($filename, PATHINFO_EXTENSION);
-
-            $this->body .= "--boundary\r\n";
-            $this->body .= "Content-Type: text/csv; name=\"" . basename($filename) . "\"\r\n";
-            $this->body .= "Content-Transfer-Encoding: base64\r\n";
-            $this->body .= "Content-Disposition: attachment; filename=\"" . "$attachment_name.$ext" . "\"\r\n\r\n";
-            $this->body .= $attachment;
-        }
-
-        $this->body .= "--boundary--";
-
-        $headers = "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: multipart/mixed; boundary=\"boundary\"\r\n";
-
-        if ($this->from){
-            $headers .= "From: {$this->from}\r\n";
-        }
-
-        if (!empty($this->cc)){
-            $headers .= 'CC: '.implode(', ', $this->cc);
-        }
-
-        if (mail(implode(', ', $this->to), $this->subject, $this->body, $headers)){
-            return true;
-        } else {
-            $error = error_get_last();
-            return false;
-        }
-    }
-}
-
-$agent_portal_link = 'https://secure.intercape.co.za/booking/invoices.phtml';
-
-$mail = new Mail();
-$mail->from = $noreply_email;
-$mail->cc = [];
-$mail->message = "<p style='font-family: 'Georgia', serif; font-size: 18px; letter-spacing: 0.5px; line-height: 1.6; color: #333; margin: 20px 0; padding: 10px;'>Good day
-<br><br>
-Hope you are well. 
-<br><br>
-Please note that your weekly statement can now be downloaded from the agent portal with link<br>
-<a href='{$agent_portal_link}'>Agent Portal Link.</a>
-<br><br>
-Kindly email your proof of payment and remittance to <a href='mailto:debtors@intercape.co.za'>debtors@intercape.co.za</a>.
-<br><br>
-Please do not reply to this mail.
-<br><br>
-Kind regards,<br>
-Intercape Debtors Controllers</p>";
-
-$filename = '/usr/local/www/DEBTORS_INFO.csv';
-
-$exist = file_exists($filename);
-
-if (file_exists($filename)){
-    $data = parseCSV($filename);
-
-    if (!empty($data)){
-
-        foreach ($data['rows'] as $row){
-            list($account_code, $email) = $row;
-
-            $mail->subject = "{$account_code} - Weekly Statement";
-            $mail->to = [$email];
-
-            if (!$mail->send()){
-                $error = error_get_last();
-            }
-        }
-    }
-}
-*/
+send_email($to_send);
 ?>

@@ -1,4 +1,4 @@
-https://192.168.10.239/booking/tv_route/managedebtors_q.phtml?stage=1&acode=0007
+https://192.168.10.239/booking/tv_route/managedebtors.phtml?stage=1&acode=0007
 https://secure.intercape.co.za/booking/usermanage/managedebtors.phtml?stage=1&acode=0007
 
 
@@ -110,7 +110,11 @@ ALTER TABLE "ICAPE"."DEBTORS_INFO" ADD CONSTRAINT "DEBTORS_PK" PRIMARY KEY ("ACC
    COMMENT ON COLUMN "ICAPE"."DEBTORS_INFO"."SHOPPING_BASKET_RESTRICTION" IS 'Not used.';
 
 Email thing.  
-1. When running /booking/debtors_alert.phtml it gets all the email address and send a msg. It need to go to the database, check for the checked thing, if yes then that is the first record set. Then grab the account_serial and look for a file that starts with the acc_serial, IF THERE IS then and only then send an email.  
+1. When running /booking/debtors_alert.phtml it gets all the email address and send a msg. It need to go to the database, check for the checked thing, 
+- if yes then that is the first record set. 
+- Then grab the account_serial and look for a file that starts with the acc_serial, IF THERE IS then and only then send an email.  
+- send email
+
 2. The mime part is whack - check Kieth's email
 
 STEP 1

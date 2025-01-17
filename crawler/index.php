@@ -11,9 +11,10 @@
  * PHASE 2: ANALYSE AND PUT IN CTK_LOG
  * 1. ...
  */
-$tot_days = 2;
+$tot_days = 1;
 $compare_list = array();
 $carrier_list = array();
+$carriers_not_found = array();
 $batch = array();
 
 function oci_conn()
@@ -96,43 +97,110 @@ function build_batch($compare_list)
 {
 	global $tot_days;
 
+	$dup_array = array();
+
 	$today = date('Y-m-d');
 
-	foreach ($compare_list as $key => $value) 
+	foreach($compare_list as $compare)
 	{
-		$route = $value['ROUTE'];
-		$from = $value['STOP_FROM_NAME'];
-		$to = $value['STOP_TO_NAME'];
+		$route = $compare['ROUTE'];
+		$from = TRIM($compare['STOP_FROM_NAME']);
+		$to = TRIM($compare['STOP_TO_NAME']);
+
+		if ($from != "" && $to != "") 
+		{
+			$str = $from . "@@" . $to;
+	
+			$dup_array[$str][] = $route;
+		}
+	}
+
+	foreach($dup_array as $key => $routes)
+	{
+		$from_to = explode('@@', $key);
+		$from = $from_to[0];
+		$to = $from_to[1];
+		$route_str = "";
+
+		foreach ($routes as $route) 
+		{
+			$route_str .= $route . ",";
+		}
+		$route_str = rtrim($route_str, ',');
 
 		for ($i=0; $i < $tot_days; $i++) 
 		{ 
 			$date = date('Y-m-d', strtotime($today . ' + ' . $i . ' days'));
 
 			$batch[] = array(
-				'route' => $route,
+				'route' => $route_str,
 				'from' => $from,
 				'to' => $to,
 				'date' => $date
 			);
 		}
 	}
+	
+	// echo "Batch count: " . count($batch) . "\n";
+	// print_r($batch);
 
 	return $batch;
 }
 
 $compare_list = get_compare_list();
+
 $carrier_list = carrier_list();
+
+// Build a list of carrier names only
+$ctk_carrier_names = array();
+foreach ($carrier_list as $carrier) 
+{
+    if (isset($carrier['NAME'])) 
+	{
+        $ctk_carrier_names[] = $carrier['NAME'];
+    }
+}
+
 $trips = build_batch($compare_list);
 
 start($trips);
 
 function start($trips)
 {
+	global $carriers_not_found;
+	
+	$start_ts = time();
+
+	log_event("--- START --------------------------------------------------------------------------------------------------------------------------------" . "\r\n[" . $timestamp = date('Y-m-d H:i:s') ."]" . "\r\n");
+
 	foreach ($trips as $trip)
 	{
 		crawl($trip['route'], $trip['from'], $trip['to'], $trip['date']);
 		// analyse();
 	}
+	
+	$carriers_not_found = array_unique($carriers_not_found);
+	$carriers_not_found = array_values($carriers_not_found);
+	
+	if (count($carriers_not_found) > 0)
+	{
+		foreach ($carriers_not_found as $carrier) 
+		{
+			addToCtkCarriers($carrier);
+		}
+		log_event("Added new carriers to CTK_CARRIERS " . json_encode($carriers_not_found));
+	}
+
+	log_event("--- END ----------------------------------------------------------------------------------------------------------------------------------" . "\r\n");
+
+	$end_ts = time();
+
+	$duration = $end_ts - $start_ts;
+	$hours = floor($duration / 3600);
+	$minutes = floor(($duration % 3600) / 60);
+	$seconds = $duration % 60;
+
+	echo "Completed " . date("Y-m-d H:i:s") . " Took: {$hours} hours, {$minutes} minutes, {$seconds} seconds" . "\n";
 }
 
 function crawl($route_no, $ctk_from, $ctk_to, $ctk_date)
@@ -149,10 +217,10 @@ function crawl($route_no, $ctk_from, $ctk_to, $ctk_date)
 	curl_close($ch);
 
 	// Analyse and save to the database
-	process_data($response, $ctk_date, $route_no);
+	process_data($response, $ctk_date, $route_no,$ctk_from, $ctk_to);
 }
 
-// function analyse()
+// function analyse(): Delete me
 function analyse($route_no, $ctk_from, $ctk_to, $ctk_date, $response)
 {
 	/*
@@ -160,17 +228,17 @@ function analyse($route_no, $ctk_from, $ctk_to, $ctk_date, $response)
 	$ctk_from = 'ZAZABUTTERWORTH';
 	$ctk_to = 'ZAZAJOHANNESBURG';
 	$ctk_date = '2025-01-13';
-	$response = '{"messages":[{"type":"received","data":"{\"type\":\"sessionResponse\",\"data\":{\"sessionId\":\"1736769780720-xxu7btiyvsqjhx03bf9nq\"}}"},{"type":"received","data":"{\"type\":\"avalibilityResponse\",\"data\":{\"data\":null,\"message\":\"Your request is processing\",\"isLoading\":true}}"},{"type":"received","data":"{\"type\":\"avalibilityResponse\",\"data\":{\"data\":null,\"message\":\"Your request is processing\",\"isLoading\":true}}"},{"type":"received","data":"{\"type\":\"getNotificationResponse\",\"data\":{\"displayText\":\"Currently searching 10 routes with 7 different carriers.\",\"metadata\":{\"gwtt\":8,\"catproductId\":\"0\",\"urlOnCreate\":\"computicket.com\",\"messageId\":\"1736769781069-1736769780720-xxu7btiyvsqjhx03bf9nq-availability\",\"channelType\":\"WEB\",\"sessionId\":\"1736769780720-xxu7btiyvsqjhx03bf9nq\",\"userName\":\"computicket.com\",\"userId\":\"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1\",\"profileId\":\"0\",\"width\":800,\"operation\":\"notify\",\"channelId\":\"1960\",\"productType\":\"bus\",\"height\":600,\"username\":\"computicket.com\"}}}"},{"type":"received","data":"{\"type\":\"multidayResponse\",\"data\":{\"metadata\":{\"gwtt\":13,\"catproductId\":\"0\",\"urlOnCreate\":\"computicket.com\",\"messageId\":\"1736769781068-1736769780720-xxu7btiyvsqjhx03bf9nq-multiday\",\"channelType\":\"WEB\",\"sessionId\":\"1736769780720-xxu7btiyvsqjhx03bf9nq\",\"userName\":\"computicket.com\",\"userId\":\"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1\",\"profileId\":\"0\",\"width\":800,\"operation\":\"multiday\",\"channelId\":\"1960\",\"productType\":\"bus\",\"height\":600,\"username\":\"computicket.com\"},\"multiday\":[{\"invalidDate\":true},{\"invalidDate\":true},{\"carrier\":\"City To City\",\"travelDate\":\"2025-01-13\",\"arrive\":\"ZAZABUTTERWORTH\",\"price\":470,\"depart\":\"ZAZAJOHANNESBURG\",\"createDate\":\"2025-01-13 10:52:45\"},{\"carrier\":\"Intercape Budgetliner\",\"travelDate\":\"2025-01-14\",\"arrive\":\"ZAZABUTTERWORTH\",\"price\":460,\"depart\":\"ZAZAJOHANNESBURG\",\"createDate\":\"2025-01-13 11:34:20\"},{\"carrier\":\"Eagle Liner Transport\",\"travelDate\":\"2025-01-15\",\"arrive\":\"ZAZABUTTERWORTH\",\"price\":400,\"depart\":\"ZAZAJOHANNESBURG\",\"createDate\":\"2025-01-13 10:54:10\"}]}}"},{"type":"received","data":"{\"type\":\"avalibilityResponse\",\"data\":{\"metadata\":{\"gwtt\":2401,\"catproductId\":\"0\",\"urlOnCreate\":\"computicket.com\",\"messageId\":\"1736769781069-1736769780720-xxu7btiyvsqjhx03bf9nq-availability\",\"channelType\":\"WEB\",\"sessionId\":\"1736769780720-xxu7btiyvsqjhx03bf9nq\",\"userName\":\"computicket.com\",\"userId\":\"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1\",\"profileId\":\"0\",\"width\":800,\"operation\":\"availability\",\"channelId\":\"1960\",\"productType\":\"bus\",\"height\":600,\"username\":\"computicket.com\"},\"availability\":[{\"totalDuration\":\"12h40m\",\"travelTime\":45600000,\"serviceNumber\":\"C83380\",\"availableSeats\":21,\"groupID\":\"ungrouped\",\"icon\":\"https://cf-content.computicket.com/bus/1878/logo_city_to_city_e1CUpiv7tx35CKQ724yqaD.png\",\"routeDesc\":\"Johannesburg to Butterworth\",\"carrierName\":\"City To City\",\"arrive\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"city to city\",\"remCheck\":\"BUTTERWORTH RAILWAY STATION  \",\"province\":\"Butterworth\",\"citycode\":\"ZAZABUTTERWORTH\",\"city\":\"Butterworth\",\"description\":\"Butterworth Railway Station\",\"suburb\":\"Butterworth\",\"id\":24667,\"remotecode\":\"BWS\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-14 08:20:00\",\"dateTimeMS\":1736842800000},\"price\":{\"totalPrice\":470,\"numPax\":1,\"currency\":\"ZAR\",\"prices\":[{\"quantity\":1,\"individualPrice\":470,\"discountID\":\"ADULT\"}]},\"carrierCode\":\"citytocity\",\"id\":\"sMa.pp42AsOrx4YENncL-5vQzxfpdhInEq3ryNu.7HXwsX2gZQM3jYW7gI3rpDhjwbJPkvg3Y-lC1A-fzb9eVZCCQsoNWd5JOcpzB3R2fIlMp4LfYWaeAfqAls1Tn4AiPLY4vIA\",\"depart\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"city to city\",\"remCheck\":\"Park Station Cnr Rissik & Wolmarans Street Braamfo\",\"province\":\"Johannesburg\",\"citycode\":\"ZAZAJOHANNESBURG\",\"city\":\"Johannesburg\",\"description\":\"Park Station, Cnr Rissik & Wolmarans Street, Braamfontein\",\"suburb\":\"Johannesburg\",\"id\":3070,\"remotecode\":\"JNB\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-13 19:40:00\",\"dateTimeMS\":1736797200000}},{\"totalDuration\":\"12h30m\",\"travelTime\":45000000,\"serviceNumber\":\"ET3078\",\"availableSeats\":9,\"groupID\":\"ungrouped\",\"icon\":\"https://cf-content.computicket.com/bus/9421/logo_eagle_liner_transport_1KAksQrwXHhGoH632g6fuz.jpg\",\"routeDesc\":\"Johannesburg to Butterworth\",\"carrierName\":\"Eagle Liner Transport\",\"arrive\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"eagle liner transport\",\"remCheck\":\"ELLERINE STORE, 14 HIGH STREET, BUTTERWORTH , BUTTERWORTH\",\"province\":\"Butterworth\",\"citycode\":\"ZAZABUTTERWORTH\",\"city\":\"Butterworth\",\"description\":\"RAILWAY STATION\",\"suburb\":\"Butterworth\",\"id\":48088,\"remotecode\":\"10266\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-14 07:45:00\",\"dateTimeMS\":1736840700000},\"price\":{\"totalPrice\":530,\"numPax\":1,\"currency\":\"ZAR\",\"prices\":[{\"quantity\":1,\"individualPrice\":530,\"discountID\":\"ADULT\"}]},\"carrierCode\":\"eaglelinertransport\",\"id\":\"sMa.pp42AsOrx5oULn8L47ucm1PlXg5jP8jm-abHBPEx1MAx6Wsf-YWLgKnnsCxbycZLkoQbb5VS1AODxct2XZiWQroBRdJ9McJ7IwgKbJ1Y34bbBKKGZBfJA3B2e-HiHMI06UUBYwkp4Wm-IAE2FNNWD-Q\",\"depart\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"eagle liner transport\",\"remCheck\":\"JOHANNESBURG PARK STATION (BAY21) ,96 RISSIK ST, JOHANNESBURG, 2000 , JOHANNESBURG\",\"province\":\"Johannesburg\",\"citycode\":\"ZAZAJOHANNESBURG\",\"city\":\"Johannesburg\",\"description\":\"JOHANNESBURG PARK STATION (BAY21) ,96 RISSIK STREET\",\"suburb\":\"Johannesburg\",\"id\":48121,\"remotecode\":\"10293\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-13 19:15:00\",\"dateTimeMS\":1736795700000}},{\"totalDuration\":\"15h25m\",\"travelTime\":55500000,\"serviceNumber\":\"IB1231\",\"availableSeats\":10,\"groupID\":\"ungrouped\",\"icon\":\"https://cf-content.computicket.com/bus/1892/def_logo_intercape_budgetliner_s2HhDfBjdxsksoriXMEjHd.png\",\"routeDesc\":\"Johannesburg to Butterworth\",\"carrierName\":\"Intercape Budgetliner\",\"arrive\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"Ellerines, High Street\",\"province\":\"Butterworth\",\"citycode\":\"ZAZABUTTERWORTH\",\"city\":\"Butterworth\",\"description\":\"Ellerines, High Street\",\"suburb\":\"Butterworth\",\"id\":1223,\"remotecode\":\"BUTTERWORTH\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-14 08:55:00\",\"dateTimeMS\":1736844900000},\"price\":{\"totalPrice\":540,\"numPax\":1,\"currency\":\"ZAR\",\"prices\":[{\"quantity\":1,\"individualPrice\":540,\"discountID\":\"ADULT\"}]},\"carrierCode\":\"intercape\",\"id\":\"sMa.pp41AsOrx4IYGm8L04fQvw.ZfnZiQt3roMveBZQ45KRJ7Ws7gYW3jI3rqDRX1bZf52XCgiSvLd4WFCr3geVL1y-UnF.EyF.qwwgKbJ1Y34bbGKaGeAPJA3B6D.36HL4wjIElAuRgdNSfxGDzhKqSF7EXZll.ycr9FK2LZGvc\",\"depart\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)\",\"province\":\"Johannesburg\",\"citycode\":\"ZAZAJOHANNESBURG\",\"city\":\"Johannesburg\",\"description\":\"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )\",\"suburb\":\"Johannesburg\",\"id\":1182,\"remotecode\":\"JOHANNESBURG\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-13 17:30:00\",\"dateTimeMS\":1736789400000}},{\"totalDuration\":\"14h00m\",\"travelTime\":50400000,\"serviceNumber\":\"IM0249\",\"availableSeats\":10,\"groupID\":\"ungrouped\",\"icon\":\"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png\",\"routeDesc\":\"Johannesburg to Butterworth\",\"carrierName\":\"Intercape Mainliner\",\"arrive\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"Ellerines, High Street\",\"province\":\"Butterworth\",\"citycode\":\"ZAZABUTTERWORTH\",\"city\":\"Butterworth\",\"description\":\"Ellerines, High Street\",\"suburb\":\"Butterworth\",\"id\":1223,\"remotecode\":\"BUTTERWORTH\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-14 09:00:00\",\"dateTimeMS\":1736845200000},\"price\":{\"totalPrice\":660,\"numPax\":1,\"currency\":\"ZAR\",\"prices\":[{\"quantity\":1,\"individualPrice\":660,\"discountID\":\"ADULT\"}]},\"carrierCode\":\"intercape\",\"id\":\"sMa.pp41AsOrx4IcPnML04fQvw.ZfnZiQt3.pPvqGZwg4LhJ7Ws3gZGnhJn.rDhP2b5X52XCgiSvLd4WFCr3geVL1y-UnF.EyF.qwwgKbJ1Y34bbGKa-dAPJA3B6D.36HL4wjIEhFvBgdNSbxGz7hKqSF7EXZll.ycr9FJGPZHf8\",\"depart\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)\",\"province\":\"Johannesburg\",\"citycode\":\"ZAZAJOHANNESBURG\",\"city\":\"Johannesburg\",\"description\":\"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )\",\"suburb\":\"Johannesburg\",\"id\":1182,\"remotecode\":\"JOHANNESBURG\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-13 19:00:00\",\"dateTimeMS\":1736794800000}},{\"totalDuration\":\"15h25m\",\"travelTime\":55500000,\"serviceNumber\":\"IM0209\",\"availableSeats\":9,\"groupID\":\"ungrouped\",\"icon\":\"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png\",\"routeDesc\":\"Johannesburg to Butterworth\",\"carrierName\":\"Intercape Mainliner\",\"arrive\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"Ellerines, High Street\",\"province\":\"Butterworth\",\"citycode\":\"ZAZABUTTERWORTH\",\"city\":\"Butterworth\",\"description\":\"Ellerines, High Street\",\"suburb\":\"Butterworth\",\"id\":1223,\"remotecode\":\"BUTTERWORTH\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-14 09:25:00\",\"dateTimeMS\":1736846700000},\"price\":{\"totalPrice\":700,\"numPax\":1,\"currency\":\"ZAR\",\"prices\":[{\"quantity\":1,\"individualPrice\":700,\"discountID\":\"ADULT\"}]},\"carrierCode\":\"intercape\",\"id\":\"sMa.pp41AsOrx4IYGlsL04fQvw.ZfnZiQt3vrNfaFZQk3LBJ7Ws3gZWjkIHnjDRL8aZv52XCgiSvLd4WFCr3geVL1y-UnF.EyF.qwwgKbJ1Y34bbGKa6dAPJA3B6D.36HL4wjIEhHuRgdNSTxGjjhKqSF7EXZll.ycr9FJGPZGf8\",\"depart\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)\",\"province\":\"Johannesburg\",\"citycode\":\"ZAZAJOHANNESBURG\",\"city\":\"Johannesburg\",\"description\":\"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )\",\"suburb\":\"Johannesburg\",\"id\":1182,\"remotecode\":\"JOHANNESBURG\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-13 18:00:00\",\"dateTimeMS\":1736791200000}},{\"totalDuration\":\"14h25m\",\"travelTime\":51900000,\"serviceNumber\":\"BI8043\",\"availableSeats\":8,\"groupID\":\"ungrouped\",\"icon\":\"https://cf-content.computicket.com/bus/1892/def_logo_intercape_bigsky_mdLsWP3oYve7dFyZGKKMiZ.png\",\"routeDesc\":\"Johannesburg to Butterworth\",\"carrierName\":\"Big Sky\",\"arrive\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"Ellerines, High Street\",\"province\":\"Butterworth\",\"citycode\":\"ZAZABUTTERWORTH\",\"city\":\"Butterworth\",\"description\":\"Ellerines, High Street\",\"suburb\":\"Butterworth\",\"id\":1223,\"remotecode\":\"BUTTERWORTH\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-14 07:25:00\",\"dateTimeMS\":1736839500000},\"price\":{\"totalPrice\":800,\"numPax\":1,\"currency\":\"ZAR\",\"prices\":[{\"quantity\":1,\"individualPrice\":800,\"discountID\":\"ADULT\"}]},\"carrierCode\":\"intercape\",\"id\":\"sMa.pp41AsOrx4IYGn8L04fQvw.ZfnZiQt33rNfGBYA41KBJ7Ws3gZW.hI3LoChHzZZr52XCgiSvLd4WFCr3geVL1y-UnF.EyF.qwwgKbJ1Y34bbGKaGdAPJA3B6D.36HL4wjIEZHuRgdNSXxFTjhKqSF7EXZll.ycr9OIGvbHfU\",\"depart\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)\",\"province\":\"Johannesburg\",\"citycode\":\"ZAZAJOHANNESBURG\",\"city\":\"Johannesburg\",\"description\":\"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )\",\"suburb\":\"Johannesburg\",\"id\":1182,\"remotecode\":\"JOHANNESBURG\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-13 17:00:00\",\"dateTimeMS\":1736787600000}},{\"totalDuration\":\"16h35m\",\"travelTime\":59700000,\"serviceNumber\":\"IM9038\",\"availableSeats\":1,\"groupID\":\"ungrouped\",\"icon\":\"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png\",\"routeDesc\":\"Bez Valley to Butterworth\",\"carrierName\":\"Intercape Mainliner\",\"arrive\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"Ellerines, High Street\",\"province\":\"Butterworth\",\"citycode\":\"ZAZABUTTERWORTH\",\"city\":\"Butterworth\",\"description\":\"Ellerines, High Street\",\"suburb\":\"Butterworth\",\"id\":1223,\"remotecode\":\"BUTTERWORTH\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-14 09:00:00\",\"dateTimeMS\":1736845200000},\"price\":{\"totalPrice\":1058,\"numPax\":1,\"currency\":\"ZAR\",\"prices\":[{\"quantity\":1,\"individualPrice\":1058,\"discountID\":\"ADULT\"}]},\"carrierCode\":\"intercape\",\"id\":\"sMa.pp42AsOrx4IQNmsL04fQvw.ZfnZiQt3jrMPGCYQswJRJzVMbhY2nlInrrDBj0b5v50Xqy6DPEfpqCBsLlAUT02uM1CvQpDYPK3wKeJVI247bDKqOdAO9CwR6G.XqGKo0uIEFFvAUdNSbsGDD8RtSZj2nugWXeC9tBUGPYEQ\",\"depart\":{\"stop\":{\"country\":\"South Africa\",\"carrier\":\"intercape\",\"remCheck\":\"1 Fourth Street, Albertina Sisulu Road (Bezuidenhout Valley)\",\"province\":\"Bez Valley\",\"citycode\":\"ZAZABEZVALLEY\",\"city\":\"Bez Valley\",\"description\":\"1 Fourth Street, Albertina Sisulu Road ( Bezuidenhout Valley )\",\"suburb\":\"Bez Valley\",\"id\":45572,\"remotecode\":\"BEZ VALLEY\"},\"timezone\":\"+02:00\",\"dateTimeLocal\":\"2025-01-13 16:25:00\",\"dateTimeMS\":1736785500000}}]}}"}]}';
 	*/
 
 	// Get data
 	process_data($response, $ctk_date, $route);
 }
 
-function process_data($json_string, $ctk_date, $route_no)
+function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to)
 {
+	global $ctk_carrier_names, $carriers_not_found;
+
 	// log_event(" _                \n| |    ___   __ _ \n| |   / _ \ / _` |\n| |__| (_) | (_| |\n|_____\___/ \__, |\n            |___/ ");
-	log_event("--- START --------------------------------------------------------------------------------------------------------------------------------" . "\r\n[" . $timestamp = date('Y-m-d H:i:s') ."]" . "\r\n");
 
 	// Decode JSON string
 	$data = json_decode($json_string, true);
@@ -207,6 +275,14 @@ function process_data($json_string, $ctk_date, $route_no)
 
 	foreach ($trips as $trip)
 	{
+		if (isset($trip['message'])) 
+		{
+			$from_stop = $ctk_from;
+			$to_stop = $ctk_to;
+			log_event("No services available for this route/date combination: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
+			continue;
+		}
+		
 		$arraive_time = $trip['arrive']['dateTimeLocal'];
 		$arrive_ts = $trip['arrive']['dateTimeMS'];
 		$depart_time = $trip['depart']['dateTimeLocal'];
@@ -218,8 +294,10 @@ function process_data($json_string, $ctk_date, $route_no)
 		$from_stop = $trip['depart']['stop']['citycode'];
 		$position = $i;
 		$price = $trip['price']['totalPrice'];
-		$route_name = $trip['routeDesc'];
-		$search_date = strtotime($ctk_date);
+		$service_number = $trip['serviceNumber'];
+		$route_name = $trip['routeDesc'] . "(" . $service_number . ")";
+		$get_search_date = strtotime($ctk_date);
+		$search_date = date('Ymd', $get_search_date);
 		$to_stop = $trip['arrive']['stop']['citycode'];
 
 		// Build carrier name array
@@ -229,11 +307,20 @@ function process_data($json_string, $ctk_date, $route_no)
 		{
 			$gotic = true;
 		}
-		
+
+		// Check if carrier is in the CTK_CARRIERS
+		if (!in_array($carrier, $ctk_carrier_names))
+		{
+			//echo "Carrier $carrier is in the list\n";
+			$carriers_not_found[] = $carrier;
+		}
+				
 		// Get carrier code and serial
 		$carrier_data = searchCarrierList($carrier);
 		$carrier_serial = $carrier_data['SERIAL'];
-		$carrier_code = $carrier_data['CODE'];
+		// Carrier code is not used and Keith said it can just be null so line below has been commented out but left in for reference
+		// $carrier_code = $carrier_data['CODE'];
+		$carrier_code = "";
 		
 		//echo "Record data: $arraive_time, $available_seats, $carrier_code, $carrier_serial, $date_logged, $depart_time, $duration, $from_stop, $position, $price, $route_name, $route_no, $search_date, $to_stop\n";
 		add_to_log($arraive_time, $available_seats, $carrier_code, $carrier_serial, $date_logged, $depart_time, $duration, $from_stop, $position, $price, $route_name, $route_no, $search_date, $to_stop);
@@ -242,18 +329,22 @@ function process_data($json_string, $ctk_date, $route_no)
 	}
 	
 	log_event("From " . $from_stop . " to " . $to_stop . "\r\n" . "Search Date: $ctk_date");
-	// log_event("From" . $from_stop . " to" . $to_stop)  . "\r\n");
+	
+	$bits = explode(",", $route_no);
 
 	// CHECK #1
 	// If there were no intercape trips, check if there is a scheduled trip for the route on the date
 	if (!$gotic)
 	{
 		// Check if there was a service
-		$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
-
-		if ($is_service)
+		foreach ($bits as $route) 
 		{
-			log_event("\r\n" . "Computicket ? - No Intercape trips found in results (" . count($trips) . "), but scheduled Intercape service was found" . "\r\n" . "Please check CTK from $from_stop to $to_stop on $ctk_date - No Intercape" . "\r\n");
+			$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+	
+			if ($is_service)
+			{
+				log_event("\r\n" . "Computicket ? - No Intercape trips found in results (" . count($trips) . "), but scheduled Intercape service was found" . "\r\n" . "Please check CTK from $from_stop to $to_stop on $ctk_date - No Intercape" . "\r\n");
+			}
 		}
 	}
 
@@ -262,23 +353,24 @@ function process_data($json_string, $ctk_date, $route_no)
 	if (count($trips) == 0)
 	{
 		// Check if there was a service
-		$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
-
-		if ($is_service)
+		foreach ($bits as $route) 
 		{
-			log_event("Computicket ? - No results (0) found, but scheduled Intercape service was found" . "\r\n" . "Please check CTK from $from_stop to $to_stop on $ctk_date - No Carriers" . "\r\n");
+			$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+
+			if ($is_service)
+			{
+				log_event("Computicket ? - No results (0) found, but scheduled Intercape service was found" . "\r\n" . "Please check CTK from $from_stop to $to_stop on $ctk_date - No Carriers" . "\r\n");
+			}
 		}
 	}
 
 	// OUTPUT ALL CARRIERS FOUND
 	log_event("------------\n" . "CARRIER LIST" . "\n------------" . "\r\n" . json_encode($carrier_names) . "\r\n");
 
-	log_event("--- END ----------------------------------------------------------------------------------------------------------------------------------" . "\r\n");
-
-	echo "Completed\n";
+	// echo "Completed\n";
 }
 
-function is_service ($route_no, $date, $from, $to)
+function is_service ($routeno, $date, $from, $to)
 {
 	// global $cursor, $conn;
 	$conn = oci_conn();
@@ -332,6 +424,7 @@ function is_service ($route_no, $date, $from, $to)
 	{
 		$routeno=sprintf("%04d",$routeno);
 		$sql = "select coach_serial,route_serial from open_coach where route_no='$routeno' and run_date=$date order by is_open desc";
+		$cursor = oci_parse($conn, $sql);
 		oci_execute($cursor);
 
 		if (oci_fetch_assoc($cursor)) 
@@ -382,6 +475,17 @@ function add_to_log($arrive_time, $available_seats, $carrier_code, $carrier_seri
 {
 	$conn = oci_conn();
 
+	// Remove ZAZA from stop names
+	$zaza_check = strpos($from_stop, 'ZAZA');
+	if ($zaza_check !== false) 
+	{
+		if ($zaza_check == 0) 
+		{
+			$from_stop = str_replace('ZAZA', '', $from_stop);
+			$to_stop = str_replace('ZAZA', '', $to_stop);
+		}
+	}
+
 	$duration = ($duration / 1000);
 	$hours = $duration / 3600;
 	$int_hours = floor($hours);
@@ -423,6 +527,22 @@ function add_to_log($arrive_time, $available_seats, $carrier_code, $carrier_seri
 	oci_bind_by_name($cursor, ':ROUTE_NO', $route_no);
 	oci_bind_by_name($cursor, ':SEARCH_DATE', $search_date);
 	oci_bind_by_name($cursor, ':TO_STOP', $to_stop);
+
+	oci_execute($cursor);
+
+	oci_free_statement($cursor);
+
+	oci_close($conn);
+}
+
+function addToCtkCarriers($new_carrier)
+{
+	$conn = oci_conn();
+
+	$sql = "INSERT INTO CTK_CARRIERS (NAME) VALUES (:NAME)";
+	$cursor = oci_parse($conn, $sql);
+
+	oci_bind_by_name($cursor, ':NAME', $new_carrier);
 
 	oci_execute($cursor);
 

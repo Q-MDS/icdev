@@ -462,8 +462,8 @@ $(".js-example-placeholder-single").select2({
 
 		// ---- START ----
 		print "<tr class=altcell>";
-		print "<td>Send statement email reminder</td>";
-		print "<td><input type=checkbox name=send[42] value=Y "; if( $results[42]=="Y" ) print "checked"; print "></td>";
+		print "<td>Send statement email reminder " . $results[43] . "</td>";
+		print "<td><input type=checkbox name=send[43] value=Y "; if( $results[43]=="Y" ) print "checked"; print "></td>";
 		print "</tr>";
 		// ---- END ----
 				
@@ -679,7 +679,7 @@ $(".js-example-placeholder-single").select2({
 		if ($sdetails!="Y")
 			$sdetails="N";
 		
-		if( $send[42]!="Y" ) $send[42] = "N";
+		if( $send[43]!="Y" ) $send[43] = "N";
 			
 		if ($dtype=="C")		
 			$sdetails="N";
@@ -823,7 +823,7 @@ $(".js-example-placeholder-single").select2({
 			$qry .= "controller='$send[15]', ";
 			$qry .= "acc_contact_person='$send[16]', ";
 			$qry .= "statement_details='$sdetails', ";
-			$qry .= "statement_reminder='$send[42]', ";
+			$qry .= "statement_reminder='$send[43]', ";
 			$qry .= "vat_number='$vatno', ";
 			$qry .= "debtor_type='$dtype', ";
 			$qry .= "billing_period='$btype', ";

@@ -1,0 +1,35 @@
+Tables used:
+1. PURCHASE_BUDGET
+
+
+Step 1:
+- Get buget amounts:
+  - Fin year runs from June to May
+  - Query get sum of serial (budget item) for the fin year range
+  - select serial, sum(amount)  from purchase_budget where rundate in ('062024','072024','082024','092024','102024','112024','122024') group by serial
+
+Step 2:
+- Find out how much has been spent on each budget (excl current month)
+  - select budget,sum(total) from purchase_running6 where budget_month in ('202406','202407','202408','202409','202410','202411','202412') group by budget
+    - *** purchase_running6 is a VIEW
+
+Step 3:
+- Get budget total - budget used = x, if x < buget_total => include in dataset, also include the difference
+
+Step 4:
+- Remove from previous month and add onto new month
+  - Update purchase_budget set amount=amount-2000 where serial=11932 and rundate=’122024’;  // Note: make sure you don’t take more than there is..
+  - Update purchase_budget set amount=amount+2000 where serial=11932 and rundate=’012025’;
+
+  (please check that both queries are successful, and then COMMIT, otherwise ROLLBACK)
+
+Overall: 
+- Log all actions taken to a txt file and email to me and Keith  
+   - e.g. Fleet Maintenance – Parts (RSA) - R 2000 moved from 2024/12 to 2025/01
+   - To get the budget name: select name from purchase_budget_names where serial='11932';
+- Note that when this runs in June, it must do nothing, because it’s the beginning of the financial year and you may not move budget from a previous financial year.
+  - In the code add a check: if Month is != 06 then you can start   
+
+
+11932 Step 1: 8311292
+11932 Step 2: 5761990.59

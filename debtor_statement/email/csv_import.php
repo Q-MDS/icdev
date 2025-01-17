@@ -25,23 +25,23 @@ function oci_conn()
 
 function get_csv($filename)
 {
-		$csv = array();
-		$csv_file = __DIR__ . '/' . $filename; // Get the full path to the CSV file
-	
-		if (!file_exists($csv_file) || !is_readable($csv_file)) {
-			return false; // Return false if the file does not exist or is not readable
+	$csv = array();
+	$csv_file = __DIR__ . '/' . $filename; // Get the full path to the CSV file
+
+	if (!file_exists($csv_file) || !is_readable($csv_file)) {
+		return false; // Return false if the file does not exist or is not readable
+	}
+
+	$handle = fopen($csv_file, 'r');
+	if ($handle !== FALSE) {
+		$header = fgetcsv($handle, 1000, ','); // Read the first row as headers
+		while (($data = fgetcsv($handle, 1000, ',')) !== FALSE) {
+			$csv[] = array_combine($header, $data); // Combine headers with data
 		}
-	
-		$handle = fopen($csv_file, 'r');
-		if ($handle !== FALSE) {
-			$header = fgetcsv($handle, 1000, ','); // Read the first row as headers
-			while (($data = fgetcsv($handle, 1000, ',')) !== FALSE) {
-				$csv[] = array_combine($header, $data); // Combine headers with data
-			}
-			fclose($handle);
-		}
-	
-		return $csv;
+		fclose($handle);
+	}
+
+	return $csv;
 }
 
 function update($conn, $csv_mail, $account_code)
@@ -83,54 +83,46 @@ function start($csv_data)
 		}
 	}
 
-	echo "Tots: " . count($found) . " >>> " . count($not_found) . "<br>";
+	echo "Tot records: " . count($csv_data) . "<br>Found: " . count($found) . "<br>Not found: " . count($not_found) . "<br><br>";
 
 	$i = 0;
 	
-	foreach ($not_found as $row) 
-	{
-		$csv_mail = TRIM($row['CSV_MAIL']);
-		$account_code = TRIM($row['ACCOUNT_CODE']);
-		$i++;
-		add_not_found($conn, $csv_mail, $account_code);
-	}
-
-	echo "TOT: " . $i . "<br>";
 	oci_close($conn);
 
 }
 
-function add_not_found($conn, $csv_mail, $account_code)
+function concat_emails($array) 
 {
-	$sql = "INSERT INTO DEBTORS_INFO (COMPANY_NAME, ACCOUNT_CODE, STATEMENT_EMAIL, STATEMENT_REMINDER) VALUES ('Import add', '$account_code', '$csv_mail', 'N')";
-	
-	$cursor = oci_parse($conn, $sql);
-	
-	oci_execute($cursor);
+	$temp = array();
+	$result = array();
 
-	oci_free_statement($cursor);
-}
-
-function remove_duplicates($array) 
-{
-    $unique_array = [];
-    $account_codes = [];
-
-    foreach ($array as $item) 
+	foreach ($array as $account)
 	{
-        if (!in_array($item['ACCOUNT_CODE'], $account_codes))
-		{
-            $account_codes[] = $item['ACCOUNT_CODE'];
-            $unique_array[] = $item;
-        }
-    }
+		$account_code = $account['ACCOUNT_CODE'];
+		$email = $account['CSV_MAIL'];
 
-    return $unique_array;
+		$temp[$account_code][] = $email;
+	}
+
+	foreach ($temp as $account_code => $emails)
+	{
+		
+		$email_str = "";
+		foreach ($emails as $email)
+		{
+			$email_str .= $email . ", ";
+		}
+		$email_str = rtrim($email_str, ", ");
+
+		$result[] = array('ACCOUNT_CODE' => $account_code, 'CSV_MAIL' => $email_str);
+	}
+
+	return $result;
 }
 
 $csv_data = get_csv('DEBTORS_INFO.csv');
 
-$csv_data = remove_duplicates($csv_data);
+$csv_data = concat_emails($csv_data);
 
 start($csv_data);
 

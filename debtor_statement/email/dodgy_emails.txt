@@ -1,0 +1,11 @@
+statement_email LIKE '%<%'
+
+Yolande de Beer <yolande@namazing.com.na>
+Keamogetswe Sello <SelloK@ufs.ac.za>
+Isha Raval <ops.sa3@one-above.com>
+Finansies <finansies@hscenturion.co.za>
+TheclaMbongue<tmbongue@gmail.com>
+Lambert Rautenbach  <lambert@fichies.co.za>
+dynamickokstad@telkomsa.net--Sally Mtsweni <dynamic.copyandprint@gmail.com>
+Sithabile <sithabileaccounts@galaxytravel.co.zw>
+Phumi Nteleko <phumi.nteleko@travel.co.za>
