@@ -124,6 +124,7 @@ function build_batch($compare_list)
 
 		foreach ($routes as $route) 
 		{
+			$route = sprintf("%04d", $route); 
 			$route_str .= $route . ",";
 		}
 		$route_str = rtrim($route_str, ',');
@@ -350,7 +351,11 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to)
 
 	// CHECK #2
 	// If there were no trips at all, but there is a scheduled trip for the route on the date, log an alert
-	if (count($trips) == 0)
+	// if (!isset($trips) || count($trips) == 0)
+
+	$is_service = is_service(2105, $ctk_date, $from_stop, $to_stop);
+	
+	if (!isset($trips) || count($trips) == 0)
 	{
 		// Check if there was a service
 		foreach ($bits as $route) 
@@ -397,11 +402,12 @@ function is_service ($routeno, $date, $from, $to)
 		}
 		$cursor = oci_parse($conn, $sql);
 
-		if (oci_fetch_assoc($cursor)) 
+		if ($data = oci_fetch_assoc($cursor)) 
 		{
 			if (date("Ymd")==$date) 
 			{
-				$start=getdata($cursor,0);
+				// $start=getdata($cursor,0);
+				$start=$data['depart_time'];
 				echo "Start time $start\n";
 
 				if ($start<date("Hi")) 
@@ -427,10 +433,12 @@ function is_service ($routeno, $date, $from, $to)
 		$cursor = oci_parse($conn, $sql);
 		oci_execute($cursor);
 
-		if (oci_fetch_assoc($cursor)) 
+		if ($data = oci_fetch_assoc($cursor)) 
 		{
-			$cs=getdata($cursor,0);
-			$rs=getdata($cursor,1);
+			$cs=$data['coach_serial'];
+			$ra = $data['route_serial'];
+			// $cs=getdata($cursor,0);
+			// $rs=getdata($cursor,1);
 			$av=availseats($cs,$key,$key2);
 
 			if ($av>0)
@@ -441,9 +449,10 @@ function is_service ($routeno, $date, $from, $to)
 					echo "this is for today: select  depart_time from route_stops where route_serial='$rs' order by stop_order\n";
 					$sql ="select depart_time from route_stops where route_serial='$rs' order by stop_order";
 					oci_execute($cursor);
-					if (oci_fetch_assoc($cursor)) 
+					if ($data = oci_fetch_assoc($cursor)) 
 					{
-						$start=getdata($cursor,0);
+						// $start=getdata($cursor,0);
+						$start=$data['depart_time'];
 						echo "Start time $start\n";
 						if ($start<date("Hi")) 
 						{

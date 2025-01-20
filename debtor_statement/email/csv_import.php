@@ -46,7 +46,7 @@ function get_csv($filename)
 
 function update($conn, $csv_mail, $account_code)
 {
-	$sql = "UPDATE DEBTORS_INFO SET STATEMENT_EMAIL = '$csv_mail', STATEMENT_REMINDER = 'N' WHERE ACCOUNT_CODE = '$account_code'";
+	$sql = "UPDATE DEBTORS_INFO SET STATEMENT_EMAIL = '$csv_mail', STATEMENT_REMINDER = 'Y' WHERE ACCOUNT_CODE = '$account_code'";
 	
 	$cursor = oci_parse($conn, $sql);
 	
@@ -121,7 +121,7 @@ function concat_emails($array)
 }
 
 $csv_data = get_csv('DEBTORS_INFO.csv');
-
+print_r($csv_data);
 $csv_data = concat_emails($csv_data);
 
 start($csv_data);

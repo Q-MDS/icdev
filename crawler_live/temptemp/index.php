@@ -140,9 +140,7 @@ start($trips);
 
 function start($trips)
 {
-	// *** Add new carrier: New carrier is added in process data function: Lines 144 have been commented out during testing
-	// global $carriers_not_found;
-	// *** Add new carrier: New carrier is added in process data function: Lines 144 have been commented out during testing
+	global $carriers_not_found;
 	
 	$start_ts = time();
 
@@ -154,8 +152,7 @@ function start($trips)
 		// analyse();
 	}
 	
-	// *** Add new carrier: New carrier is added in process data function: Lines 156 - 166 have been commented out during testing
-	/*$carriers_not_found = array_unique($carriers_not_found);
+	$carriers_not_found = array_unique($carriers_not_found);
 	$carriers_not_found = array_values($carriers_not_found);
 	
 	if (count($carriers_not_found) > 0)
@@ -165,7 +162,7 @@ function start($trips)
 			addToCtkCarriers($carrier);
 		}
 		log_event("Added new carriers to CTK_CARRIERS " . json_encode($carriers_not_found));
-	}*/
+	}
 
 	log_event("--- END ----------------------------------------------------------------------------------------------------------------------------------" . "\r\n");
 
@@ -197,8 +194,8 @@ function crawl($route_no, $ctk_from, $ctk_to, $ctk_date)
 }
 
 // function analyse(): Delete me
-// function analyse($route_no, $ctk_from, $ctk_to, $ctk_date, $response)
-// {
+function analyse($route_no, $ctk_from, $ctk_to, $ctk_date, $response)
+{
 	/*
 	$route = 209;
 	$ctk_from = 'ZAZABUTTERWORTH';
@@ -207,13 +204,14 @@ function crawl($route_no, $ctk_from, $ctk_to, $ctk_date)
 	*/
 
 	// Get data
-// 	process_data($response, $ctk_date, $route);
-// }
+	process_data($response, $ctk_date, $route);
+}
 
 function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to)
 {
-	// global $ctk_carrier_names, $carriers_not_found;
-	global $ctk_carrier_names;
+	global $ctk_carrier_names, $carriers_not_found;
+
+	// log_event(" _                \n| |    ___   __ _ \n| |   / _ \ / _` |\n| |__| (_) | (_| |\n|_____\___/ \__, |\n            |___/ ");
 
 	// Decode JSON string
 	$data = json_decode($json_string, true);
@@ -286,20 +284,15 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to)
 		// Check if carrier is in the CTK_CARRIERS
 		if (!in_array($carrier, $ctk_carrier_names))
 		{
-			
-			// Not used as carrier is added here and not at the end $carriers_not_found[] = $carrier;
-
-			// *** Add new carrier here
-			addToCtkCarriers($carrier);
-			// *** Add new carrier here
-			
+			//echo "Carrier $carrier is in the list\n";
+			$carriers_not_found[] = $carrier;
 		}
 				
 		// Get carrier code and serial
 		$carrier_data = searchCarrierList($carrier);
 		$carrier_serial = $carrier_data['SERIAL'];
-
 		// Carrier code is not used and Keith said it can just be null so line below has been commented out but left in for reference
+		// $carrier_code = $carrier_data['CODE'];
 		$carrier_code = "";
 		
 		//echo "Record data: $arraive_time, $available_seats, $carrier_code, $carrier_serial, $date_logged, $depart_time, $duration, $from_stop, $position, $price, $route_name, $route_no, $search_date, $to_stop\n";
@@ -535,8 +528,7 @@ function addToCtkCarriers($new_carrier)
 
 function searchCarrierList($name) 
 {
-	// global $carrier_list;
-	$carrier_list = carrier_list();
+	global $carrier_list;
 
     foreach ($carrier_list as $item) 
 	{
@@ -552,7 +544,7 @@ function searchCarrierList($name)
     return [
 		'CODE' => 'Z',
 		'SERIAL' => '0'
-	]; // Return null if no match is found
+	];; // Return null if no match is found
 }
 
 function isNotEmpty($value) 

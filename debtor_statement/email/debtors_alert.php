@@ -215,13 +215,16 @@ function get_to_send($email_list, $statement_list)
 {
 	$to_send = [];
 
-	foreach ($email_list as $email) {
+	foreach ($email_list as $email) 
+	{
 		$account_code = $email['ACCOUNT_CODE'];
 
-		foreach ($statement_list as $statement) {
+		foreach ($statement_list as $statement) 
+		{
 			$statement_name = pathinfo($statement, PATHINFO_FILENAME);
 
-			if (strpos($statement_name, $account_code) !== false) {
+			if (strpos($statement_name, $account_code) !== false) 
+			{
 				$to_send[] = $email;
 				break;
 			}
@@ -277,6 +280,7 @@ function send_email($to_send)
 	{
 		$account_code = $recipient['ACCOUNT_CODE'];
 		$email_address = $recipient['STATEMENT_EMAIL'];
+
 		$subject = "{$account_code} - Weekly Statement";
 
 		echo "Run this: mail--->smtp_send($from, $subject, $email_address)<br>";

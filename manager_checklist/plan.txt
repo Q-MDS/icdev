@@ -105,4 +105,4 @@ tfc_id from technical_faults_category
 
 
 
-  
+  257760 ctk_log

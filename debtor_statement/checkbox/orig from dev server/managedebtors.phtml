@@ -258,7 +258,6 @@ $(".js-example-placeholder-single").select2({
 				$results[$i] = chop( $results[$i] );
 
 			$stdetail=$results[22];
-			$streminder=$results[42];
 
 			ora_parse( $cursor, "SELECT COUNT(*) FROM SUSPENDED_ACCOUNTS WHERE account_code='$acode'" );
 			ora_exec( $cursor );
@@ -459,14 +458,6 @@ $(".js-example-placeholder-single").select2({
 		print "> <font size=2>(Tick to include full invoices with each statement <b>ONLY FOR BUS TICKETS</b>)";
                 print "</td>";
                 print "</tr>";
-
-		// ---- START ----
-		print "<tr class=altcell>";
-		print "<td>Send statement email reminder</td>";
-		print "<td><input type=checkbox name=send[43] value=Y "; if( $results[43]=="Y" ) print "checked"; print "></td>";
-		print "</tr>";
-		// ---- END ----
-				
 
 		print "<tr class=cell>";
                 print "<td>Accounts Contact Person</td>";
@@ -678,8 +669,6 @@ $(".js-example-placeholder-single").select2({
 		
 		if ($sdetails!="Y")
 			$sdetails="N";
-		
-		if( $send[43]!="Y" ) $send[43] = "N";
 			
 		if ($dtype=="C")		
 			$sdetails="N";
@@ -823,7 +812,6 @@ $(".js-example-placeholder-single").select2({
 			$qry .= "controller='$send[15]', ";
 			$qry .= "acc_contact_person='$send[16]', ";
 			$qry .= "statement_details='$sdetails', ";
-			$qry .= "statement_reminder='$send[43]', ";
 			$qry .= "vat_number='$vatno', ";
 			$qry .= "debtor_type='$dtype', ";
 			$qry .= "billing_period='$btype', ";
