@@ -283,8 +283,14 @@ function send_email($to_send)
 
 		$subject = "{$account_code} - Weekly Statement";
 
-		echo "Run this: mail--->smtp_send($from, $subject, $email_address)<br>";
-		// $mail->smtp_send($from, $subject, $email_address);
+		str_replace(", ", "", $email_address);
+		$bits = explode(",", $email_address);
+
+		foreach ($bits as $email_address) 
+		{
+			echo "Run this: mail: [ smtp_send($from, $subject, $email_address) ]<br>";
+			// $mail->smtp_send($from, $subject, $email_address);
+		}
 	}
 }
 

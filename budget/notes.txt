@@ -33,3 +33,45 @@ Overall:
 
 11932 Step 1: 8311292
 11932 Step 2: 5761990.59
+
+
+
+
+
+
+// Start a transaction
+$success = true;
+
+// First query
+$sql1 = "UPDATE purchase_budget SET amount = amount - 2000 WHERE serial = 11932 AND rundate = '122024'";
+$stid1 = oci_parse($conn, $sql1);
+if (!oci_execute($stid1, OCI_NO_AUTO_COMMIT)) {
+    $success = false;
+}
+
+// Second query
+$sql2 = "UPDATE purchase_budget SET amount = amount + 2000 WHERE serial = 11932 AND rundate = '012025'";
+$stid2 = oci_parse($conn, $sql2);
+if (!oci_execute($stid2, OCI_NO_AUTO_COMMIT)) {
+    $success = false;
+}
+
+// Commit or rollback based on success
+if ($success) {
+    if (oci_commit($conn)) {
+        echo "Transaction committed successfully.";
+    } else {
+        echo "Error committing transaction.";
+    }
+} else {
+    if (oci_rollback($conn)) {
+        echo "Transaction rolled back successfully.";
+    } else {
+        echo "Error rolling back transaction.";
+    }
+}
+
+// Free the statement and close the connection
+oci_free_statement($stid1);
+oci_free_statement($stid2);
+oci_close($conn);

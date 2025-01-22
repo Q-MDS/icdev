@@ -1,0 +1,186 @@
+*** index.php	2025-01-22 10:34:07.409388869 +0200
+--- test.php	2025-01-22 11:41:09.334385793 +0200
+***************
+*** 6,24 ****
+  
+  if (!open_oracle()) { Exit; };
+  if (!AllowedAccess("")) { Exit; };
+  
+  // Ajust for 7, 14, 21
+! $tot_days = 1;
+  $compare_list = array();
+  $carrier_list = array();
+  $carriers_not_found = array();
+  $batch = array();
+  
+  
+  set_time_limit(0);
+  
+  
+  function get_compare_list()
+  {
+  	global $conn;
+  
+--- 6,62 ----
+  
+  if (!open_oracle()) { Exit; };
+  if (!AllowedAccess("")) { Exit; };
+  
+  // Ajust for 7, 14, 21
+! if (!isset($tot_days) || !is_numeric($tot_days)) {
+! 	$tot_days = 1;
+! }
+! if ($tot_days > 93) {
+! 	$tot_days = 93;
+! }
+! if (!isset($start_date)) {
+! 	$start_date = date("Y-m-d");
+! }
+  $compare_list = array();
+  $carrier_list = array();
+  $carriers_not_found = array();
+  $batch = array();
+  
+  
+  set_time_limit(0);
+  
++ function get_single_list($route, $from, $to) 
++ {
++ 	global $conn;
++ 
++         $sql = "SELECT
++                 '$route' AS ROUTE,
++                 stop_from_table.STOP_NUMBER AS STOP_FROM,
++                 stop_from_table.STOP_ZAZA AS STOP_FROM_NAME,
++                 stop_to_table.STOP_NUMBER STOP_TO,
++                 stop_to_table.STOP_ZAZA AS STOP_TO_NAME
++         FROM
++                 CTK_STOPS stop_from_table, CTK_STOPS stop_to_table
++ 	WHERE
++ 		(stop_from_table.stop_number='$from')
++ 	AND
++ 		(stop_to_table.stop_number='$to')
++         ";
++ 
++         $cursor = oci_parse($conn, $sql);
++         oci_execute($cursor);
++ 
++         while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS))
++         {
++                 $compare_list[] = $row;
++         }
++ 
++         oci_free_statement($cursor);
++ 
++         return $compare_list;
++ }
+  
+  function get_compare_list()
+  {
+  	global $conn;
+  
+***************
+*** 32,41 ****
+--- 70,80 ----
+  		CTK_COMPARE main_table
+  	LEFT JOIN 
+  		CTK_STOPS stop_from_table ON main_table.STOP_FROM = stop_from_table.STOP_NUMBER
+  	LEFT JOIN 
+  		CTK_STOPS stop_to_table ON main_table.STOP_TO = stop_to_table.STOP_NUMBER
++ 	WHERE ROWNUM=1
+  	";
+  		
+  	$cursor = oci_parse($conn, $sql);
+  	oci_execute($cursor);
+  
+***************
+*** 68,82 ****
+  	return $carrier_list;
+  }
+  
+  function build_batch($compare_list)
+  {
+! 	global $tot_days;
+  
+  	$dup_array = array();
+  
+! 	$today = date('Y-m-d');
+  
+  	foreach($compare_list as $compare)
+  	{
+  		$route = $compare['ROUTE'];
+  		$from = TRIM($compare['STOP_FROM_NAME']);
+--- 107,121 ----
+  	return $carrier_list;
+  }
+  
+  function build_batch($compare_list)
+  {
+! 	global $tot_days, $start_date;
+  
+  	$dup_array = array();
+  
+! 	$today = $start_date;
+  
+  	foreach($compare_list as $compare)
+  	{
+  		$route = $compare['ROUTE'];
+  		$from = TRIM($compare['STOP_FROM_NAME']);
+***************
+*** 104,114 ****
+  		}
+  		$route_str = rtrim($route_str, ',');
+  
+  		for ($i=0; $i < $tot_days; $i++) 
+  		{ 
+! 			$date = date('Y-m-d', strtotime($today . ' + ' . $i . ' days'));
+  
+  			$batch[] = array(
+  				'route' => $route_str,
+  				'from' => $from,
+  				'to' => $to,
+--- 143,153 ----
+  		}
+  		$route_str = rtrim($route_str, ',');
+  
+  		for ($i=0; $i < $tot_days; $i++) 
+  		{ 
+! 			$date = date('Y-m-d', strtotime($start_date . ' + ' . $i . ' days'));
+  
+  			$batch[] = array(
+  				'route' => $route_str,
+  				'from' => $from,
+  				'to' => $to,
+***************
+*** 121,131 ****
+  	// print_r($batch);
+  
+  	return $batch;
+  }
+  
+! $compare_list = get_compare_list();
+  
+  $carrier_list = carrier_list();
+  
+  // Build a list of carrier names only
+  $ctk_carrier_names = array();
+--- 160,178 ----
+  	// print_r($batch);
+  
+  	return $batch;
+  }
+  
+! 
+! if (isset($from) && isset($route) && isset($to)) {
+! 	$tot_days = 1;
+! 	echo "Running a single query for $from-$to on $route for $start_date<bR>";
+! 	$compare_list = get_single_list($route,$from,$to);
+! } else {
+! 	$compare_list = get_compare_list();
+! }
+! 
+  
+  $carrier_list = carrier_list();
+  
+  // Build a list of carrier names only
+  $ctk_carrier_names = array();
