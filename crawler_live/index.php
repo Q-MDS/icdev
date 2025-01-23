@@ -3,6 +3,7 @@ ob_start();
 require_once ("/usr/local/www/pages/php3/oracle.inc");
 require_once ("/usr/local/www/pages/php3/misc.inc");
 require_once ("/usr/local/www/pages/php3/sec.inc");
+require_once("class.html.mime.mail.inc");
 
 if (!open_oracle()) { Exit; };
 if (!AllowedAccess("")) { Exit; };
@@ -213,7 +214,7 @@ function crawl($route_no, $ctk_from, $ctk_to, $ctk_date, $from_name, $to_name)
 function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $from_name, $to_name)
 {
 	// global $ctk_carrier_names, $carriers_not_found;
-	global $ctk_carrier_names;
+	global $ctk_carrier_names, $ctk_stops;
 
 	// Decode JSON string
 	$data = json_decode($json_string, true);
@@ -227,6 +228,7 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 	// Iterate through messages
 	foreach ($data['messages'] as $message) 
 	{
+		echo "A";
 		$result = [];
 		
 		$inner_data = json_decode($message['data'], true);
@@ -234,6 +236,7 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 		{
 			if (isset($inner_data['data']['availability'])) 
 			{
+				echo " B";
 				$result['availability'] = $inner_data['data']['availability'];
 			}
 			
@@ -246,11 +249,13 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 
 	if (isset($filtered_array[0]['availability']))
 	{
+		echo " C";
 		$trips = $filtered_array[0]['availability'];
 	}
 
 	if (count($trips) == 0)
 	{
+		echo " D";
 		$from_stop = $ctk_from;
 		$to_stop = $ctk_to;
 		log_event("No services available for this route/date combination: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
@@ -258,11 +263,14 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 	} 
 	else 
 	{
-		$stops_not_found = array();
+		echo " E";
 		$i = 1;
+		$stops_not_found = array();
+		$ctk_routes = array();
 
 		foreach ($trips as $trip)
 		{
+			echo " F";
 			if (isset($trip['message'])) 
 			{
 				$from_stop = $ctk_from;
@@ -291,7 +299,7 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 			$to_stop = $trip['arrive']['stop']['citycode'];
 			$to_stop_id = $trip['arrive']['stop']['id'];
 			$to_stop_city = $trip['arrive']['stop']['city'];
-
+			echo " G";
 			// Check if stop is in the CTK_STOPS
 			if (!in_array($from_stop, $ctk_stops))
 			{
@@ -303,15 +311,19 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 				//echo "Stop $to_stop is in the list\n";
 				$stops_not_found[] = array($to_stop_id, $to_stop, $to_stop_city);
 			}
-
+			echo " H";
 			// Build carrier name array
 			$carrier_names[] = $carrier;
 
 			if (in_array($carrier, $ic_carriers)) 
 			{
 				$gotic = true;
-			}
 
+				// Collect ctk routes
+				$just_route = substr($service_number, 2);
+				$ctk_routes[] = $just_route;
+			}
+			echo " I";
 			// Check if carrier is in the CTK_CARRIERS
 			if (!in_array($carrier, $ctk_carrier_names))
 			{
@@ -323,19 +335,22 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 				// *** Add new carrier here
 				
 			}
-					
+			echo " J";	
 			// Get carrier code and serial
 			$carrier_data = searchCarrierList($carrier);
 			$carrier_serial = $carrier_data['SERIAL'];
 
 			// Carrier code is not used and Keith said it can just be null so line below has been commented out but left in for reference
 			$carrier_code = "";
-			
+			echo " K";
 			//echo "Record data: $arraive_time, $available_seats, $carrier_code, $carrier_serial, $date_logged, $depart_time, $duration, $from_stop, $position, $price, $route_name, $route_no, $search_date, $to_stop\n";
 			add_to_log($arraive_time, $available_seats, $carrier_code, $carrier_serial, $date_logged, $depart_time, $duration, $from_name, $position, $price, $route_name, $route_no, $search_date, $to_name);
 
 			$i++;
-		}
+			echo " L";
+		} // End of foreach
+
+		echo " M";
 
 		// Check if any new stops found in crawler data were added. Add if found
 		print_r($stops_not_found);
@@ -348,44 +363,98 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 		
 		$bits = explode(",", $route_no);
 
-		// CHECK #1
-		// If there were no intercape trips, check if there is a scheduled trip for the route on the date
-		if (!$gotic)
+		// CHECK ALERTS: START
+		// Get/have a list of all the routes from ctx_compare: 1345, 1346, 949,6450...
+		// Get/have a ;ist of routes from crawler data: 1346, 949,6450...
+		   // do an in_array and with above data 1345 IS NOT in crawler data -> alert - IC has route but compu doesan't have it
+		   // if crawler has a route that compare does not have, then alert - compu has route but IC does not have it
+		// CTK has IC routes 1,2,3,4
+		// Script has routes: 1,2,3,4,5 - means that IC has a route that CTK does not have: ALERT: Intercape has route no 5 running but Computicket does not have it
+		// OR
+		// 1,2,3,4 - nothing to do here
+		// OR
+		// 1,2,3 -means that CTK has a route that IC does not have: ALERT: Computicket has route no 4 running but Intercape does not have it
+
+		// CHECK 1: IC has routes that we not listed in the CTK data
+		echo "Routes from CTK_COMPARE: \n";
+		print_r($bits);
+		echo "Routes from Crawler/Computicket: \n";
+		print_r($ctk_routes);
+
+		log_event("\n" . "CHECK 1: IC has routes that we not listed in the CTK data");
+		log_event("--------------------------------------------------------");
+		foreach ($bits as $ic_route)
 		{
-			// Check if there was a service
-			foreach ($bits as $route) 
+			if (!in_array($ic_route, $ctk_routes))
 			{
+				// A route has been isolated as not being in the CTK data
+				// Need to dbl check (is_service) before outputing the log
 				$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
-		
-				if ($is_service)
 				{
-					log_event("\r\n" . "Computicket ? - No Intercape trips found in results (" . count($trips) . "), but scheduled Intercape service was found" . "\r\n" . "Please check CTK from $from_stop to $to_stop on $ctk_date - No Intercape" . "\r\n");
+					log_event("Intercape has route $ic_route running but CTK does not have it" . "\r\n" . "Please check IC route $ic_route on $ctk_date - No Intercape" . "\n");
 				}
 			}
 		}
+
+
+		// CHECK 2: CTK has a route that IC does not have
+		log_event("\n" . "CHECK 2: CTK has a route that IC does not have");
+		log_event("----------------------------------------------");
+		foreach($ctk_routes as $ctk_route)
+		{
+			$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+			{
+				if (!in_array($ctk_route, $bits))
+				{
+					log_event("CTK has route $ctk_route running but Intercape does not have it" . "\r\n" . "Please check CTK route $ctk_route on $ctk_date - No CTK" . "\n");
+				}
+			}
+		}
+		// CHECK ALERTS: END
+
+
+
+
+		// CHECK #1
+		// If there were no intercape trips, check if there is a scheduled trip for the route on the date
+		// if (!$gotic)
+		// {
+		// 	// Check if there was a service
+		// 	foreach ($bits as $route) 
+		// 	{
+		// 		$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+		
+		// 		if ($is_service)
+		// 		{
+		// 			log_event("\r\n" . "Computicket ? - No Intercape trips found in results (" . count($trips) . "), but scheduled Intercape service was found" . "\r\n" . "Please check CTK from $from_stop to $to_stop on $ctk_date - No Intercape" . "\r\n");
+		// 		}
+		// 	}
+		// }
 
 		// CHECK #2
 		// If there were no trips at all, but there is a scheduled trip for the route on the date, log an alert
-		if (!isset($trips) || count($trips) == 0)
-		{
-			// Check if there was a service
-			foreach ($bits as $route) 
-			{
-				$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+		// if (!isset($trips) || count($trips) == 0)
+		// {
+		// 	// Check if there was a service
+		// 	foreach ($bits as $route) 
+		// 	{
+		// 		$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
 
-				if ($is_service)
-				{
-					log_event("Computicket ? - No results (0) found, but scheduled Intercape service was found" . "\r\n" . "Please check CTK from $from_stop to $to_stop on $ctk_date - No Carriers" . "\r\n");
-				}
-			}
-		}
+		// 		if ($is_service)
+		// 		{
+		// 			log_event("Computicket ? - No results (0) found, but scheduled Intercape service was found" . "\r\n" . "Please check CTK from $from_stop to $to_stop on $ctk_date - No Carriers" . "\r\n");
+		// 		}
+		// 	}
+		// }
 
 		// OUTPUT ALL CARRIERS FOUND
-		log_event("------------\n" . "CARRIER LIST" . "\n------------" . "\r\n" . json_encode($carrier_names) . "\r\n");
+		if (count($carrier_names) > 0)
+		{
+			log_event("------------\n" . "CARRIER LIST" . "\n------------" . "\r\n" . json_encode($carrier_names) . "\r\n");
+		}
 
 		// echo "Completed\n";
 	}
-	
 }
 
 function is_service ($routeno, $date, $from, $to)
@@ -572,7 +641,7 @@ function addToCtkCarriers($new_carrier)
 
 function add_new_stops($stops_not_found)
 {
-	$conn = oci_conn();
+	global $conn;
 
 	foreach ($stops_not_found as $stop)
 	{
@@ -627,6 +696,7 @@ function isNotEmpty($value)
 function log_event($message) 
 {
     $log_file = '/tmp/ctkerr.log';
+    // $log_file = 'ctkerr.log';
 
     $file_handle = fopen($log_file, 'a');
 
@@ -640,6 +710,25 @@ function log_event($message)
 	{
         echo "Error: Unable to open log file.";
     }
+}
+
+function send_error_email($html_message, $text_message)
+{
+	// $message = '';
+	$email_list = ["keith@intercape.co.za", "quintin@moderndaystrategy.com"];
+	$from = $noreply_email;
+	$subject = "CTK Crawl Error Report - " . date("Y-m-d H:i:s");
+	// $html_message .= "Error list: <br>";
+	// $text_message .= "Error list: \n";
+
+	$mail = new html_mime_mail('X-Mailer: Html Mime Mail Class');
+	$mail->add_html($html_message, $text_message);
+	$mail->build_message();
+
+	foreach ($email_list as $email_address) 
+	{
+		$mail->smtp_send($from, $email_address);
+	}
 }
 
 $compare_list = get_compare_list();

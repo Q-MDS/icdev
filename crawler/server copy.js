@@ -24,27 +24,19 @@ app.post('/run-capture', async (req, res) => {
         await client.send('Page.enable');
 
         let messages = [];
-		let lastMessageTime = Date.now();
-        const inactivityTimeout = 2000;
 
         client.on('Network.webSocketFrameReceived', ({ requestId, timestamp, response }) => {
             console.log('WebSocket Frame Received:', response.payloadData);
             messages.push({ type: 'received', data: response.payloadData });
         });
 
-       // Function to check for inactivity
-	   async function checkInactivity() {
-		while (true) {
-			await new Promise(resolve => setTimeout(resolve, 500)); // Check every 500ms
-			if (Date.now() - lastMessageTime > inactivityTimeout) {
-				break;
-			}
-		}
-	}
+        // client.on('Network.webSocketFrameSent', ({ requestId, timestamp, response }) => {
+        //     console.log('WebSocket Frame Sent:', response.payloadData);
+        //     messages.push({ type: 'sent', data: response.payloadData });
+        // });
 
         // Keep the browser open for a while to capture messages
-        // await new Promise(resolvse => setTimeout(resolve, 10000));
-		await checkInactivity();
+        await new Promise(resolve => setTimeout(resolve, 10000));
 
         await browser.close();
         res.json({ messages });
