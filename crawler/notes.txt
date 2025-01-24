@@ -55,5 +55,11 @@ errors:
 2. 2 x checks
 3. added a new stop
 
+TODO 20250124
+1. oci_commit after INSERT....
+2. looking at the code in index.php - the error ""No services available "" - when NOTHING comes back from computicket - when this happens, you must still do the check to see if our bus is running that day.
+3. note that my index.php does a 7 day crawl for ALL relevant info, so make sure you change that for your testing - really!!!!!!!!!!
 
+const browser = await puppeteer.launch({ headless: true,    args: ['--no-sandbox'] });
 
+"No services available "" - when NOTHING comes back from computicket - when this happens, you must still do the check to see if our bus is running that day.

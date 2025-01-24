@@ -194,29 +194,9 @@ function adjust_next_budget($cm_pb, $serial, $total)
 	oci_free_statement($cursor);
 }
 
-$month_array = array(
-	["cp_pb" => "062024", "cm_pr" => "202406", "nm_pb" => "072024"],
-	["cp_pb" => "072024", "cm_pr" => "202407", "nm_pb" => "082024"],
-	["cp_pb" => "082024", "cm_pr" => "202408", "nm_pb" => "092024"],
-	["cp_pb" => "092024", "cm_pr" => "202409", "nm_pb" => "102024"],
-	["cp_pb" => "102024", "cm_pr" => "202410", "nm_pb" => "112024"],
-	["cp_pb" => "112024", "cm_pr" => "202411", "nm_pb" => "122024"],
-	["cp_pb" => "122024", "cm_pr" => "202412", "nm_pb" => "012025"]
-);
-
-print_r($month_array);
-die();
-
 $cm_pb = '122024';
 $cm_pr = '202412'; 
 $nm_pb = '012025';
-
-foreach ($month_array as $month)
-{
-
-}
-
-
 
 $get_budget_amounts = get_budget_amounts($cm_pb);
 $budget_amounts = $get_budget_amounts['results'];
@@ -267,3 +247,157 @@ foreach ($budget_serials as $serial)
 	//echo "Serial: " . $name . " -> " . $serial . " -> . " . $amount . " -> " . $used_total . " === " . $diff . "\n";
 }
 
+// loop thru amounts and then get used from used array
+// Do a calc.
+// Output if it is an over budget
+// If under budget
+    // 22 000 - 20 000 = 2000
+   // amount = amount - used -> 20 000
+   // amount = amount + used -> 22 000 + 2 000 = 24 000 for next month
+   // Do commit and rollback
+
+   //12942
+//    27 750 - 741.54 = 27 008.46
+//    27750 - 27008.46 = 741.54
+//    NM: 27750 + 27008.46 = 54758.46
+
+
+// print_r($get_budget_amounts['results']);
+// print_r($budget_used);
+
+die();
+
+
+// function start($budget_amounts, $budget_serials, $budget_used, $budget_names)
+// {
+// 	$under_budget = array();
+// 	$over_budget = array();
+
+// 	foreach ($budget_serials as $serial) 
+// 	{
+// 		$amount = $budget_amounts[$serial];
+// 		if (isset($budget_used[$serial]))
+// 		{
+// 			$used_total = $budget_used[$serial];
+// 		} 
+// 		else 
+// 		{
+// 			$used_total = 0;
+// 		}
+// 		$name = $budget_names[$serial];
+
+// 		$diff = $amount - $used_total;
+
+// 		if ($diff < 0)
+// 		{
+// 			$over_budget[$serial] = $diff;
+// 		}
+// 		else
+// 		{
+// 			$under_budget[$serial] = array("amount" => $amount, "used_total" => $used_total, "diff" => $diff);
+// 		}
+
+// 		//echo "Serial: " . $name . " -> " . $serial . " -> . " . $amount . " -> " . $used_total . " === " . $diff . "\n";
+// 	}
+
+// 	// Output overbudget items
+// 	/*
+// 	log_event("OVERBUDGET" . "\n\n" . str_pad("Budget Name", 60)  . str_pad("Serial", 20, " ", STR_PAD_LEFT) . str_pad("Budget Total", 20, " ", STR_PAD_LEFT) . str_pad("Used Total", 20, " ", STR_PAD_LEFT) . str_pad("NETT", 20, " ", STR_PAD_LEFT));
+// 	foreach ($over_budget as $serial => $diff) 
+// 	{
+// 		$amount = $budget_amounts[$serial];
+// 		$used_total = $budget_used[$serial];
+// 		$name = $budget_names[$serial];
+
+// 		$diff = $amount - $used_total;
+
+// 		log_event(str_pad($name, 60)  . str_pad($serial, 20, " ", STR_PAD_LEFT) . str_pad($amount, 20, " ", STR_PAD_LEFT) . str_pad($used_total, 20, " ", STR_PAD_LEFT) . str_pad($diff, 20, " ", STR_PAD_LEFT));
+// 	}
+// 	*/
+
+// 	// Update budget tables
+// 	move_budgets($under_budget, $budget_used, $budget_names);
+// }
+
+// function move_budgets($under_budget)
+// {
+// 	global $year2425;
+
+// 	$conn = oci_conn();
+
+// 	// Get current and next month
+// 	$month_index = date("m");
+// 	$current_month = date("mY");
+// 	$next_month = date("mY", strtotime("+1 month"));
+// 	$get_run_dates = $year2425[$month_index];
+// 	$prep_for_array = str_replace("'", "", $get_run_dates);
+// 	$run_dates = explode(",", $prep_for_array);
+
+// 	foreach($run_dates as $run_date)
+// 	{
+// 		echo "Run Date: " . $run_date . "\n";
+		
+// 	}
+
+
+// 	echo "Current Month: " . $current_month . " - " . $prep_for_array . "\n";
+
+// 	// Remove from current budget
+// 	// Work out the expected value after the update
+// 	// Do the update
+// 	// Read the value back and check it is correct
+// 	// Commit or rollback
+
+
+// 	// print_r($under_budget);
+// 	$expected_total_after_minus = 0;
+
+// 	// print_r($under_budget);
+// 	// die();
+
+// 	$count = 0;
+
+// 	// print_r($under_budget);
+// 	// die();
+// 	foreach ($under_budget as $serial => $value) 
+// 	{
+// 		if ($count == 2)
+// 		{
+// 			break;
+// 		}
+// 		$amount = $value['amount'];
+// 		$used_total = $value['used_total'];
+// 		$diff = $value['diff'];
+
+// 		$expected_total_after_minus	= $amount - $diff;
+// 		echo "XXX: $serial >>>  $expected_total_after_minus\n";
+
+// 		foreach ($run_dates as $run_date)
+// 		{
+// 			$sql = "SELECT total FROM purchase_running6 WHERE serial = " . $serial . " AND rundate = '" . $run_date . "';";
+// 			$total = 19406.6;
+// 			echo $sql . "\n";
+// 			$sql = "UPDATE purchase_budget SET amount = " . $total . " WHERE serial = " . $serial . " AND rundate = '" . $run_date . "';";
+// 			echo $sql . "\n";
+// 			// $cursor = oci_parse($conn, $sql);
+// 			// oci_execute($cursor);
+// 			// oci_free_statement($cursor);
+// 		}
+// 		$sql = "UPDATE purchase_budget SET amount = amount + " . $diff . "  WHERE serial = " . $serial . " AND rundate = '" . $next_month . "';";
+
+// 		echo $sql . "\n";
+
+// 		// $sql = "UPDATE purchase_budget SET amount=amount-2000 WHERE serial = " . $serial . " AND rundate = '" . $current_month . "';";
+// 		// $cursor = oci_parse($conn, $sql);
+// 		// oci_execute($cursor);
+
+// 		// oci_free_statement($cursor);
+		
+// 		$expected_total_after_minus = 0;
+
+// 		$count++;
+// 	}
+	
+
+// 	oci_close($conn);
+// }
