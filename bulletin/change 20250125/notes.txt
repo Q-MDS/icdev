@@ -1,0 +1,44 @@
+Problem: Not all users have to do the tech bulletin thing
+
+Solution: Get the users clocking group and if in array show
+
+select 
+    ctm_ref_user,
+    ctm_ref_roster_group
+from clocking_roster_group_members A
+where ctm_end_date is null;
+GROUPS INCLUDED
+82
+83
+95
+31
+35
+30
+58
+29
+43
+44
+72
+32
+33
+34
+80
+84
+85
+77
+36
+78
+76
+62
+64
+63
+71
+68
+61
+69
+66
+67
+65
+70
+81
+93

@@ -5,6 +5,83 @@
 |_____\___/ \__, |
             |___/ 
 
+
 --- START --------------------------------------------------------------------------------------------------------------------------------
-[2025-01-24 14:31:12]
+[2025-01-28 07:07:30]
+
+From ZAZACAPETOWN to ZAZAJOHANNESBURG
+Search Date: 2025-01-28
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+Intercape has route 0429 running but CTK does not have it
+Please check IC route 0429 on 2025-01-28 - No Intercape
+
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+CTK has route 1639 running but Intercape does not have it
+Please check CTK route 1639 on 2025-01-28 - No CTK
+
+CTK has route 0105 running but Intercape does not have it
+Please check CTK route 0105 on 2025-01-28 - No CTK
+
+CTK has route 2615 running but Intercape does not have it
+Please check CTK route 2615 on 2025-01-28 - No CTK
+
+CTK has route 2105 running but Intercape does not have it
+Please check CTK route 2105 on 2025-01-28 - No CTK
+
+CTK has route 0221 running but Intercape does not have it
+Please check CTK route 0221 on 2025-01-28 - No CTK
+
+------------
+CARRIERS LIST
+------------
+["FF Gertse","FF Gertse","Delta Coaches","Delta Coaches","African People Mover WC","Eagle Liner Transport","Intercity Xpress","African People Mover WC","African People Mover WC","Intercape Budgetliner","Intercape Mainliner","Greyhound Premium","Intercape Sleepliner","Intercape Sleepliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-28 07:07:57]
+
+No services available for this route/date combination: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 2025-01-28
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-28 07:08:12]
+
+From ZAZACAPETOWN to ZAZAJOHANNESBURG
+Search Date: 2025-01-28
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+Intercape has route 0429 running but CTK does not have it
+Please check IC route 0429 on 2025-01-28 - No Intercape
+
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+CTK has route 1639 running but Intercape does not have it
+Please check CTK route 1639 on 2025-01-28 - No CTK
+
+CTK has route 0105 running but Intercape does not have it
+Please check CTK route 0105 on 2025-01-28 - No CTK
+
+CTK has route 2615 running but Intercape does not have it
+Please check CTK route 2615 on 2025-01-28 - No CTK
+
+CTK has route 2105 running but Intercape does not have it
+Please check CTK route 2105 on 2025-01-28 - No CTK
+
+CTK has route 0221 running but Intercape does not have it
+Please check CTK route 0221 on 2025-01-28 - No CTK
+
+------------
+CARRIERS LIST
+------------
+["FF Gertse","FF Gertse","Delta Coaches","Delta Coaches","African People Mover WC","Eagle Liner Transport","Intercity Xpress","African People Mover WC","African People Mover WC","Intercape Budgetliner","Intercape Mainliner","Greyhound Premium","Intercape Sleepliner","Intercape Sleepliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
 

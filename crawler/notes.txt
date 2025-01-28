@@ -63,3 +63,8 @@ TODO 20250124
 const browser = await puppeteer.launch({ headless: true,    args: ['--no-sandbox'] });
 
 "No services available "" - when NOTHING comes back from computicket - when this happens, you must still do the check to see if our bus is running that day.
+
+Error log
+1. App cant run - Node server not running
+2. No data from crawler
+3. Missing routes etc.
