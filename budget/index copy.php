@@ -83,7 +83,6 @@ function oci_conn()
 
 function get_budget_serials($month)
 {
-	echo "XXX: $month\n";
 	global $range_budget;
 
 	$conn = oci_conn();
@@ -192,64 +191,26 @@ function get_budget_spend($month, $serial)
 	return $data;
 }
 
-// function upd_budget_amounts($new_budget, $serial)
-// {
-// 	$conn = oci_conn();
-
-// 	foreach ($new_budget as $rundate => $amount) 
-// 	{
-// 		$sql = "UPDATE purchase_budget SET amount = :amount WHERE rundate = :rundate AND serial = :serial";
-	
-// 		$cursor = oci_parse($conn, $sql);
-	
-// 		// Bind variables to prevent SQL injection
-// 		oci_bind_by_name($cursor, ':amount', $amount);
-// 		oci_bind_by_name($cursor, ':rundate', $rundate);
-// 		oci_bind_by_name($cursor, ':serial', $serial);
-	
-// 		oci_execute($cursor);
-	
-// 		// Free the statement resource
-// 		oci_free_statement($cursor);
-// 	}
-// }
-
 function upd_budget_amounts($new_budget, $serial)
 {
-    $conn = oci_conn();
+	$conn = oci_conn();
 
-    try {
-        foreach ($new_budget as $rundate => $amount) {
-            $sql = "UPDATE purchase_budget SET amount = :amount WHERE rundate = :rundate AND serial = :serial";
-        
-            $cursor = oci_parse($conn, $sql);
-        
-            // Bind variables to prevent SQL injection
-            oci_bind_by_name($cursor, ':amount', $amount);
-            oci_bind_by_name($cursor, ':rundate', $rundate);
-            oci_bind_by_name($cursor, ':serial', $serial);
-        
-            oci_execute($cursor);
-        
-            // Free the statement resource
-            oci_free_statement($cursor);
-        }
-
-        // Commit the transaction
-        oci_commit($conn);
-        // Return success result
-        return ['status' => 'success', 'message' => 'Transaction committed successfully.'];
-    } catch (Exception $e) {
-        // Rollback the transaction in case of an error
-        oci_rollback($conn);
-        // Log the error message
-        error_log("Error updating budget amounts: " . $e->getMessage());
-        // Return failure result
-        return ['status' => 'error', 'message' => 'Transaction rolled back due to an error: ' . $e->getMessage()];
-    } finally {
-        // Close the connection
-        oci_close($conn);
-    }
+	foreach ($new_budget as $rundate => $amount) 
+	{
+		$sql = "UPDATE purchase_budget SET amount = :amount WHERE rundate = :rundate AND serial = :serial";
+	
+		$cursor = oci_parse($conn, $sql);
+	
+		// Bind variables to prevent SQL injection
+		oci_bind_by_name($cursor, ':amount', $amount);
+		oci_bind_by_name($cursor, ':rundate', $rundate);
+		oci_bind_by_name($cursor, ':serial', $serial);
+	
+		oci_execute($cursor);
+	
+		// Free the statement resource
+		oci_free_statement($cursor);
+	}
 }
 
 function get_budget_names()
@@ -276,10 +237,157 @@ function get_budget_names()
 	return $result;
 }
 
-function log_event($message) 
+// $work_months = array('122024', '012025', '022025', '032025', '042025');
+// $spend_months = array('202501', '202502', '202503', '202504', '202505','202406','202507','202508','202509','202510','202511');
+
+
+
+if (isset($_GET['m']))
 {
-	/*$now = date('Y-m-d_H_i_s');
-    $log_file = $now . '_budget_update_report.log';*/
+	$month = $_GET['m'];
+	$work_month_budget = '122024';
+	$work_month_spend = '202412';
+	$next_month_budget = '012025';
+	// $next_month_spend = '202501';
+
+	$budget_serials = get_budget_serials($month);
+
+	$i = 1;
+	foreach ($budget_serials as $serial)
+	{
+		if ($i < 2)
+		{
+			$budget_names = get_budget_names();
+			$budget_amounts = get_budget_amounts($month, $serial);
+			$new_budget = $budget_amounts;
+			$budget_spend = get_budget_spend($month, $serial);
+
+			echo "Budget Amounts<br>";
+	print_r($budget_amounts);
+	print_r($budget_spend);
+
+	$total_budget = array_sum($budget_amounts);
+	$total_used = array_sum($budget_spend);
+
+	// Get YTD budget
+	$ytd_budget_amount = 0;
+	$ytd_budget = array();
+	foreach ($budget_amounts as $month => $amount) {
+		// Check if the month is in the same year and before or equal to the target month
+		if (substr($month, 2) === substr($work_month_budget, 2) && $month <= $work_month_budget) {
+			
+			$ytd_budget_amount += $amount;
+			if (!isset($ytd_budget[$month])) {
+				$ytd_budget[$month] = 0;
+			}
+	
+			$ytd_budget[$month] += $ytd_budget_amount;
+		}
+	}
+
+	// Get YTD Spend
+	$ytd_spend_amount = 0;
+	$ytd_spend = array();
+	foreach ($budget_spend as $month => $amount) {
+
+		echo "Month: $month > $amount \n";
+		// Check if the month is in the same year and before or equal to the target month
+		if (substr($month, 0, -2) === substr($work_month_spend, 0, -2) && $month <= $work_month_spend) {
+			$ytd_spend_amount += $amount;
+			if (!isset($ytd_spend[$month])) {
+				$ytd_spend[$month] = 0;
+			}
+	
+			$ytd_spend[$month] += $ytd_spend_amount;
+		}
+	}
+
+	$diff = $ytd_budget[$work_month_budget] - $ytd_spend[$work_month_spend];
+	$adjustment = $budget_spend[$work_month_spend] - $diff;
+	// Get work month new budget
+	$work_month_new_budget = $budget_amounts[$work_month_budget] + $adjustment;
+	// Get next month new budget
+	echo "XXX: " . $next_month_budget . " >>> " . $budget_amounts[$next_month_budget] . " >>> " . $adjustment;
+	$next_month_new_budget = $budget_amounts[$next_month_budget] - $adjustment;
+	
+
+	echo "Total budget: $total_budget\n";
+	echo "Total used: $total_used\n";
+	print_r($ytd_budget);
+	print_r($ytd_spend);
+
+	echo "Year-to-date total for $work_month_budget: " . array_sum($ytd_budget) . "\n";
+	echo "Year-to-date total for $work_month_spend: " . array_sum($ytd_spend) . "\n";
+	
+	echo "DIFF: $diff \n";
+	echo "ADJUSTMENT: $adjustment \n";
+	echo "WORK NEW BUDGET: $work_month_new_budget \n";
+	echo "NEXT NEW BUDGET: $next_month_new_budget \n";
+	print_r($new_budget);
+	$new_budget[$work_month_budget] = $work_month_new_budget;
+	$new_budget[$next_month_budget] = $next_month_new_budget;
+	print_r($new_budget);
+
+
+	// Borrow
+	// Calculate the total sum
+	$total_sum = array_sum($new_budget);
+
+	// Check if the second last item is negative
+	$keys = array_keys($new_budget);
+	$second_last_key = $keys[count($keys) - 2];
+	$last_key = $keys[count($keys) - 1];
+	$last_value = $new_budget[$last_key];
+
+	if ($new_budget[$second_last_key] < 0) {
+		// Calculate the adjustment needed
+		$adjustment = abs($new_budget[$second_last_key]);
+		$new_budget[$second_last_key] = 0;
+
+		// Adjust the previous items to maintain the total sum
+		for ($i = count($keys) - 3; $i >= 0; $i--) {
+			$key = $keys[$i];
+			if ($new_budget[$key] >= $adjustment) {
+				$new_budget[$key] -= $adjustment;
+				break;
+			} else {
+				$adjustment -= $new_budget[$key];
+				$new_budget[$key] = 0;
+			}
+		}
+
+		// Ensure the total sum remains the same
+		$new_budget[$keys[count($keys) - 1]] = $total_sum - array_sum($new_budget);
+	}
+	$new_budget[$last_key] = $last_value;
+	echo "Boo\n";
+	print_r($new_budget);
+
+	// Update budget table
+	upd_budget_amounts($new_budget, 11888);
+		}
+
+
+		$i++;
+	}
+
+
+
+	
+
+
+	
+}
+else
+{
+	echo "Missing month parameter";
+}
+/**
+ * Param: month
+ */
+
+ function log_event($message) 
+{
     $log_file = 'budget_update_report.log';
 
     $file_handle = fopen($log_file, 'a');
@@ -295,165 +403,6 @@ function log_event($message)
         echo "Error: Unable to open log file.";
     }
 }
-
-// $work_months = array('122024', '012025', '022025', '032025', '042025');
-// $spend_months = array('202501', '202502', '202503', '202504', '202505','202406','202507','202508','202509','202510','202511');
-
-
-
-if (isset($_GET['m']))
-{
-	log_event("- Budget update started: " . date('Y-m-d H:i:s'));
-	
-	$the_month = $_GET['m'];
-	$work_month_budget = '122024';
-	$work_month_spend = '202412';
-	$next_month_budget = '012025';
-	
-	log_event("- Selected date range: " . json_encode($range_budget[$the_month]));
-
-
-	$budget_serials = get_budget_serials($the_month);
-
-	$i = 1;
-	foreach ($budget_serials as $serial)
-	{
-		if ($i < 5)
-		{
-			$budget_names = get_budget_names();
-			$budget_amounts = get_budget_amounts($the_month, $serial);
-			$new_budget = $budget_amounts;
-			$budget_spend = get_budget_spend($the_month, $serial);
-			$budget_name = $budget_names[$serial];
-			// echo "Budget Amounts<br>";
-			// print_r($budget_amounts);
-			// print_r($budget_spend);
-
-			$total_budget = array_sum($budget_amounts);
-			$total_used = array_sum($budget_spend);
-
-			// Get YTD budget
-			$ytd_budget_amount = 0;
-			$ytd_budget = array();
-			foreach ($budget_amounts as $month => $amount) 
-			{
-				// Check if the month is in the same year and before or equal to the target month
-				if (substr($month, 2) === substr($work_month_budget, 2) && $month <= $work_month_budget) 
-				{
-					
-					$ytd_budget_amount += $amount;
-					if (!isset($ytd_budget[$month])) 
-					{
-						$ytd_budget[$month] = 0;
-					}
-			
-					$ytd_budget[$month] += $ytd_budget_amount;
-				}
-			}
-
-			// Get YTD Spend
-			$ytd_spend_amount = 0;
-			$ytd_spend = array();
-			foreach ($budget_spend as $month => $amount) 
-			{
-				//echo "Month: $month > $amount \n";
-				// Check if the month is in the same year and before or equal to the target month
-				if (substr($month, 0, -2) === substr($work_month_spend, 0, -2) && $month <= $work_month_spend) 
-				{
-					$ytd_spend_amount += $amount;
-					if (!isset($ytd_spend[$month])) 
-					{
-						$ytd_spend[$month] = 0;
-					}
-			
-					$ytd_spend[$month] += $ytd_spend_amount;
-				}
-			}
-
-			$diff = $ytd_budget[$work_month_budget] - $ytd_spend[$work_month_spend];
-			$adjustment = $budget_spend[$work_month_spend] - $diff;
-			// Get work month new budget
-			$work_month_new_budget = $budget_amounts[$work_month_budget] + $adjustment;
-			// Get next month new budget
-			// echo "XXX: " . $next_month_budget . " >>> " . $budget_amounts[$next_month_budget] . " >>> " . $adjustment;
-			$next_month_new_budget = $budget_amounts[$next_month_budget] - $adjustment;
-			
-			log_event("- Budget name: " . $budget_name . " - Budget serial: " . $serial . "- Total budget: " . $total_budget . " - Total spend: " . $total_used . " - Difference: " . $total_budget - $total_used);
-
-			// echo "Total budget: $total_budget\n";
-			// echo "Total used: $total_used\n";
-			// print_r($ytd_budget);
-			// print_r($ytd_spend);
-
-			// echo "Year-to-date total for $work_month_budget: " . array_sum($ytd_budget) . "\n";
-			// echo "Year-to-date total for $work_month_spend: " . array_sum($ytd_spend) . "\n";
-			
-			// echo "DIFF: $diff \n";
-			// echo "ADJUSTMENT: $adjustment \n";
-			// echo "WORK NEW BUDGET: $work_month_new_budget \n";
-			// echo "NEXT NEW BUDGET: $next_month_new_budget \n";
-			// print_r($new_budget);
-			$new_budget[$work_month_budget] = $work_month_new_budget;
-			$new_budget[$next_month_budget] = $next_month_new_budget;
-			// print_r($new_budget);
-			
-
-			// Borrow
-			// Calculate the total sum
-			$total_sum = array_sum($new_budget);
-
-			// Check if the second last item is negative
-			$keys = array_keys($new_budget);
-			$second_last_key = $keys[count($keys) - 2];
-			$last_key = $keys[count($keys) - 1];
-			$last_value = $new_budget[$last_key];
-
-			if ($new_budget[$second_last_key] < 0) {
-				// Calculate the adjustment needed
-				$adjustment = abs($new_budget[$second_last_key]);
-				$new_budget[$second_last_key] = 0;
-
-				// Adjust the previous items to maintain the total sum
-				for ($i = count($keys) - 3; $i >= 0; $i--) {
-					$key = $keys[$i];
-					if ($new_budget[$key] >= $adjustment) {
-						$new_budget[$key] -= $adjustment;
-						break;
-					} else {
-						$adjustment -= $new_budget[$key];
-						$new_budget[$key] = 0;
-					}
-				}
-
-				// Ensure the total sum remains the same
-				$new_budget[$keys[count($keys) - 1]] = $total_sum - array_sum($new_budget);
-			}
-			$new_budget[$last_key] = $last_value;
-			// echo "Boo\n";
-			// print_r($new_budget);
-			log_event("- New budget amounts: " . json_encode($new_budget));
-			// Update budget table
-			$result = upd_budget_amounts($new_budget, $serial);
-
-			log_event("- Update result: " . json_encode($result));
-		} 
-		else 
-		{ 
-			break; 
-		}
-
-		$i++;
-	}
-}
-else
-{
-	log_event("Missing month parameter");
-}
-/**
- * Param: month
- */
-
-
 
 function adjust_current_budget($cm_pb, $serial, $total)
 {

@@ -6,82 +6,439 @@
             |___/ 
 
 
+
+
 --- START --------------------------------------------------------------------------------------------------------------------------------
-[2025-01-28 07:07:30]
+[2025-01-29 10:48:23]
 
-From ZAZACAPETOWN to ZAZAJOHANNESBURG
-Search Date: 2025-01-28
-
-CHECK 1: IC has routes that we not listed in the CTK data
---------------------------------------------------------
-Intercape has route 0429 running but CTK does not have it
-Please check IC route 0429 on 2025-01-28 - No Intercape
-
-
-CHECK 2: CTK has a route that IC does not have
-----------------------------------------------
-CTK has route 1639 running but Intercape does not have it
-Please check CTK route 1639 on 2025-01-28 - No CTK
-
-CTK has route 0105 running but Intercape does not have it
-Please check CTK route 0105 on 2025-01-28 - No CTK
-
-CTK has route 2615 running but Intercape does not have it
-Please check CTK route 2615 on 2025-01-28 - No CTK
-
-CTK has route 2105 running but Intercape does not have it
-Please check CTK route 2105 on 2025-01-28 - No CTK
-
-CTK has route 0221 running but Intercape does not have it
-Please check CTK route 0221 on 2025-01-28 - No CTK
-
-------------
-CARRIERS LIST
-------------
-["FF Gertse","FF Gertse","Delta Coaches","Delta Coaches","African People Mover WC","Eagle Liner Transport","Intercity Xpress","African People Mover WC","African People Mover WC","Intercape Budgetliner","Intercape Mainliner","Greyhound Premium","Intercape Sleepliner","Intercape Sleepliner","Intercape Mainliner"]
+CTK - No services. IC has 0429 on 20250129
 
 --- END ----------------------------------------------------------------------------------------------------------------------------------
 
 --- START --------------------------------------------------------------------------------------------------------------------------------
-[2025-01-28 07:07:57]
-
-No services available for this route/date combination: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 2025-01-28
+[2025-01-29 10:51:13]
 
 --- END ----------------------------------------------------------------------------------------------------------------------------------
 
 --- START --------------------------------------------------------------------------------------------------------------------------------
-[2025-01-28 07:08:12]
+[2025-01-29 10:52:07]
 
-From ZAZACAPETOWN to ZAZAJOHANNESBURG
-Search Date: 2025-01-28
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 10:54:23]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 10:56:40]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 10:57:06]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 10:58:27]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 10:58:34]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 10:59:07]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 10:59:17]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 10:59:35]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 10:59:41]
+
+From  to 
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:00:02]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:00:34]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:01:18]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:06:28]
+
+CTK - No services: [0429] ZAZAABERDEENAAA to ZAZAACORNHOEKAAA on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:07:32]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:10:19]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:10:21]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:11:13]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:11:26]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:11:56]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:12:14]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:12:37]
+
+From  to 
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:14:06]
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:14:54]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:16:37]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
 
 CHECK 1: IC has routes that we not listed in the CTK data
 --------------------------------------------------------
 Intercape has route 0429 running but CTK does not have it
-Please check IC route 0429 on 2025-01-28 - No Intercape
+Please check IC route 0429 on 2025-01-29 - No Intercape
 
 
 CHECK 2: CTK has a route that IC does not have
 ----------------------------------------------
-CTK has route 1639 running but Intercape does not have it
-Please check CTK route 1639 on 2025-01-28 - No CTK
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
 
-CTK has route 0105 running but Intercape does not have it
-Please check CTK route 0105 on 2025-01-28 - No CTK
+--- END ----------------------------------------------------------------------------------------------------------------------------------
 
-CTK has route 2615 running but Intercape does not have it
-Please check CTK route 2615 on 2025-01-28 - No CTK
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:18:33]
 
-CTK has route 2105 running but Intercape does not have it
-Please check CTK route 2105 on 2025-01-28 - No CTK
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
 
-CTK has route 0221 running but Intercape does not have it
-Please check CTK route 0221 on 2025-01-28 - No CTK
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:18:59]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:19:39]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+CTK has route 1232 running but Intercape does not have it
+Please check CTK route 1232 on 20250129 - No CTK
 
 ------------
 CARRIERS LIST
 ------------
-["FF Gertse","FF Gertse","Delta Coaches","Delta Coaches","African People Mover WC","Eagle Liner Transport","Intercity Xpress","African People Mover WC","African People Mover WC","Intercape Budgetliner","Intercape Mainliner","Greyhound Premium","Intercape Sleepliner","Intercape Sleepliner","Intercape Mainliner"]
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:21:42]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+Intercape has route 0429 running but CTK does not have it
+Please check IC route 0429 on 20250129 - No Intercape
+
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+CTK has route 1232 running but Intercape does not have it
+Please check CTK route 1232 on 20250129 - No CTK
+
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:32:06]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+IC has 0429 on 20250129. CTK does not have it
+
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+CTK has 0429 on 20250129. Intercape does not have it
+
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 11:32:25]
+
+From ZAZABUTTERWORTH to ZAZABEZVALLEY
+Search Date: 2025-01-29
+
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+IC has 0429 on 20250129. CTK does not have it
+
+
+CHECK 2: CTK has a route that IC does not have
+----------------------------------------------
+CTK has 0429 on 20250129. Intercape does not have it
+
+------------
+CARRIERS LIST
+------------
+["Intercape Budgetliner","Intercape Mainliner","Intercape Mainliner"]
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 12:24:07]
+
+CTK - No services. IC has 0429 on 20250129
+
+--- END ----------------------------------------------------------------------------------------------------------------------------------
+
+--- START --------------------------------------------------------------------------------------------------------------------------------
+[2025-01-29 12:25:24]
 
 --- END ----------------------------------------------------------------------------------------------------------------------------------
 

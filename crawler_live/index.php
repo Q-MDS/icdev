@@ -286,8 +286,33 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 	{
 		$from_stop = $ctk_from;
 		$to_stop = $ctk_to;
-		log_event("No services available for this route/date combination: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
-		$error_log .= "- No services available for this route/date combination: [$route_no] $ctk_from to $ctk_to on $ctk_date";
+		
+		if (isset($data['jsonData']['data']['message'])) 
+		{
+			$bits = explode(",", $route_no);
+
+			foreach ($bits as $ic_route)
+			{
+				$ctk_date = str_replace("-", "", $ctk_date);
+				$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+
+				if ($is_service)
+				{
+					log_event("CTK - No services. IC has $ic_route on $ctk_date\n");
+					$error_log .= "CTK - No services. IC has $ic_route on $ctk_date<br>";
+				}
+				else 
+				{
+					log_event("CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
+					$error_log .= "- CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date<br>";
+
+				}
+			}
+		}
+		else
+		{
+			$error_log .= "- Trips array is invalid or empty. Route: $route_no, from: $ctk_from, to: $ctk_to, date: $ctk_date<br>";
+		}
 
 		return;
 	} 
@@ -299,30 +324,28 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 
 		foreach ($trips as $trip)
 		{
-			if (isset($trip['message'])) 
+			if (isset($data['jsonData']['data']['message'])) 
 			{
-				$from_stop = $ctk_from;
-				$to_stop = $ctk_to;
-				log_event("No services available for this route/date combination: [$route_no] $ctk_from to $ctk_to on $ctk_date");
-				$error_log .= "- No services available for this route/date combination: [$route_no] $ctk_from to $ctk_to on $ctk_date<br>";
-
-				// Check if Intercape has routes running that day
 				$bits = explode(",", $route_no);
+
 				foreach ($bits as $ic_route)
 				{
-					if (!in_array($ic_route, $ctk_routes))
+					$ctk_date = str_replace("-", "", $ctk_date);
+					$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+
+					if ($is_service)
 					{
-						// A route has been isolated as not being in the CTK data
-						// Need to dbl check (is_service) before outputing the log
-						$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
-						{
-							log_event("CTK returned no services BUT Intercape does have $ic_route running. Please check IC route $ic_route on $ctk_date - No CTK" . "\n");
-							$error_log .= "CTK returned no services BUT Intercape does have $ic_route running. Please check IC route $ic_route on $ctk_date - No CTK" . "<br>";
-						}
+						log_event("CTK - No services. IC has $ic_route on $ctk_date\n");
+						$error_log .= "CTK - No services. IC has $ic_route on $ctk_date<br>";
+					}
+					else 
+					{
+						log_event("CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
+						$error_log .= "- CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date<br>";
+
 					}
 				}
 
-				//"No services available "" - when NOTHING comes back from computicket - when this happens, you must still do the check to see if our bus is running that day.
 				continue;
 			}
 			
@@ -400,31 +423,23 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 		
 		$bits = explode(",", $route_no);
 
-		// CHECK ALERTS: START
-		// Get/have a list of all the routes from ctx_compare: 1345, 1346, 949,6450...
-		// Get/have a ;ist of routes from crawler data: 1346, 949,6450...
-		   // do an in_array and with above data 1345 IS NOT in crawler data -> alert - IC has route but compu doesan't have it
-		   // if crawler has a route that compare does not have, then alert - compu has route but IC does not have it
-		// CTK has IC routes 1,2,3,4
-		// Script has routes: 1,2,3,4,5 - means that IC has a route that CTK does not have: ALERT: Intercape has route no 5 running but Computicket does not have it
-		// OR
-		// 1,2,3,4 - nothing to do here
-		// OR
-		// 1,2,3 -means that CTK has a route that IC does not have: ALERT: Computicket has route no 4 running but Intercape does not have it
-
 		// CHECK 1: IC has routes that we not listed in the CTK data
 		log_event("\n" . "CHECK 1: IC has routes that we not listed in the CTK data");
 		log_event("--------------------------------------------------------");
+		
 		foreach ($bits as $ic_route)
 		{
 			if (!in_array($ic_route, $ctk_routes))
 			{
 				// A route has been isolated as not being in the CTK data
 				// Need to dbl check (is_service) before outputing the log
+				$ctk_date = str_replace("-", "", $ctk_date);
 				$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+
+				if ($is_service)
 				{
-					log_event("Intercape has route $ic_route running but CTK does not have it" . "\r\n" . "Please check IC route $ic_route on $ctk_date - No Intercape" . "\n");
-					$error_log .= "- Intercape has route $ic_route running but CTK does not have it. Please check IC route $ic_route on $ctk_date - No Intercape" . "<br>";
+					log_event("IC has $ic_route on $ctk_date. CTK does not have it" . "\n");
+					$error_log .= "- IC has $ic_route on $ctk_date. CTK does not have it" . "<br>";
 				}
 			}
 		}
@@ -434,20 +449,17 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 		log_event("----------------------------------------------");
 		foreach($ctk_routes as $ctk_route)
 		{
-			$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+			// echo "AAA: $ctk_route\n";
+			$ctk_date = str_replace("-", "", $ctk_date);
+			$is_service = is_service($ctk_route, $ctk_date, $from_stop, $to_stop);
+			if ($is_service)
 			{
 				if (!in_array($ctk_route, $bits))
 				{
-					log_event("CTK has route $ctk_route running but Intercape does not have it" . "\r\n" . "Please check CTK route $ctk_route on $ctk_date - No CTK" . "\n");
-					$error_log .= "CTK has route $ctk_route running but Intercape does not have it" . "\r\n" . "Please check CTK route $ctk_route on $ctk_date - No CTK" . "<br>";
+					log_event("CTK has $ic_route on $ctk_date. Intercape does not have it" . "\n");
+					//$error_log .= "CTK has $ic_route on $ctk_date. Intercape does not have it" . "\n";
 				}
 			}
-		}
-
-		// OUTPUT ALL CARRIERS FOUND
-		if (count($carrier_names) > 0)
-		{
-			log_event("------------\n" . "CARRIER LIST" . "\n------------" . "\r\n" . json_encode($carrier_names) . "\r\n");
 		}
 	}
 }
@@ -455,6 +467,9 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 function is_service ($routeno, $date, $from, $to)
 {
 	global $cursor, $conn;
+
+	$date = str_replace("-","",$date);
+
 
 	$av="";
 	if ($routeno==0 || $routeno=="0000")
@@ -511,8 +526,6 @@ function is_service ($routeno, $date, $from, $to)
 
 		if ($data = oci_fetch_assoc($cursor)) 
 		{
-			// $cs=getdata($cursor,0);
-			// $rs=getdata($cursor,1);
 			$cs=$data['COACH_SERIAL'];
 			$rs=$data['ROUTE_SERIAL'];
 
@@ -525,6 +538,7 @@ function is_service ($routeno, $date, $from, $to)
 				{
 					echo "this is for today: select  depart_time from route_stops where route_serial='$rs' order by stop_order\n";
 					$sql ="select depart_time from route_stops where route_serial='$rs' order by stop_order";
+					$cursor = oci_parse($conn, $sql);
 					oci_execute($cursor);
 					
 					if ($data = oci_fetch_assoc($cursor)) 

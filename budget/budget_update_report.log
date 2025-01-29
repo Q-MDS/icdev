@@ -4,141 +4,38 @@
 | |__| (_) | (_| |
 |_____\___/ \__, |
             |___/ 
-
-2025-01-20 07:14:07
-STARTING BUDGET UPDATE
-
-OVERBUDGET
-
-Budget Name                                                               Serial        Budget Total          Used Total                NETT
-RSA Permits                                                                11935              116750              144562              -27812
-RSA Consulting Secretarial                                                 12003                9500               35925              -26425
-NAM Fleet Maintenance - Small Accidents                                    11928           145186.82           312827.73          -167640.91
-RSA Travel - IR                                                            12938               70000            75558.47            -5558.47
-RSA Security - Cash Collections                                            12086              350000           544782.06          -194782.06
-RSA IR - Legal Fees                                                        12036              300660          1649241.49         -1348581.49
-RSA IR - Training                                                          13719                4880                6300               -1420
-RSA Fumigation Coaches - Outsourcing                                       12637           469933.02           561398.83           -91465.81
-RSA Fixed assets - Workshop Equipment                                      11876              550000            615520.4            -65520.4
-RSA Protective Clothing - Technical                                        11915            187539.3           197073.99            -9534.69
-RSA Rental Coaches - Charters                                              12130              420000            970318.2           -550318.2
-RSA HR - Intern Administration Fees                                        13956               35000               62100              -27100
-RSA Inspectorate Cost                                                      12034                8000            17729.89            -9729.89
-NAM Marketing - Advertising                                                12795               42000            76729.12           -34729.12
-MOZ Insurance - Assets and Public Liability                                11905               50000            73542.69           -23542.69
-RSA Refunds                                                                11937           442402.04          2275220.51         -1832818.47
-RSA Technical Entertainment                                                15239               24500            34088.32            -9588.32
-RSA Fleet Maintenance - Units                                              11921          3946720.86          5891276.47         -1944555.61
-RSA Depot Maintenance                                                      12041             2338000          2393412.62           -55412.62
-RSA Refurbs Busses Sold                                                    13696              350000            560963.5           -210963.5
-NAM Legal - Commercial                                                     13778               30000             33803.1             -3803.1
-RSA Cleaning Coaches - Outsourcing                                         11897           148534.58            196255.2           -47720.62
-MOZ Marketing - Advertising                                                12635               16907            87209.33           -70302.33
-NAM Permits                                                                16038               16350               26500              -10150
-RSA Travel - Operational (Core)                                            12115              100119           141936.35           -41817.35
-RSA HR - Advertising                                                       12396                8400            56741.84           -48341.84
-RSA Legal - Commercial                                                     12035              400200           836584.14          -436384.14
-RSA Fleet Maintenance Large Trailers - Parts                               13877               10780             20783.5            -10003.5
-RSA CEO - Subscriptions                                                    12097              105000           110628.75            -5628.75
-2025-01-20 07:18:58
-STARTING BUDGET UPDATE
-
-2025-01-20 07:19:22
-STARTING BUDGET UPDATE
-
-2025-01-20 07:39:23
-STARTING BUDGET UPDATE
-
-2025-01-20 08:06:33
-STARTING BUDGET UPDATE
-
-2025-01-20 08:08:35
-STARTING BUDGET UPDATE
-
-2025-01-20 08:20:16
-STARTING BUDGET UPDATE
-
-2025-01-20 08:20:50
-STARTING BUDGET UPDATE
-
-2025-01-20 08:22:22
-STARTING BUDGET UPDATE
-
-2025-01-20 08:24:58
-STARTING BUDGET UPDATE
-
-2025-01-20 08:25:11
-STARTING BUDGET UPDATE
-
-2025-01-20 08:26:17
-STARTING BUDGET UPDATE
-
-2025-01-20 09:15:53
-STARTING BUDGET UPDATE
-
-2025-01-20 09:24:44
-STARTING BUDGET UPDATE
-
-2025-01-20 09:27:02
-STARTING BUDGET UPDATE
-
-2025-01-20 09:27:24
-STARTING BUDGET UPDATE
-
-2025-01-20 09:30:58
-STARTING BUDGET UPDATE
-
-2025-01-20 09:31:18
-STARTING BUDGET UPDATE
-
-2025-01-20 09:31:40
-STARTING BUDGET UPDATE
-
-2025-01-20 09:32:16
-STARTING BUDGET UPDATE
-
-2025-01-20 09:35:12
-STARTING BUDGET UPDATE
-
-2025-01-20 11:24:24
-STARTING BUDGET UPDATE
-
-2025-01-20 11:24:37
-STARTING BUDGET UPDATE
-
-2025-01-20 11:25:10
-STARTING BUDGET UPDATE
-
-2025-01-20 11:51:30
-STARTING BUDGET UPDATE
-
-2025-01-20 12:00:04
-STARTING BUDGET UPDATE
-
-2025-01-20 12:07:16
-STARTING BUDGET UPDATE
-
-2025-01-21 11:30:58
-STARTING BUDGET UPDATE
-
-2025-01-21 11:31:32
-STARTING BUDGET UPDATE
-
-2025-01-21 11:32:03
-STARTING BUDGET UPDATE
-
-2025-01-21 11:32:22
-STARTING BUDGET UPDATE
-
-2025-01-21 11:33:14
-STARTING BUDGET UPDATE
-
-2025-01-21 11:46:59
-STARTING BUDGET UPDATE
-
-2025-01-21 11:48:35
-STARTING BUDGET UPDATE
-
-2025-01-21 13:00:44
-STARTING BUDGET UPDATE
-
+- Budget update started: 2025-01-29 15:18:07
+- Selected date range: ["062024","072024","082024","092024","102024","112024","122024","012025"]
+- Budget name: RSA Travel - IR - Budget serial: 12938- Total budget: 80000 - Total spend: 75558.47 - Difference: 4441.53
+- New budget amounts: {"062024":"10000","072024":"10000","082024":"10000","092024":"10000","102024":"10000","112024":"10000","122024":15558.47,"012025":4441.53}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - IT - Budget serial: 12937- Total budget: 176000 - Total spend: 86338.59 - Difference: 89661.41
+- New budget amounts: {"062024":"22000","072024":"22000","082024":"22000","092024":"20338.59","102024":"0","112024":"0","122024":0,"012025":89661.41}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - Inspectorate - Budget serial: 16062- Total budget: 112000 - Total spend: 57062.39 - Difference: 54937.61
+- New budget amounts: {"062024":"14000","072024":"14000","082024":"14000","092024":"14000","102024":"1062.39","112024":"0","122024":0,"012025":54937.61}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - Internal Audit - Budget serial: 12113- Total budget: 77800 - Total spend: 10111 - Difference: 67689
+- New budget amounts: {"062024":"9800","072024":311,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":67689}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - Logistics - Budget serial: 12116- Total budget: 14000 - Total spend: 0 - Difference: 14000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":14000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - Maintenance - Budget serial: 13736- Total budget: 52500 - Total spend: 26305.8 - Difference: 26194.2
+- New budget amounts: {"062024":"7500","072024":"7500","082024":"7500","092024":3805.7999999999993,"102024":0,"112024":0,"122024":0,"012025":26194.2}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - Management Meetings - Budget serial: 12105- Total budget: 177500 - Total spend: 72400 - Difference: 105100
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":72400,"102024":0,"112024":0,"122024":0,"012025":105100}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - OHS - Budget serial: 15738- Total budget: 40000 - Total spend: 2520 - Difference: 37480
+- New budget amounts: {"062024":"0","072024":2520,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":37480}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - Operational (Core) - Budget serial: 12115- Total budget: 104136 - Total spend: 141936.35 - Difference: -37800.35
+- New budget amounts: {"062024":"24517","072024":"2517","082024":"23767","092024":"11017","102024":"20517","112024":"5267","122024":54334.350000000006,"012025":-37800.350000000006}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - Procurement - Budget serial: 13096- Total budget: 157000 - Total spend: 47122.41 - Difference: 109877.59
+- New budget amounts: {"062024":"18500","072024":"18500","082024":10122.410000000003,"092024":0,"102024":0,"112024":0,"122024":0,"012025":109877.59}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+- Budget name: RSA Travel - Technical - Budget serial: 12117- Total budget: 480000 - Total spend: 312214.47 - Difference: 167785.53
+- New budget amounts: {"062024":"60000","072024":"60000","082024":"60000","092024":"60000","102024":"60000","112024":12214.469999999972,"122024":0,"012025":167785.53000000003}
+- Update result: {"status":"success","message":"Transaction committed successfully."}

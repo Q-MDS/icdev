@@ -1,50 +1,68 @@
 <?php
-/**
- * https://computicket.com/travel/busses/search?from=ZAZABUTTERWORTH&to=ZAZAJOHANNESBURG&date=2024-11-08&adult=1&senior=0&child=0&student=0&sapsandf=0
- * 
- * PHASE 1: COLLECT -> RUN -> OUTPUT
- * √. Read data from ctk_compare
- * √. Build array of calls
- * 3. Run calls/simulate run_capture on dev setup
- * 4. Output results to table : CTK_TEMP
- * 5. Check that run has completed
- * PHASE 2: ANALYSE AND PUT IN CTK_LOG
- * 1. ...
- */
-$tot_days = 1;
+ob_start();
+require_once ("/usr/local/www/pages/php3/oracle.inc");
+require_once ("/usr/local/www/pages/php3/misc.inc");
+require_once ("/usr/local/www/pages/php3/sec.inc");
+require_once("class.html.mime.mail.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+
+// Ajust for 7, 14, 21
+if (!isset($tot_days) || !is_numeric($tot_days)) {
+	$tot_days = 7;
+}
+if ($tot_days > 93) {
+	$tot_days = 93;
+}
+if (!isset($start_date)) {
+	$start_date = date("Y-m-d");
+}
+
 $compare_list = array();
 $carrier_list = array();
 $carriers_not_found = array();
 $ctk_stops = array();
 $batch = array();
 
-function oci_conn()
+set_time_limit(0);
+
+function get_single_list($route, $from, $to)
 {
-	$host = 'localhost';
-	$port = '1521';
-	$sid = 'XE';
-	$username = 'SYSTEM';
-	$password = 'dontletmedown3';
+        global $conn;
 
-	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
+        $sql = "SELECT
+                '$route' AS ROUTE,
+                stop_from_table.STOP_NUMBER AS STOP_FROM,
+		stop_from_table.STOP_NAME as FROM_NAME,
+                stop_from_table.STOP_ZAZA AS STOP_FROM_NAME,
+                stop_to_table.STOP_NUMBER STOP_TO,
+		stop_to_table.STOP_NAME as TO_NAME,
+                stop_to_table.STOP_ZAZA AS STOP_TO_NAME
+        FROM
+                CTK_STOPS stop_from_table, CTK_STOPS stop_to_table
+        WHERE
+                (stop_from_table.stop_number='$from')
+        AND
+                (stop_to_table.stop_number='$to')
+        ";
 
-	if (!$conn) 
-	{
-		$e = oci_error();
-		// echo "Connection failed: " . $e['message'];
-		exit;
-	} 
-	else 
-	{
-		// echo "Connection succeeded";
-	}
+        $cursor = oci_parse($conn, $sql);
+        oci_execute($cursor);
 
-	return $conn;
+        while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS))
+        {
+                $compare_list[] = $row;
+        }
+
+        oci_free_statement($cursor);
+
+        return $compare_list;
 }
 
 function get_compare_list()
 {
-	$conn = oci_conn();
+	global $conn;
 
 	$sql = "SELECT 
 		main_table.ROUTE,
@@ -59,7 +77,9 @@ function get_compare_list()
 	LEFT JOIN 
 		CTK_STOPS stop_from_table ON main_table.STOP_FROM = stop_from_table.STOP_NUMBER
 	LEFT JOIN 
-		CTK_STOPS stop_to_table ON main_table.STOP_TO = stop_to_table.STOP_NUMBER
+		CTK_STOPS stop_to_table ON main_table.STOP_TO = stop_to_table.STOP_NUMBER 
+	WHERE 
+    	ROWNUM <= 2
 	";
 		
 	$cursor = oci_parse($conn, $sql);
@@ -71,16 +91,13 @@ function get_compare_list()
 	}
 
 	oci_free_statement($cursor);
-	oci_close($conn);
 
 	return $compare_list;
 }
 
 function carrier_list()
 {
-	global $carrier_list;
-
-	$conn = oci_conn();
+	global $conn, $carrier_list;
 
 	$results = array();
 
@@ -95,14 +112,13 @@ function carrier_list()
 	}
 
 	oci_free_statement($cursor);
-	oci_close($conn);
 
 	$carrier_list = $results;
 }
 
 function get_ctk_stops()
 {
-	$conn = oci_conn();
+	global $conn;
 
 	$results = array();
 
@@ -117,18 +133,17 @@ function get_ctk_stops()
 	}
 
 	oci_free_statement($cursor);
-	oci_close($conn);
 
 	return $results;
 }
 
 function build_batch($compare_list)
 {
-	global $tot_days;
+	global $tot_days, $start_date;
 
 	$dup_array = array();
 
-	$today = date('Y-m-d');
+	// $today = date('Y-m-d');
 
 	foreach($compare_list as $compare)
 	{
@@ -157,14 +172,14 @@ function build_batch($compare_list)
 
 		foreach ($routes as $route) 
 		{
-			$route = sprintf("%04d", $route); 
+			$route = sprintf("%04d", $route);
 			$route_str .= $route . ",";
 		}
 		$route_str = rtrim($route_str, ',');
 
 		for ($i=0; $i < $tot_days; $i++) 
 		{ 
-			$date = date('Y-m-d', strtotime($today . ' + ' . $i . ' days'));
+			$date = date('Y-m-d', strtotime($start_date . ' + ' . $i . ' days'));
 
 			$batch[] = array(
 				'route' => $route_str,
@@ -185,7 +200,7 @@ function build_batch($compare_list)
 
 function start($trips)
 {
-	global $carriers_not_found, $error_log;
+	global $error_log;
 	
 	$start_ts = time();
 
@@ -194,18 +209,6 @@ function start($trips)
 	foreach ($trips as $trip)
 	{
 		crawl($trip['route'], $trip['from'], $trip['to'], $trip['date'], $trip['from_name'], $trip['to_name']);
-	}
-	
-	$carriers_not_found = array_unique($carriers_not_found);
-	$carriers_not_found = array_values($carriers_not_found);
-	
-	if (count($carriers_not_found) > 0)
-	{
-		foreach ($carriers_not_found as $carrier) 
-		{
-			addToCtkCarriers($carrier);
-		}
-		log_event("Added new carriers to CTK_CARRIERS " . json_encode($carriers_not_found));
 	}
 
 	log_event("--- END ----------------------------------------------------------------------------------------------------------------------------------" . "\r\n");
@@ -221,9 +224,8 @@ function start($trips)
 	if ($error_log != "")
 	{ 
 		echo "<br>Sending error log email<br>";
-		//send_error_email($error_log);
+		send_error_email($error_log);
 		echo "Email sent<br><br>";
-		echo "\n\nLLL: $error_log\n\n";
 	}
 
 	echo "Completed " . date("Y-m-d H:i:s") . " Took: {$hours} hours, {$minutes} minutes, {$seconds} seconds" . "\n";
@@ -232,50 +234,38 @@ function start($trips)
 function crawl($route_no, $ctk_from, $ctk_to, $ctk_date, $from_name, $to_name)
 {
 	global $error_log;
-	
-	/*$data = json_encode(['from' => $ctk_from, 'to' => $ctk_to, 'date' => $ctk_date]);
 
-	
-	$ch = curl_init('http://localhost:3000/run-capture');
+	$data = json_encode(['from' => $ctk_from, 'to' => $ctk_to, 'date' => $ctk_date]);
+
+	$ch = curl_init('http://10.50.0.180:3001/run-capture');
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 	curl_setopt($ch, CURLOPT_POST, true);
 	curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-	
+
 	$response = curl_exec($ch);
-	
+
 	// Check for cURL errors
-    if (curl_errno($ch)) 
+	if (curl_errno($ch)) 
 	{
-        $error_msg = curl_error($ch);
+		$error_msg = curl_error($ch);
 		$error_log .= '- CURL error: ' . $error_msg . "\n";
-    } 
+	} 
 	else 
 	{
-        // Analyse and save to the database
-		// No service found. This is no config because I use wonky from and to names but the message part of the response is correct/there
-		$response = '{"jsonData":{"type":"avalibilityResponse","data":{"metadata":{"gwtt":117,"catproductId":"0","urlOnCreate":"computicket.com","messageId":"1737725247345-1737725247115-2zzsz9dm9uey16t57o2wy-availability","channelType":"WEB","sessionId":"1737725247115-2zzsz9dm9uey16t57o2wy","userName":"computicket.com","userId":"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1","profileId":"0","width":800,"operation":"availability","channelId":"1960","productType":"bus","height":600,"username":"computicket.com"},"error":true,"message":"config missing [store:config:buses:routeCarrierMap:ZAZAABERDEENAAA:ZAZAACORNHOEKAAA]"}}}';
-		// Intercape Budgetliner, mainliner
+		// Test data
 		// $response = '{"jsonData":{"type":"avalibilityResponse","data":{"metadata":{"gwtt":6,"catproductId":"0","urlOnCreate":"computicket.com","messageId":"1737720417500-1737720417218-g2uhuv88qibwcdneyfy9ho-availability","channelType":"WEB","sessionId":"1737720417218-g2uhuv88qibwcdneyfy9ho","userName":"computicket.com","userId":"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1","cacheTime":1737720040343,"profileId":"0","width":800,"operation":"availability","channelId":"1960","productType":"bus","height":600,"username":"computicket.com"},"availability":[{"totalDuration":"16h15m","travelTime":58500000,"serviceNumber":"IB1232","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_budgetliner_s2HhDfBjdxsksoriXMEjHd.png","routeDesc":"Butterworth to Johannesburg","carrierName":"Intercape Budgetliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 08:30:00","dateTimeMS":1737793800000},"price":{"totalPrice":490,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":490,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p541Eue394oUPmsL04fQvw.ZfnZiQt3LnMPWBYAgyKRJ7Ws7gYW3jIHnjBhXzaJD50Wq8nCDXZZmVC6eKHl.o3v8sAPU.EPy.wgKbJ1Y34bXBKaCcBfJA3B6D.36HL48iIElGvBgdNSfxGTHhKqSF7E3sqmjsa79FK2LZGvQ","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Ellerines, High Street","province":"Butterworth","citycode":"ZAZABUTTERWORTH","city":"Butterworth","description":"Ellerines, High Street","suburb":"Butterworth","id":1223,"remotecode":"BUTTERWORTH"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 16:15:00","dateTimeMS":1737735300000}},{"totalDuration":"14h25m","travelTime":51900000,"serviceNumber":"IM0250","availableSeats":5,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Butterworth to Johannesburg","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 05:30:00","dateTimeMS":1737783000000},"price":{"totalPrice":610,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":610,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p541Eue394oQGl8L04fQvw.ZfnZiQt3vmN.WJYwkxLBJ7Ws7gZ2jmK33qCRP9a5X50Wq8nCDXZZmVC6eKHl.o3v8sAPU.EPy.wgKbJ1Y34bXBKaOdBfJA3B6D.36HL48iIERGvBgdNSXxGznhKqSF7E3sqmjsa79FJGPZHPY","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Ellerines, High Street","province":"Butterworth","citycode":"ZAZABUTTERWORTH","city":"Butterworth","description":"Ellerines, High Street","suburb":"Butterworth","id":1223,"remotecode":"BUTTERWORTH"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 15:05:00","dateTimeMS":1737731100000}},{"totalDuration":"16h45m","travelTime":60300000,"serviceNumber":"IM9037","availableSeats":4,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Butterworth to Bez Valley","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"1 Fourth Street, Albertina Sisulu Road (Bezuidenhout Valley)","province":"Bez Valley","citycode":"ZAZABEZVALLEY","city":"Bez Valley","description":"1 Fourth Street, Albertina Sisulu Road ( Bezuidenhout Valley )","suburb":"Bez Valley","id":45572,"remotecode":"BEZ VALLEY"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 07:50:00","dateTimeMS":1737791400000},"price":{"totalPrice":1540,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":1540,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Eue3664wKm8L04fQvw.ZfnZiQsn7nNfaAZgs5MAZzVM3jYW7gI3nuBhH3a46Wxmu8jTfSfYSTF8LlEUqAyfAuCeMkaJzI3QWbJFEz4bLFLaadHfBAwxmD.HmCLooiIEFFoRgAKSLoHSWQNsjylmLOpVCnb981WWDc","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Ellerines, High Street","province":"Butterworth","citycode":"ZAZABUTTERWORTH","city":"Butterworth","description":"Ellerines, High Street","suburb":"Butterworth","id":1223,"remotecode":"BUTTERWORTH"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 15:05:00","dateTimeMS":1737731100000}}]}}}';
-		// $response = '{"jsonData":{"type":"avalibilityResponse","data":{"metadata":{"gwtt":6,"catproductId":"0","urlOnCreate":"computicket.com","messageId":"1737720117983-1737720117511-wkv3csubejqzc7m7dh4p-availability","channelType":"WEB","sessionId":"1737720117511-wkv3csubejqzc7m7dh4p","userName":"computicket.com","userId":"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1","cacheTime":1737720040343,"profileId":"0","width":800,"operation":"availability","channelId":"1960","productType":"bus","height":600,"username":"computicket.com"},"availability":[{"totalDuration":"16h15m","travelTime":58500000,"serviceNumber":"IB1232","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_budgetliner_s2HhDfBjdxsksoriXMEjHd.png","routeDesc":"Butterworth to Johannesburg","carrierName":"Intercape Budgetliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 08:30:00","dateTimeMS":1737793800000},"price":{"totalPrice":490,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":490,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p541Eue394oUPmsL04fQvw.ZfnZiQt3LnMPWBYAgyKRJ7Ws7gYW3jIHnjBhXzaJD50Wq8nCDXZZmVC6eKHl.o3v8sAPU.EPy.wgKbJ1Y34bXBKaCcBfJA3B6D.36HL48iIElGvBgdNSfxGTHhKqSF7E3sqmjsa79FK2LZGvQ","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Ellerines, High Street","province":"Butterworth","citycode":"ZAZABUTTERWORTH","city":"Butterworth","description":"Ellerines, High Street","suburb":"Butterworth","id":1223,"remotecode":"BUTTERWORTH"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 16:15:00","dateTimeMS":1737735300000}},{"totalDuration":"14h25m","travelTime":51900000,"serviceNumber":"IM0250","availableSeats":5,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Butterworth to Johannesburg","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 05:30:00","dateTimeMS":1737783000000},"price":{"totalPrice":610,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":610,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p541Eue394oQGl8L04fQvw.ZfnZiQt3vmN.WJYwkxLBJ7Ws7gZ2jmK33qCRP9a5X50Wq8nCDXZZmVC6eKHl.o3v8sAPU.EPy.wgKbJ1Y34bXBKaOdBfJA3B6D.36HL48iIERGvBgdNSXxGznhKqSF7E3sqmjsa79FJGPZHPY","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Ellerines, High Street","province":"Butterworth","citycode":"ZAZABUTTERWORTH","city":"Butterworth","description":"Ellerines, High Street","suburb":"Butterworth","id":1223,"remotecode":"BUTTERWORTH"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 15:05:00","dateTimeMS":1737731100000}},{"totalDuration":"16h45m","travelTime":60300000,"serviceNumber":"IM9037","availableSeats":4,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Butterworth to Bez Valley","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"1 Fourth Street, Albertina Sisulu Road (Bezuidenhout Valley)","province":"Bez Valley","citycode":"ZAZABEZVALLEY","city":"Bez Valley","description":"1 Fourth Street, Albertina Sisulu Road ( Bezuidenhout Valley )","suburb":"Bez Valley","id":45572,"remotecode":"BEZ VALLEY"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 07:50:00","dateTimeMS":1737791400000},"price":{"totalPrice":1540,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":1540,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Eue3664wKm8L04fQvw.ZfnZiQsn7nNfaAZgs5MAZzVM3jYW7gI3nuBhH3a46Wxmu8jTfSfYSTF8LlEUqAyfAuCeMkaJzI3QWbJFEz4bLFLaadHfBAwxmD.HmCLooiIEFFoRgAKSLoHSWQNsjylmLOpVCnb981WWDc","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Ellerines, High Street","province":"Butterworth","citycode":"ZAZABUTTERWORTH","city":"Butterworth","description":"Ellerines, High Street","suburb":"Butterworth","id":1223,"remotecode":"BUTTERWORTH"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 15:05:00","dateTimeMS":1737731100000}}]}}}';
-		
-		// Mixed carriers
 		// $response = '{"jsonData":{"type":"avalibilityResponse","data":{"metadata":{"gwtt":1445,"catproductId":"0","urlOnCreate":"computicket.com","messageId":"1737720419811-1737720419518-kcrftp1bb3hqrs8t7epgxf-availability","channelType":"WEB","sessionId":"1737720419518-kcrftp1bb3hqrs8t7epgxf","userName":"computicket.com","userId":"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1","profileId":"0","width":800,"operation":"availability","channelId":"1960","productType":"bus","height":600,"username":"computicket.com"},"availability":[{"totalDuration":"16h00m","travelTime":57600000,"serviceNumber":"FG3814","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1884/logo_f_f_gertse_ba8Kxyx1AcUeMJb8bAS63u.png","routeDesc":"Cape Town to Johannesburg","carrierName":"FF Gertse","arrive":{"stop":{"country":"South Africa","carrier":"f f gertse","remCheck":"A 41, PARK STATION, RISSIK ST, CBD, JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"A 41, Park Station, Rissik Street, Johannesburg C B D","suburb":"Johannesburg","id":46737,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 07:00:00","dateTimeMS":1737788400000},"price":{"totalPrice":300,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":300,"discountID":"ADULT"}]},"carrierCode":"ffgertse","id":"sMa.p542Euen74ocInsL76ecvw-FNiNCOvnrrKvGJYgo1KQ98QLySAx7wRgSNcQyOE-uV3XGtmyfQYJHqbd-VYSCRrYVTcJZNdZ7V3QCZIFM24rLFL6adAPJdyAGA.XuaX4w6RDY29WZbNVGbHjDgMw","depart":{"stop":{"country":"South Africa","carrier":"f f gertse","remCheck":"1 OLD MARINE DR, FORESHORE","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"1 Old Marine Drive, Foreshore","suburb":"Cape Town","id":46738,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 15:00:00","dateTimeMS":1737730800000}},{"totalDuration":"16h00m","travelTime":57600000,"serviceNumber":"FG3803","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1884/logo_f_f_gertse_ba8Kxyx1AcUeMJb8bAS63u.png","routeDesc":"Cape Town to Johannesburg","carrierName":"FF Gertse","arrive":{"stop":{"country":"South Africa","carrier":"f f gertse","remCheck":"A 41, PARK STATION, RISSIK ST, CBD, JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"A 41, Park Station, Rissik Street, Johannesburg C B D","suburb":"Johannesburg","id":46737,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 10:40:00","dateTimeMS":1737801600000},"price":{"totalPrice":300,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":300,"discountID":"ADULT"}]},"carrierCode":"ffgertse","id":"sMa.p542Euen74ocIm8L76ecvw-FNiNCOvnvsKvGJYw01KQ98QLySAx7wRgSNcQyOE-uV3XGtmyfQYJHqbd-VYSCRrYVTfZJNdZ7V3QCZIFM24rLEKKKdAPJdxgGA.XuaX4w6RDY29WZbNVGbHjDhNA","depart":{"stop":{"country":"South Africa","carrier":"f f gertse","remCheck":"1 OLD MARINE DR, FORESHORE","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"1 Old Marine Drive, Foreshore","suburb":"Cape Town","id":46738,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:40:00","dateTimeMS":1737744000000}},{"totalDuration":"16h20m","travelTime":58800000,"serviceNumber":"DE7527","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1879/logo_delta_coaches_oSddEafjkEwkb1wso7NsYC.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Delta Coaches","arrive":{"stop":{"country":"South Africa","carrier":"delta coaches","remCheck":"PARK STATION, 41 RISSIK STREET , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Park Station, 41 Rissik Street","suburb":"Johannesburg","id":24712,"remotecode":"6117"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 08:30:00","dateTimeMS":1737793800000},"price":{"totalPrice":310,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":310,"discountID":"ADULT"}]},"carrierCode":"deltacoaches","id":"sMa.p542Euen74oMNnsL56uw-0PZRjJ7V4zjyMPeDZBMyLQh-XMziZGr9JH3rCAzybZLjvg3Y-lC1A-TzbtmWZCCQsoNSd5NNdJzN3wiYJVM3.bbYK6edHvJdsB2emQz0Z.NhPTUwux0fLw","depart":{"stop":{"country":"South Africa","carrier":"delta coaches","remCheck":"TRAIN STATION,1 OLD MARINE DRIVE, CAPE TOWN , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Train Station, 1 Old Marine Drive, Cape Town","suburb":"Cape Town","id":24714,"remotecode":"6617"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 16:10:00","dateTimeMS":1737735000000}},{"totalDuration":"17h45m","travelTime":63900000,"serviceNumber":"DE7505","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1879/logo_delta_coaches_oSddEafjkEwkb1wso7NsYC.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Delta Coaches","arrive":{"stop":{"country":"South Africa","carrier":"delta coaches","remCheck":"PARK STATION, 41 RISSIK STREET , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Park Station, 41 Rissik Street","suburb":"Johannesburg","id":24712,"remotecode":"6117"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 11:45:00","dateTimeMS":1737805500000},"price":{"totalPrice":310,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":310,"discountID":"ADULT"}]},"carrierCode":"deltacoaches","id":"sMa.p542Euen74oMNmsL56uw-0PZRjJ7V4zjyMPeBZhMyLQh-XMziYWj9JH3rCAzybZLjvg3Y-lC1A-TzbteXZCCQsoNSd5NNdJzN3gGfIFM3.bbYK6edHvJdsB2emQz0Z.NhPTUwux0dLQ","depart":{"stop":{"country":"South Africa","carrier":"delta coaches","remCheck":"TRAIN STATION,1 OLD MARINE DRIVE, CAPE TOWN , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Train Station, 1 Old Marine Drive, Cape Town","suburb":"Cape Town","id":24714,"remotecode":"6617"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"18h15m","travelTime":65700000,"serviceNumber":"AW1001","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1868/logo_apmwc_u6CwEdB3raDHHTbVdjt3Mc.png","routeDesc":"Cape Town to Johannesburg","carrierName":"African People Mover WC","arrive":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"JOHANNESBURG PARK STATION , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION","suburb":"Johannesburg","id":33440,"remotecode":"3340"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 11:15:00","dateTimeMS":1737803700000},"price":{"totalPrice":360,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":360,"discountID":"ADULT"}]},"carrierCode":"apmwc","id":"sMa.p540Euen744QJn8L8.-090rgP3c2Mq3jvMvqDYQ0yLxJ5Xs3nfmjjJnv3DRH2aZPloQvZ.1W1Aubqbd-VYSCRrYRTdJdIdZ7V3h2YI1Mp4Kq0Kbv5d4EJv1qejByGLo0m","depart":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"RAILWAY STATION , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"RAILWAY STATION","suburb":"Cape Town","id":33420,"remotecode":"3324"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 17:00:00","dateTimeMS":1737738000000}},{"totalDuration":"17h30m","travelTime":63000000,"serviceNumber":"ET3071","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/9421/logo_eagle_liner_transport_1KAksQrwXHhGoH632g6fuz.jpg","routeDesc":"Cape Town to Johannesburg","carrierName":"Eagle Liner Transport","arrive":{"stop":{"country":"South Africa","carrier":"eagle liner transport","remCheck":"JOHANNESBURG PARK STATION (BAY21) ,96 RISSIK ST, JOHANNESBURG, 2000 , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION (BAY21) ,96 RISSIK STREET","suburb":"Johannesburg","id":48121,"remotecode":"10293"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 10:30:00","dateTimeMS":1737801000000},"price":{"totalPrice":400,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":400,"discountID":"ADULT"}]},"carrierCode":"eaglelinertransport","id":"sMa.p542Euen74oMNnsL47ucm1PlXg5jP8jm-abHBPEx1MAx6Ws7-YWLiJ3vtCxf1cZLkoQnf5VS1AO.0ct2XZiWQroNWdJFNdZ7IwgKbJ1Y34bXAKaaeAPJA3B2e-XuHMI06UUBY2G9uYVmqAE2FNNWD8A","depart":{"stop":{"country":"South Africa","carrier":"eagle liner transport","remCheck":"BUS TERMINAL, OLD MARINE DRIVE ,CAPE TOWN STATION, 8001 , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"BUS TERMINAL, OLD MARINE DRIVE ,CAPE TOWN STATION","suburb":"Cape Town","id":48089,"remotecode":"10267"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 17:00:00","dateTimeMS":1737738000000}},{"totalDuration":"18h25m","travelTime":66300000,"serviceNumber":"IX7067","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/6639/logo_intercity_xpress_4wwBPNTXSJHtuZm1HG5EQF.jpg","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercity Xpress","arrive":{"stop":{"country":"South Africa","carrier":"intercity xpress","remCheck":"JOHANNESBURG PARK STATION (BAY21) ,96 RISSIK ST, JOHANNESBURG, 2000 , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION (BAY21) , 96 RISSIK STREET","suburb":"Johannesburg","id":48262,"remotecode":"10293"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 12:25:00","dateTimeMS":1737807900000},"price":{"totalPrice":420,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":420,"discountID":"ADULT"}]},"carrierCode":"intercityxpress","id":"sMa.p540Euen744QImcL04fQvw.ZXmYTF9jm6dLGcZA43KhJ4VM3mYGznJ3P3DhH2apT5og.a8VaoAOb1at-WZiSRp4FSdZZQd57K2gCaJ1Y24rXAKKaAAe9Ewxyd.Wb2L5BDVzIMwl4AUU.rHT7m","depart":{"stop":{"country":"South Africa","carrier":"intercity xpress","remCheck":"BUS TERMINAL, OLD MARINE DRIVE ,CAPE TOWN STATION, 8001 , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"BUS TERMINAL, OLD MARINE DRIVE ,CAPE TOWN STATION","suburb":"Cape Town","id":48230,"remotecode":"10267"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"18h15m","travelTime":65700000,"serviceNumber":"AW1081","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1868/logo_apmwc_u6CwEdB3raDHHTbVdjt3Mc.png","routeDesc":"Cape Town to Johannesburg","carrierName":"African People Mover WC","arrive":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"JOHANNESBURG PARK STATION , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION","suburb":"Johannesburg","id":33440,"remotecode":"3340"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 12:15:00","dateTimeMS":1737807300000},"price":{"totalPrice":470,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":470,"discountID":"ADULT"}]},"carrierCode":"apmwc","id":"sMa.p540Euen744QJm8L8.-090rgP3cWMq3jvP.CCawwwLBJ5Xs3nfmjjJnv3DRH2aZPloQvZ8FW1Aubqbd-VYSCRrYRTd5dIdZ7V3h2fIlMp4Kq0Kbv5d4EJv1qejByGLoUm","depart":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"RAILWAY STATION , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"RAILWAY STATION","suburb":"Cape Town","id":33420,"remotecode":"3324"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"18h55m","travelTime":68100000,"serviceNumber":"AW1010","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1868/logo_apmwc_u6CwEdB3raDHHTbVdjt3Mc.png","routeDesc":"Cape Town to Johannesburg","carrierName":"African People Mover WC","arrive":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"JOHANNESBURG PARK STATION , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION","suburb":"Johannesburg","id":33440,"remotecode":"3340"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 12:55:00","dateTimeMS":1737809700000},"price":{"totalPrice":530,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":530,"discountID":"ADULT"}]},"carrierCode":"apmwc","id":"sMa.p540Euen744QJl8L8.-090rgP3cyNq3jtNPOIYwo5KBJ5Xs3nfmjjJnv3DRH2aZPloQvZ8FW1Aubqbd-VYSCRrYRTd5NIdZ7V3h2eJlMp4Kq0Kbv5d4EJv1qejByGLown","depart":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"RAILWAY STATION , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"RAILWAY STATION","suburb":"Cape Town","id":33420,"remotecode":"3324"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"19h45m","travelTime":71100000,"serviceNumber":"IB1639","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_budgetliner_s2HhDfBjdxsksoriXMEjHd.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Budgetliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 12:45:00","dateTimeMS":1737809100000},"price":{"totalPrice":550,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":550,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Euen744cGmsL04fQvw.ZfnZiQt3.nM.KBYw4xKhJ7Ws7gZmnkIHnjDRf1ZZD50H64jUXRfYGJcqXoHFHu0fQxB.MvAoPK3wKeJVI15LbCKKadAO9CwR6G.XqFK4wlJERFvAUZNSLpHSWQNsjghkjCjWunb9A9X2DS","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 17:00:00","dateTimeMS":1737738000000}},{"totalDuration":"18h30m","travelTime":66600000,"serviceNumber":"IM0105","availableSeats":8,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 13:30:00","dateTimeMS":1737811800000},"price":{"totalPrice":550,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":550,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Euen744AOnsL04fQvw.ZfnZiQt3npMPKBYgk2KBJ7WszkYGPgJn3sDRDzb5r50H64jUXRfYGJcqXoHFHu0fQxB.MvAoPK3wKeJVI15LbMKKadAO9CwR6G.XqFK4wkI0FFvAUcNSLpHSWQNsjghkjCjWunb988WGPe","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 19:00:00","dateTimeMS":1737745200000}},{"totalDuration":"19h00m","travelTime":68400000,"serviceNumber":"GP13379","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1889/logo_greyhound_premium_goGSwKyCM6ycEXaVPCVSrh.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Greyhound Premium","arrive":{"stop":{"country":"South Africa","carrier":"greyhound premium","remCheck":"Park City Transit Centre, 96 Rissik St, Johannesburg CBD , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Park City Transit Centre, 96 Rissik Street, Johannesburg Cbd","suburb":"Johannesburg","id":45668,"remotecode":"8720"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 13:00:00","dateTimeMS":1737810000000},"price":{"totalPrice":650,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":650,"discountID":"ADULT"}]},"carrierCode":"greyhoundpremium","id":"sMa.p542Euen74oMNnML6.eUz2fpLg5nN9C6ybrfcfg8yLghzQM3qY23oInjsCQz8a5Ljvgff-lWoAOb1at-WZiSRp4FSdZZQd57K2gCaJ1Y247fFKKaAAe9GxByd.Wb2L5BDVzIMwl4AX0ftHjvmPg","depart":{"stop":{"country":"South Africa","carrier":"greyhound premium","remCheck":"Long Distance Bus Facility, 1 Old Marine Drive, Cape Town , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Long Distance Bus Facility, 1 Old Marine Drive","suburb":"Cape Town","id":45616,"remotecode":"8717"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"20h15m","travelTime":72900000,"serviceNumber":"IS2615","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_sleepliner_f9xiquDyhsd2A1kKNDsGCv.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Sleepliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 14:45:00","dateTimeMS":1737816300000},"price":{"totalPrice":650,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":650,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Euen744APmML04fQvw.ZfnZiQt3jmNfeJZwg4LRJ7Ws7gZmnjJ3riDBD0a5v50H64jUXRfYGJcqXoHFHu0fQxB.MvAoPK3wKeJVI15LbNK6adAO9CwR6G.XqFK4wjJERFvAUdNSHpHSWQNsjghkjCjWunb8E-X2Le","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:30:00","dateTimeMS":1737743400000}},{"totalDuration":"19h20m","travelTime":69600000,"serviceNumber":"IS2105","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_sleepliner_f9xiquDyhsd2A1kKNDsGCv.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Sleepliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 13:20:00","dateTimeMS":1737811200000},"price":{"totalPrice":690,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":690,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Euen744cGlsL04fQvw.ZfnZiQt3LtM.WGZwk0KhJ7Ws7gZmnjIXjiDBD0a5v50H64jUXRfYGJcqXoHFHu0fQxB.MvAoPK3wKeJVI15LbNKKadAO9CwR6G.XqFK4wkIkFFvAUeNSHlHSWQNsjghkjCjWunb8E-WGPe","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"26h00m","travelTime":93600000,"serviceNumber":"IM0221","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 20:15:00","dateTimeMS":1737836100000},"price":{"totalPrice":860,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":860,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p542Euen744APnML04fQvw.ZfnZiQv3PrP.SBYA0yMA59XMznZ2LnInPjDxDxceCVw3rInCrSfPuNEKfmGl7lzPM3F-FQd57K2gCaJ1c26LbAKKaAAvJCxByC.36FLowiIEFYvgUVLifxbDn8U6L3uEXN7lTHFqA-WA","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:15:00","dateTimeMS":1737742500000}}]}}}';
 		
 		process_data($response, $ctk_date, $route_no,$ctk_from, $ctk_to, $from_name, $to_name);
-    }
+	}
 
-	curl_close($ch);*/
-
-	//$response = '{"jsonData":{"type":"avalibilityResponse","data":{"metadata":{"gwtt":1445,"catproductId":"0","urlOnCreate":"computicket.com","messageId":"1737720419811-1737720419518-kcrftp1bb3hqrs8t7epgxf-availability","channelType":"WEB","sessionId":"1737720419518-kcrftp1bb3hqrs8t7epgxf","userName":"computicket.com","userId":"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1","profileId":"0","width":800,"operation":"availability","channelId":"1960","productType":"bus","height":600,"username":"computicket.com"},"availability":[{"totalDuration":"16h00m","travelTime":57600000,"serviceNumber":"FG3814","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1884/logo_f_f_gertse_ba8Kxyx1AcUeMJb8bAS63u.png","routeDesc":"Cape Town to Johannesburg","carrierName":"FF Gertse","arrive":{"stop":{"country":"South Africa","carrier":"f f gertse","remCheck":"A 41, PARK STATION, RISSIK ST, CBD, JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"A 41, Park Station, Rissik Street, Johannesburg C B D","suburb":"Johannesburg","id":46737,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 07:00:00","dateTimeMS":1737788400000},"price":{"totalPrice":300,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":300,"discountID":"ADULT"}]},"carrierCode":"ffgertse","id":"sMa.p542Euen74ocInsL76ecvw-FNiNCOvnrrKvGJYgo1KQ98QLySAx7wRgSNcQyOE-uV3XGtmyfQYJHqbd-VYSCRrYVTcJZNdZ7V3QCZIFM24rLFL6adAPJdyAGA.XuaX4w6RDY29WZbNVGbHjDgMw","depart":{"stop":{"country":"South Africa","carrier":"f f gertse","remCheck":"1 OLD MARINE DR, FORESHORE","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"1 Old Marine Drive, Foreshore","suburb":"Cape Town","id":46738,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 15:00:00","dateTimeMS":1737730800000}},{"totalDuration":"16h00m","travelTime":57600000,"serviceNumber":"FG3803","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1884/logo_f_f_gertse_ba8Kxyx1AcUeMJb8bAS63u.png","routeDesc":"Cape Town to Johannesburg","carrierName":"FF Gertse","arrive":{"stop":{"country":"South Africa","carrier":"f f gertse","remCheck":"A 41, PARK STATION, RISSIK ST, CBD, JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"A 41, Park Station, Rissik Street, Johannesburg C B D","suburb":"Johannesburg","id":46737,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 10:40:00","dateTimeMS":1737801600000},"price":{"totalPrice":300,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":300,"discountID":"ADULT"}]},"carrierCode":"ffgertse","id":"sMa.p542Euen74ocIm8L76ecvw-FNiNCOvnvsKvGJYw01KQ98QLySAx7wRgSNcQyOE-uV3XGtmyfQYJHqbd-VYSCRrYVTfZJNdZ7V3QCZIFM24rLEKKKdAPJdxgGA.XuaX4w6RDY29WZbNVGbHjDhNA","depart":{"stop":{"country":"South Africa","carrier":"f f gertse","remCheck":"1 OLD MARINE DR, FORESHORE","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"1 Old Marine Drive, Foreshore","suburb":"Cape Town","id":46738,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:40:00","dateTimeMS":1737744000000}},{"totalDuration":"16h20m","travelTime":58800000,"serviceNumber":"DE7527","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1879/logo_delta_coaches_oSddEafjkEwkb1wso7NsYC.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Delta Coaches","arrive":{"stop":{"country":"South Africa","carrier":"delta coaches","remCheck":"PARK STATION, 41 RISSIK STREET , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Park Station, 41 Rissik Street","suburb":"Johannesburg","id":24712,"remotecode":"6117"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 08:30:00","dateTimeMS":1737793800000},"price":{"totalPrice":310,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":310,"discountID":"ADULT"}]},"carrierCode":"deltacoaches","id":"sMa.p542Euen74oMNnsL56uw-0PZRjJ7V4zjyMPeDZBMyLQh-XMziZGr9JH3rCAzybZLjvg3Y-lC1A-TzbtmWZCCQsoNSd5NNdJzN3wiYJVM3.bbYK6edHvJdsB2emQz0Z.NhPTUwux0fLw","depart":{"stop":{"country":"South Africa","carrier":"delta coaches","remCheck":"TRAIN STATION,1 OLD MARINE DRIVE, CAPE TOWN , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Train Station, 1 Old Marine Drive, Cape Town","suburb":"Cape Town","id":24714,"remotecode":"6617"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 16:10:00","dateTimeMS":1737735000000}},{"totalDuration":"17h45m","travelTime":63900000,"serviceNumber":"DE7505","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1879/logo_delta_coaches_oSddEafjkEwkb1wso7NsYC.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Delta Coaches","arrive":{"stop":{"country":"South Africa","carrier":"delta coaches","remCheck":"PARK STATION, 41 RISSIK STREET , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Park Station, 41 Rissik Street","suburb":"Johannesburg","id":24712,"remotecode":"6117"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 11:45:00","dateTimeMS":1737805500000},"price":{"totalPrice":310,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":310,"discountID":"ADULT"}]},"carrierCode":"deltacoaches","id":"sMa.p542Euen74oMNmsL56uw-0PZRjJ7V4zjyMPeBZhMyLQh-XMziYWj9JH3rCAzybZLjvg3Y-lC1A-TzbteXZCCQsoNSd5NNdJzN3gGfIFM3.bbYK6edHvJdsB2emQz0Z.NhPTUwux0dLQ","depart":{"stop":{"country":"South Africa","carrier":"delta coaches","remCheck":"TRAIN STATION,1 OLD MARINE DRIVE, CAPE TOWN , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Train Station, 1 Old Marine Drive, Cape Town","suburb":"Cape Town","id":24714,"remotecode":"6617"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"18h15m","travelTime":65700000,"serviceNumber":"AW1001","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1868/logo_apmwc_u6CwEdB3raDHHTbVdjt3Mc.png","routeDesc":"Cape Town to Johannesburg","carrierName":"African People Mover WC","arrive":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"JOHANNESBURG PARK STATION , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION","suburb":"Johannesburg","id":33440,"remotecode":"3340"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 11:15:00","dateTimeMS":1737803700000},"price":{"totalPrice":360,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":360,"discountID":"ADULT"}]},"carrierCode":"apmwc","id":"sMa.p540Euen744QJn8L8.-090rgP3c2Mq3jvMvqDYQ0yLxJ5Xs3nfmjjJnv3DRH2aZPloQvZ.1W1Aubqbd-VYSCRrYRTdJdIdZ7V3h2YI1Mp4Kq0Kbv5d4EJv1qejByGLo0m","depart":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"RAILWAY STATION , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"RAILWAY STATION","suburb":"Cape Town","id":33420,"remotecode":"3324"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 17:00:00","dateTimeMS":1737738000000}},{"totalDuration":"17h30m","travelTime":63000000,"serviceNumber":"ET3071","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/9421/logo_eagle_liner_transport_1KAksQrwXHhGoH632g6fuz.jpg","routeDesc":"Cape Town to Johannesburg","carrierName":"Eagle Liner Transport","arrive":{"stop":{"country":"South Africa","carrier":"eagle liner transport","remCheck":"JOHANNESBURG PARK STATION (BAY21) ,96 RISSIK ST, JOHANNESBURG, 2000 , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION (BAY21) ,96 RISSIK STREET","suburb":"Johannesburg","id":48121,"remotecode":"10293"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 10:30:00","dateTimeMS":1737801000000},"price":{"totalPrice":400,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":400,"discountID":"ADULT"}]},"carrierCode":"eaglelinertransport","id":"sMa.p542Euen74oMNnsL47ucm1PlXg5jP8jm-abHBPEx1MAx6Ws7-YWLiJ3vtCxf1cZLkoQnf5VS1AO.0ct2XZiWQroNWdJFNdZ7IwgKbJ1Y34bXAKaaeAPJA3B2e-XuHMI06UUBY2G9uYVmqAE2FNNWD8A","depart":{"stop":{"country":"South Africa","carrier":"eagle liner transport","remCheck":"BUS TERMINAL, OLD MARINE DRIVE ,CAPE TOWN STATION, 8001 , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"BUS TERMINAL, OLD MARINE DRIVE ,CAPE TOWN STATION","suburb":"Cape Town","id":48089,"remotecode":"10267"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 17:00:00","dateTimeMS":1737738000000}},{"totalDuration":"18h25m","travelTime":66300000,"serviceNumber":"IX7067","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/6639/logo_intercity_xpress_4wwBPNTXSJHtuZm1HG5EQF.jpg","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercity Xpress","arrive":{"stop":{"country":"South Africa","carrier":"intercity xpress","remCheck":"JOHANNESBURG PARK STATION (BAY21) ,96 RISSIK ST, JOHANNESBURG, 2000 , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION (BAY21) , 96 RISSIK STREET","suburb":"Johannesburg","id":48262,"remotecode":"10293"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 12:25:00","dateTimeMS":1737807900000},"price":{"totalPrice":420,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":420,"discountID":"ADULT"}]},"carrierCode":"intercityxpress","id":"sMa.p540Euen744QImcL04fQvw.ZXmYTF9jm6dLGcZA43KhJ4VM3mYGznJ3P3DhH2apT5og.a8VaoAOb1at-WZiSRp4FSdZZQd57K2gCaJ1Y24rXAKKaAAe9Ewxyd.Wb2L5BDVzIMwl4AUU.rHT7m","depart":{"stop":{"country":"South Africa","carrier":"intercity xpress","remCheck":"BUS TERMINAL, OLD MARINE DRIVE ,CAPE TOWN STATION, 8001 , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"BUS TERMINAL, OLD MARINE DRIVE ,CAPE TOWN STATION","suburb":"Cape Town","id":48230,"remotecode":"10267"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"18h15m","travelTime":65700000,"serviceNumber":"AW1081","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1868/logo_apmwc_u6CwEdB3raDHHTbVdjt3Mc.png","routeDesc":"Cape Town to Johannesburg","carrierName":"African People Mover WC","arrive":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"JOHANNESBURG PARK STATION , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION","suburb":"Johannesburg","id":33440,"remotecode":"3340"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 12:15:00","dateTimeMS":1737807300000},"price":{"totalPrice":470,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":470,"discountID":"ADULT"}]},"carrierCode":"apmwc","id":"sMa.p540Euen744QJm8L8.-090rgP3cWMq3jvP.CCawwwLBJ5Xs3nfmjjJnv3DRH2aZPloQvZ8FW1Aubqbd-VYSCRrYRTd5dIdZ7V3h2fIlMp4Kq0Kbv5d4EJv1qejByGLoUm","depart":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"RAILWAY STATION , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"RAILWAY STATION","suburb":"Cape Town","id":33420,"remotecode":"3324"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"18h55m","travelTime":68100000,"serviceNumber":"AW1010","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1868/logo_apmwc_u6CwEdB3raDHHTbVdjt3Mc.png","routeDesc":"Cape Town to Johannesburg","carrierName":"African People Mover WC","arrive":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"JOHANNESBURG PARK STATION , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"JOHANNESBURG PARK STATION","suburb":"Johannesburg","id":33440,"remotecode":"3340"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 12:55:00","dateTimeMS":1737809700000},"price":{"totalPrice":530,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":530,"discountID":"ADULT"}]},"carrierCode":"apmwc","id":"sMa.p540Euen744QJl8L8.-090rgP3cyNq3jtNPOIYwo5KBJ5Xs3nfmjjJnv3DRH2aZPloQvZ8FW1Aubqbd-VYSCRrYRTd5NIdZ7V3h2eJlMp4Kq0Kbv5d4EJv1qejByGLown","depart":{"stop":{"country":"South Africa","carrier":"apmwc","remCheck":"RAILWAY STATION , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"RAILWAY STATION","suburb":"Cape Town","id":33420,"remotecode":"3324"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"19h45m","travelTime":71100000,"serviceNumber":"IB1639","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_budgetliner_s2HhDfBjdxsksoriXMEjHd.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Budgetliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 12:45:00","dateTimeMS":1737809100000},"price":{"totalPrice":550,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":550,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Euen744cGmsL04fQvw.ZfnZiQt3.nM.KBYw4xKhJ7Ws7gZmnkIHnjDRf1ZZD50H64jUXRfYGJcqXoHFHu0fQxB.MvAoPK3wKeJVI15LbCKKadAO9CwR6G.XqFK4wlJERFvAUZNSLpHSWQNsjghkjCjWunb9A9X2DS","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 17:00:00","dateTimeMS":1737738000000}},{"totalDuration":"18h30m","travelTime":66600000,"serviceNumber":"IM0105","availableSeats":8,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 13:30:00","dateTimeMS":1737811800000},"price":{"totalPrice":550,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":550,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Euen744AOnsL04fQvw.ZfnZiQt3npMPKBYgk2KBJ7WszkYGPgJn3sDRDzb5r50H64jUXRfYGJcqXoHFHu0fQxB.MvAoPK3wKeJVI15LbMKKadAO9CwR6G.XqFK4wkI0FFvAUcNSLpHSWQNsjghkjCjWunb988WGPe","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 19:00:00","dateTimeMS":1737745200000}},{"totalDuration":"19h00m","travelTime":68400000,"serviceNumber":"GP13379","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1889/logo_greyhound_premium_goGSwKyCM6ycEXaVPCVSrh.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Greyhound Premium","arrive":{"stop":{"country":"South Africa","carrier":"greyhound premium","remCheck":"Park City Transit Centre, 96 Rissik St, Johannesburg CBD , JOHANNESBURG","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Park City Transit Centre, 96 Rissik Street, Johannesburg Cbd","suburb":"Johannesburg","id":45668,"remotecode":"8720"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 13:00:00","dateTimeMS":1737810000000},"price":{"totalPrice":650,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":650,"discountID":"ADULT"}]},"carrierCode":"greyhoundpremium","id":"sMa.p542Euen74oMNnML6.eUz2fpLg5nN9C6ybrfcfg8yLghzQM3qY23oInjsCQz8a5Ljvgff-lWoAOb1at-WZiSRp4FSdZZQd57K2gCaJ1Y247fFKKaAAe9GxByd.Wb2L5BDVzIMwl4AX0ftHjvmPg","depart":{"stop":{"country":"South Africa","carrier":"greyhound premium","remCheck":"Long Distance Bus Facility, 1 Old Marine Drive, Cape Town , CAPE TOWN","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Long Distance Bus Facility, 1 Old Marine Drive","suburb":"Cape Town","id":45616,"remotecode":"8717"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"20h15m","travelTime":72900000,"serviceNumber":"IS2615","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_sleepliner_f9xiquDyhsd2A1kKNDsGCv.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Sleepliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 14:45:00","dateTimeMS":1737816300000},"price":{"totalPrice":650,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":650,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Euen744APmML04fQvw.ZfnZiQt3jmNfeJZwg4LRJ7Ws7gZmnjJ3riDBD0a5v50H64jUXRfYGJcqXoHFHu0fQxB.MvAoPK3wKeJVI15LbNK6adAO9CwR6G.XqFK4wjJERFvAUdNSHpHSWQNsjghkjCjWunb8E-X2Le","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:30:00","dateTimeMS":1737743400000}},{"totalDuration":"19h20m","travelTime":69600000,"serviceNumber":"IS2105","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_sleepliner_f9xiquDyhsd2A1kKNDsGCv.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Sleepliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 13:20:00","dateTimeMS":1737811200000},"price":{"totalPrice":690,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":690,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Euen744cGlsL04fQvw.ZfnZiQt3LtM.WGZwk0KhJ7Ws7gZmnjIXjiDBD0a5v50H64jUXRfYGJcqXoHFHu0fQxB.MvAoPK3wKeJVI15LbNKKadAO9CwR6G.XqFK4wkIkFFvAUeNSHlHSWQNsjghkjCjWunb8E-WGPe","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:00:00","dateTimeMS":1737741600000}},{"totalDuration":"26h00m","travelTime":93600000,"serviceNumber":"IM0221","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Cape Town to Johannesburg","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 20:15:00","dateTimeMS":1737836100000},"price":{"totalPrice":860,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":860,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p542Euen744APnML04fQvw.ZfnZiQv3PrP.SBYA0yMA59XMznZ2LnInPjDxDxceCVw3rInCrSfPuNEKfmGl7lzPM3F-FQd57K2gCaJ1c26LbAKKaAAvJCxByC.36FLowiIEFYvgUVLifxbDn8U6L3uEXN7lTHFqA-WA","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Unit 2 Intercape Office, Old Marine Drive (Cape Town Station)","province":"Cape Town","citycode":"ZAZACAPETOWN","city":"Cape Town","description":"Unit 2 Intercape Office, Old Marine Drive ( Cape Town Station )","suburb":"Cape Town","id":1184,"remotecode":"CAPE TOWN"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 18:15:00","dateTimeMS":1737742500000}}]}}}';
-	//$response = '{"jsonData":{"type":"avalibilityResponse","data":{"metadata":{"gwtt":6,"catproductId":"0","urlOnCreate":"computicket.com","messageId":"1737720417500-1737720417218-g2uhuv88qibwcdneyfy9ho-availability","channelType":"WEB","sessionId":"1737720417218-g2uhuv88qibwcdneyfy9ho","userName":"computicket.com","userId":"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1","cacheTime":1737720040343,"profileId":"0","width":800,"operation":"availability","channelId":"1960","productType":"bus","height":600,"username":"computicket.com"},"availability":[{"totalDuration":"16h15m","travelTime":58500000,"serviceNumber":"IB1232","availableSeats":10,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_budgetliner_s2HhDfBjdxsksoriXMEjHd.png","routeDesc":"Butterworth to Johannesburg","carrierName":"Intercape Budgetliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 08:30:00","dateTimeMS":1737793800000},"price":{"totalPrice":490,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":490,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p541Eue394oUPmsL04fQvw.ZfnZiQt3LnMPWBYAgyKRJ7Ws7gYW3jIHnjBhXzaJD50Wq8nCDXZZmVC6eKHl.o3v8sAPU.EPy.wgKbJ1Y34bXBKaCcBfJA3B6D.36HL48iIElGvBgdNSfxGTHhKqSF7E3sqmjsa79FK2LZGvQ","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Ellerines, High Street","province":"Butterworth","citycode":"ZAZABUTTERWORTH","city":"Butterworth","description":"Ellerines, High Street","suburb":"Butterworth","id":1223,"remotecode":"BUTTERWORTH"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 16:15:00","dateTimeMS":1737735300000}},{"totalDuration":"14h25m","travelTime":51900000,"serviceNumber":"IM0250","availableSeats":5,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Butterworth to Johannesburg","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Intercape Office, C/O Rissik and Wolmarans Street (Johannesburg Station)","province":"Johannesburg","citycode":"ZAZAJOHANNESBURG","city":"Johannesburg","description":"Intercape Office, C/O Rissik and Wolmarans Street ( Johannesburg Station )","suburb":"Johannesburg","id":1182,"remotecode":"JOHANNESBURG"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 05:30:00","dateTimeMS":1737783000000},"price":{"totalPrice":610,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":610,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p541Eue394oQGl8L04fQvw.ZfnZiQt3vmN.WJYwkxLBJ7Ws7gZ2jmK33qCRP9a5X50Wq8nCDXZZmVC6eKHl.o3v8sAPU.EPy.wgKbJ1Y34bXBKaOdBfJA3B6D.36HL48iIERGvBgdNSXxGznhKqSF7E3sqmjsa79FJGPZHPY","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Ellerines, High Street","province":"Butterworth","citycode":"ZAZABUTTERWORTH","city":"Butterworth","description":"Ellerines, High Street","suburb":"Butterworth","id":1223,"remotecode":"BUTTERWORTH"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 15:05:00","dateTimeMS":1737731100000}},{"totalDuration":"16h45m","travelTime":60300000,"serviceNumber":"IM9037","availableSeats":4,"groupID":"ungrouped","icon":"https://cf-content.computicket.com/bus/1892/def_logo_intercape_mainliner_aModybrB325AfEoJfPAHX5.png","routeDesc":"Butterworth to Bez Valley","carrierName":"Intercape Mainliner","arrive":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"1 Fourth Street, Albertina Sisulu Road (Bezuidenhout Valley)","province":"Bez Valley","citycode":"ZAZABEZVALLEY","city":"Bez Valley","description":"1 Fourth Street, Albertina Sisulu Road ( Bezuidenhout Valley )","suburb":"Bez Valley","id":45572,"remotecode":"BEZ VALLEY"},"timezone":"+02:00","dateTimeLocal":"2025-01-25 07:50:00","dateTimeMS":1737791400000},"price":{"totalPrice":1540,"numPax":1,"currency":"ZAR","prices":[{"quantity":1,"individualPrice":1540,"discountID":"ADULT"}]},"carrierCode":"intercape","id":"sMa.p540Eue3664wKm8L04fQvw.ZfnZiQsn7nNfaAZgs5MAZzVM3jYW7gI3nuBhH3a46Wxmu8jTfSfYSTF8LlEUqAyfAuCeMkaJzI3QWbJFEz4bLFLaadHfBAwxmD.HmCLooiIEFFoRgAKSLoHSWQNsjylmLOpVCnb981WWDc","depart":{"stop":{"country":"South Africa","carrier":"intercape","remCheck":"Ellerines, High Street","province":"Butterworth","citycode":"ZAZABUTTERWORTH","city":"Butterworth","description":"Ellerines, High Street","suburb":"Butterworth","id":1223,"remotecode":"BUTTERWORTH"},"timezone":"+02:00","dateTimeLocal":"2025-01-24 15:05:00","dateTimeMS":1737731100000}}]}}}';
-	$response = '{"jsonData":{"type":"avalibilityResponse","data":{"metadata":{"gwtt":117,"catproductId":"0","urlOnCreate":"computicket.com","messageId":"1737725247345-1737725247115-2zzsz9dm9uey16t57o2wy-availability","channelType":"WEB","sessionId":"1737725247115-2zzsz9dm9uey16t57o2wy","userName":"computicket.com","userId":"c40d0f1c-40f0-4ce0-baab-5c1c7b26e7a1","profileId":"0","width":800,"operation":"availability","channelId":"1960","productType":"bus","height":600,"username":"computicket.com"},"error":true,"message":"config missing [store:config:buses:routeCarrierMap:ZAZAABERDEENAAA:ZAZAACORNHOEKAAA]"}}}';
-	process_data($response, $ctk_date, $route_no,$ctk_from, $ctk_to, $from_name, $to_name);
+	curl_close($ch);
 }
 
 function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $from_name, $to_name)
 {
-	global $ctk_carrier_names, $carriers_not_found, $ctk_stops, $error_log;
+	global $ctk_carrier_names, $ctk_stops, $error_log;
 
 	// Decode JSON string
 	$data = json_decode($json_string, true);
@@ -292,7 +282,6 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 		$trips = $data['jsonData']['data']['availability'];
 	}
 
-	// if (count($trips) == 0)
 	if (!is_array($trips) || count($trips) == 0)
 	{
 		$from_stop = $ctk_from;
@@ -304,7 +293,7 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 
 			foreach ($bits as $ic_route)
 			{
-				$ctk_date = str_replace("-", "", $ctk_date);
+				$ctk_date = '20250129';
 				$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
 
 				if ($is_service)
@@ -332,28 +321,30 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 		$i = 1;
 		$stops_not_found = array();
 		$ctk_routes = array();
-		
+
 		foreach ($trips as $trip)
 		{
-			if (isset($data['jsonData']['data']['message'])) 
+			if (isset($trip['jsonData']['data']['message'])) 
 			{
-				$bits = explode(",", $route_no);
+				$from_stop = $ctk_from;
+				$to_stop = $ctk_to;
+				log_event("No services available for this route/date combination: [$route_no] $ctk_from to $ctk_to on $ctk_date");
+				$error_log .= "- No services available for this route/date combination: [$route_no] $ctk_from to $ctk_to on $ctk_date<br>";
 
+				// Check if Intercape has routes running that day
+				$bits = explode(",", $route_no);
 				foreach ($bits as $ic_route)
 				{
-					$ctk_date = str_replace("-", "", $ctk_date);
-					$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
-
-					if ($is_service)
+					if (!in_array($ic_route, $ctk_routes))
 					{
-						log_event("CTK - No services. IC has $ic_route on $ctk_date\n");
-						$error_log .= "CTK - No services. IC has $ic_route on $ctk_date<br>";
-					}
-					else 
-					{
-						log_event("CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
-						$error_log .= "- CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date<br>";
-
+						// A route has been isolated as not being in the CTK data
+						// Need to dbl check (is_service) before outputing the log
+						$is_service = is_service($route_no, $ctk_date, $from_stop, $to_stop);
+						if ($is_service)
+						{
+							log_event("CTK returned no services BUT Intercape does have $ic_route running. Please check IC route $ic_route on $ctk_date - No CTK" . "\n");
+							$error_log .= "CTK returned no services BUT Intercape does have $ic_route running. Please check IC route $ic_route on $ctk_date - No CTK" . "<br>";
+						}
 					}
 				}
 
@@ -380,9 +371,7 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 			$to_stop = $trip['arrive']['stop']['citycode'];
 			$to_stop_id = $trip['arrive']['stop']['id'];
 			$to_stop_city = $trip['arrive']['stop']['city'];
-
-			echo "Carrier: $carrier \n";
-
+			
 			// Check if stop is in the CTK_STOPS
 			if (!in_array($from_stop, $ctk_stops))
 			{
@@ -394,7 +383,7 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 				//echo "Stop $to_stop is in the list\n";
 				$stops_not_found[] = array($to_stop_id, $to_stop, $to_stop_city);
 			}
-
+			
 			// Build carrier name array
 			$carrier_names[] = $carrier;
 
@@ -406,29 +395,25 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 				$just_route = substr($service_number, 2);
 				$ctk_routes[] = $just_route;
 			}
-
+			
 			// Check if carrier is in the CTK_CARRIERS
 			if (!in_array($carrier, $ctk_carrier_names))
 			{
-				
-				// Not used as carrier is added here and not at the end $carriers_not_found[] = $carrier;
-
-				// *** Add new carrier here
 				addToCtkCarriers($carrier);
-				// *** Add new carrier here
 				carrier_list();
 				getCarrierNames();
 			}
-					
+			
 			// Get carrier code and serial
 			$carrier_data = searchCarrierList($carrier);
 			$carrier_serial = $carrier_data['SERIAL'];
 			$carrier_code = "";
 			
+			//echo "Record data: $arraive_time, $available_seats, $carrier_code, $carrier_serial, $date_logged, $depart_time, $duration, $from_stop, $position, $price, $route_name, $route_no, $search_date, $to_stop\n";
 			add_to_log($arraive_time, $available_seats, $carrier_code, $carrier_serial, $date_logged, $depart_time, $duration, $from_name, $position, $price, $route_name, $route_no, $search_date, $to_name);
 
 			$i++;
-		} // End foreach
+		} // End of foreach
 
 		// Check if any new stops found in crawler data were added. Add if found
 		if (count($stops_not_found) > 0)
@@ -441,7 +426,6 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 		$bits = explode(",", $route_no);
 
 		// CHECK 1: IC has routes that we not listed in the CTK data
-
 		log_event("\n" . "CHECK 1: IC has routes that we not listed in the CTK data");
 		log_event("--------------------------------------------------------");
 		
@@ -462,13 +446,12 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 			}
 		}
 
-
 		// CHECK 2: CTK has a route that IC does not have
 		log_event("\n" . "CHECK 2: CTK has a route that IC does not have");
 		log_event("----------------------------------------------");
 		foreach($ctk_routes as $ctk_route)
 		{
-			echo "AAA: $ctk_route\n";
+			// echo "AAA: $ctk_route\n";
 			$ctk_date = str_replace("-", "", $ctk_date);
 			$is_service = is_service($ctk_route, $ctk_date, $from_stop, $to_stop);
 			if ($is_service)
@@ -480,21 +463,15 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 				}
 			}
 		}
-		// CHECK ALERTS: END
-
-		// OUTPUT ALL CARRIERS FOUND
-		if (count($carrier_names) > 0)
-		{
-			log_event("------------\n" . "CARRIERS LIST" . "\n------------" . "\r\n" . json_encode($carrier_names) . "\r\n");
-		}
 	}
 }
 
 function is_service ($routeno, $date, $from, $to)
 {
-	// global $cursor, $conn;
-	// echo "is_service($routeno, $date, $from, $to)";
-	$conn = oci_conn();
+	global $cursor, $conn;
+
+	$date = str_replace("-","",$date);
+
 
 	$av="";
 	if ($routeno==0 || $routeno=="0000")
@@ -537,7 +514,7 @@ function is_service ($routeno, $date, $from, $to)
 		} 
 		else 
 		{
-			echo "No departure for $routeno on $date\n";
+			echo "No departure for $route on $date\n";
 			return false;
 		}
 
@@ -552,10 +529,9 @@ function is_service ($routeno, $date, $from, $to)
 		if ($data = oci_fetch_assoc($cursor)) 
 		{
 			$cs=$data['COACH_SERIAL'];
-			$rs = $data['ROUTE_SERIAL'];
-			
-			// $av=availseats($cs,$key,$key2);
-			$av=10000;
+			$rs=$data['ROUTE_SERIAL'];
+
+			$av=availseats($cs,$key,$key2);
 
 			if ($av>0)
 			{
@@ -566,10 +542,10 @@ function is_service ($routeno, $date, $from, $to)
 					$sql ="select depart_time from route_stops where route_serial='$rs' order by stop_order";
 					$cursor = oci_parse($conn, $sql);
 					oci_execute($cursor);
+					
 					if ($data = oci_fetch_assoc($cursor)) 
 					{
-						print_r($data);
-						// $start=getdata($cursor,0);
+						//$start=getdata($cursor,0);
 						$start=$data['DEPART_TIME'];
 						echo "Start time $start\n";
 						if ($start<date("Hi")) 
@@ -594,14 +570,13 @@ function is_service ($routeno, $date, $from, $to)
 				return false;
 			}
 		}
-		
 		else return false;
 	}
 }
 
-function add_to_log($arrive_time, $available_seats, $carrier_code, $carrier_serial, $date_logged, $depart_time, $duration, $from_name, $position, $price, $route_name, $route_no, $search_date, $to_name)
+function add_to_log($arrive_time, $available_seats, $carrier_code, $carrier_serial, $date_logged, $depart_time, $duration, $from_stop, $position, $price, $route_name, $route_no, $search_date, $to_stop)
 {
-	$conn = oci_conn();
+	global $conn;
 
 	// Remove ZAZA from stop names
 	// $zaza_check = strpos($from_stop, 'ZAZA');
@@ -628,7 +603,7 @@ function add_to_log($arrive_time, $available_seats, $carrier_code, $carrier_seri
 	:AVAILABLE_SEATS,  
 	:CARRIER,
 	:CARRIER_SERIAL,
-	TO_DATE(:DATE_LOGGED, 'YYYY-MM-DD HH24:MI:SS'), 
+	CURRENT_TIMESTAMP, 
 	TO_DATE(:DEPART_TIME, 'YYYY-MM-DD HH24:MI:SS'), 
 	:DURATION, 
 	:FROM_STOP,
@@ -645,27 +620,26 @@ function add_to_log($arrive_time, $available_seats, $carrier_code, $carrier_seri
 	oci_bind_by_name($cursor, ':AVAILABLE_SEATS', $available_seats);
 	oci_bind_by_name($cursor, ':CARRIER', $carrier_code);
 	oci_bind_by_name($cursor, ':CARRIER_SERIAL', $carrier_serial);
-	oci_bind_by_name($cursor, ':DATE_LOGGED', $date_logged);
 	oci_bind_by_name($cursor, ':DEPART_TIME', $depart_time);
 	oci_bind_by_name($cursor, ':DURATION', $duration_decimal);
-	oci_bind_by_name($cursor, ':FROM_STOP', $from_name);
+	oci_bind_by_name($cursor, ':FROM_STOP', $from_stop);
 	oci_bind_by_name($cursor, ':POSITION', $position);
 	oci_bind_by_name($cursor, ':PRICE', $price);
 	oci_bind_by_name($cursor, ':ROUTE_NAME', $route_name);
 	oci_bind_by_name($cursor, ':ROUTE_NO', $route_no);
 	oci_bind_by_name($cursor, ':SEARCH_DATE', $search_date);
-	oci_bind_by_name($cursor, ':TO_STOP', $to_name);
+	oci_bind_by_name($cursor, ':TO_STOP', $to_stop);
 
 	oci_execute($cursor);
 
 	oci_free_statement($cursor);
 
-	oci_close($conn);
+	oci_commit($conn);
 }
 
 function addToCtkCarriers($new_carrier)
 {
-	$conn = oci_conn();
+	global $conn;
 
 	$sql = "INSERT INTO CTK_CARRIERS (NAME, SERIAL) VALUES (:NAME, CTK_CARRIER_SEQ.NEXTVAL)";
 	$cursor = oci_parse($conn, $sql);
@@ -679,7 +653,7 @@ function addToCtkCarriers($new_carrier)
 
 function add_new_stops($stops_not_found)
 {
-	$conn = oci_conn();
+	global $conn;
 
 	foreach ($stops_not_found as $stop)
 	{
@@ -700,9 +674,8 @@ function add_new_stops($stops_not_found)
 
 		log_event("Added new stop: " . "Name: $stop_city, Number: $stop_id, Zaza: $stop_name");
 	}
+	
 	log_event("\n");
-
-	oci_close($conn);
 }
 
 function searchCarrierList($name) 
@@ -723,14 +696,12 @@ function searchCarrierList($name)
     return [
 		'CODE' => 'Z',
 		'SERIAL' => '0'
-	];; // Return null if no match is found
+	]; // Return null if no match is found
 }
 
 function getCarrierNames() 
 {
 	global $ctk_carrier_names, $carrier_list;
-
-	// $carrier_list = carrier_list();
 
 	$results = array();
 
@@ -752,7 +723,8 @@ function isNotEmpty($value)
 
 function log_event($message) 
 {
-    $log_file = 'ctkerr.log';
+    $log_file = '/tmp/ctkerr.log';
+    // $log_file = 'ctkerr.log';
 
     $file_handle = fopen($log_file, 'a');
 
@@ -771,25 +743,39 @@ function log_event($message)
 function send_error_email($html_message)
 {
 	global $noreply_email;
-	
-	echo "Email sent<br><br>";
+
 	// $email_list = ["keith@intercape.co.za", "quintin@moderndaystrategy.com"];
-	/*$email_list = ["quintin@moderndaystrategy.com"];
+	$email_list = ["quintin@moderndaystrategy.com", "quintin@pxo.co.za"];
 	$from = $noreply_email;
 	$subject = "CTK Crawler Error Report - " . date("Y-m-d H:i:s");
 	$text_message = str_replace("<br>", "\n", $html_message);
 
-	$mail = new html_mime_mail('X-Mailer: Html Mime Mail Class');
-	$mail->add_html($html_message, $text_message);
-	$mail->build_message();
-
-	foreach ($email_list as $email_address) 
+	try 
 	{
-		$mail->smtp_send($from, $email_address);
-	}*/
+		$mail = new html_mime_mail('X-Mailer: Html Mime Mail Class');
+		$mail->add_html($html_message, $text_message);
+		$mail->build_message();
+
+		foreach ($email_list as $email_address) 
+		{
+			$result = $mail->smtp_send($from, $email_address);
+		}
+	} 
+	catch (Exception $e) 
+	{
+		// Log any exceptions that occur
+		error_log("Exception caught while sending email: " . $e->getMessage());
+	}
 }
 
-$compare_list = get_compare_list();
+if (isset($from) && isset($route) && isset($to)) {
+	$tot_days = 1;
+	echo "Running a single query for $from-$to on $route for $start_date<bR>";
+	$compare_list = get_single_list($route,$from,$to);
+} else {
+	$compare_list = get_compare_list();
+}
+
 carrier_list();
 $ctk_stops = get_ctk_stops();
 getCarrierNames();

@@ -68,3 +68,35 @@ Error log
 1. App cant run - Node server not running
 2. No data from crawler
 3. Missing routes etc.
+
+TODO 29-01-2025
+√ 1.
+CTK has route 9019 running but Intercape does not have it
+Please check CTK route 9019 on 2025-01-31 - No CTK
+10:11
+can you pls condense this into 1 line - CTK has 9019 on 2025-01-31 but Intercape does not have it - however, this line does NOT need to be in the email, since the email is only for routes that SHOULD show on CTK that dont.
+
+√ 2.
+CHECK 1: IC has routes that we not listed in the CTK data
+--------------------------------------------------------
+Intercape has route 0151 running but CTK does not have it
+Please check IC route 0151 on 2025-01-29 - No Intercape
+10:27
+select * from open_coach where run_date=20250129 and route_no='0151';
+10:27
+the above query comes back blank, so the route is not running on that date.  Query was cape town to kimberley for today's date 
+
+------------------------------------
+√ I see the issue with is_service
+10:31
+you are setting $is_service, but not checking the value !!
+10:32
+3 places
+10:32
+also, I see this code missing the "$"  - if (is_service)
+-------------------------------------
+
+3.
+server.js log showing timeouts
+- add from, toand date
+- ??? change timeout length
