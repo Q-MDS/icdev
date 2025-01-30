@@ -2,6 +2,8 @@ Problem: Not all users have to do the tech bulletin thing
 
 Solution: Get the users clocking group and if in array show
 
+- If I run the below query with a users serial ??? I get a list of groups they belong to
+
 select 
     ctm_ref_user,
     ctm_ref_roster_group
@@ -42,3 +44,16 @@ GROUPS INCLUDED
 70
 81
 93
+
+Results:
+2147478626	91
+2147478626	87
+2147478626	38
+2147478626	39
+2147478626	75
+2147478626	92
+2147478626	50
+2147478626	94
+2147478626	101
+2147478626	86
+2147478626	40
