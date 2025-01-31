@@ -303,11 +303,11 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 					log_event("CTK - No services. IC has $ic_route on $ctk_date\n");
 					$error_log .= "CTK - No services. IC has $ic_route on $ctk_date<br>";
 				}
-				// else 
-				// {
-				// 	log_event("CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
-				// 	$error_log .= "- CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date<br>";
-				// }
+				//else 
+				//{
+				//	log_event("CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
+				//	$error_log .= "- CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date<br>";
+				//}
 			}
 		}
 		else
@@ -339,11 +339,11 @@ function process_data($json_string, $ctk_date, $route_no, $ctk_from, $ctk_to, $f
 						log_event("CTK - No services. IC has $ic_route on $ctk_date\n");
 						$error_log .= "CTK - No services. IC has $ic_route on $ctk_date<br>";
 					}
-					// else 
-					// {
-					// 	log_event("CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
-					// 	$error_log .= "- CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date<br>";
-					// }
+					//else 
+					//{
+					//	log_event("CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date\r\n");
+					//	$error_log .= "- CTK - No services: [$route_no] $ctk_from to $ctk_to on $ctk_date<br>";
+					//}
 				}
 
 				continue;

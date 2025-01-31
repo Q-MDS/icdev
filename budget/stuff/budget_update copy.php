@@ -83,7 +83,6 @@ function oci_conn()
 
 function get_budget_serials($month)
 {
-	echo "XXX: $month\n";
 	global $range_budget;
 
 	$conn = oci_conn();
@@ -192,27 +191,6 @@ function get_budget_spend($month, $serial)
 	return $data;
 }
 
-// function upd_budget_amounts($new_budget, $serial)
-// {
-// 	$conn = oci_conn();
-
-// 	foreach ($new_budget as $rundate => $amount) 
-// 	{
-// 		$sql = "UPDATE purchase_budget SET amount = :amount WHERE rundate = :rundate AND serial = :serial";
-	
-// 		$cursor = oci_parse($conn, $sql);
-	
-// 		// Bind variables to prevent SQL injection
-// 		oci_bind_by_name($cursor, ':amount', $amount);
-// 		oci_bind_by_name($cursor, ':rundate', $rundate);
-// 		oci_bind_by_name($cursor, ':serial', $serial);
-	
-// 		oci_execute($cursor);
-	
-// 		// Free the statement resource
-// 		oci_free_statement($cursor);
-// 	}
-// }
 
 function upd_budget_amounts($new_budget, $serial)
 {
@@ -276,10 +254,37 @@ function get_budget_names()
 	return $result;
 }
 
+function clearLogFile()
+{
+	$log_file = 'budget_update_report.log';
+	$file_handle = fopen($log_file, 'w');
+	fclose($file_handle);
+
+	log_event("_                ");
+	log_event("| |    ___   __ _ ");
+	log_event("| |   / _ \ / _` |");
+	log_event("| |__| (_) | (_| |");
+	log_event("|_____\___/ \__, |");
+	log_event("            |___/ " . "\n");
+}
+
+function backupTables()
+{
+	$backup_table_name = 'purchase_budget_backup_' . date('ymdHis');
+
+	$conn = oci_conn();
+
+	$sql = "CREATE TABLE " . $backup_table_name . " AS SELECT * FROM purchase_budget";
+		
+	$cursor = oci_parse($conn, $sql);
+	oci_execute($cursor);
+	oci_commit($conn);
+	oci_free_statement($cursor);
+	oci_close($conn);
+}
+
 function log_event($message) 
 {
-	/*$now = date('Y-m-d_H_i_s');
-    $log_file = $now . '_budget_update_report.log';*/
     $log_file = 'budget_update_report.log';
 
     $file_handle = fopen($log_file, 'a');
@@ -296,30 +301,38 @@ function log_event($message)
     }
 }
 
-// $work_months = array('122024', '012025', '022025', '032025', '042025');
-// $spend_months = array('202501', '202502', '202503', '202504', '202505','202406','202507','202508','202509','202510','202511');
+// ---------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-
+// ### Time of testing: 2106 budgets to do ###
 if (isset($_POST['month']))
 {
-	log_event("- Budget update started: " . date('Y-m-d H:i:s') . "\n");
+	clearLogFile();
+
+	$backup_yn = $_POST['backup'] ?? 'off';
+
+	if ($backup_yn === 'on')
+	{
+		backupTables();
+	}
+
+	die();
+	log_event("Budget update started: " . date('Y-m-d H:i:s') . "\n");
 	
 	$the_month = $_POST['month'];
 	$work_month_budget = '122024';
 	$work_month_spend = '202412';
 	$next_month_budget = '012025';
 	
-	log_event("- Selected date range: " . json_encode($range_budget[$the_month]) . "\n");
+	log_event("Selected date range: " . json_encode($range_budget[$the_month]) . "\n");
 
 	$budget_serials = get_budget_serials($the_month);
+	$budget_names = get_budget_names();
 
 	$i = 1;
 	foreach ($budget_serials as $serial)
 	{
-		if ($i < 5)
+		if ($i < 3)
 		{
-			$budget_names = get_budget_names();
 			$budget_amounts = get_budget_amounts($the_month, $serial);
 			$new_budget = $budget_amounts;
 			$budget_spend = get_budget_spend($the_month, $serial);
@@ -334,6 +347,7 @@ if (isset($_POST['month']))
 			// Get YTD budget
 			$ytd_budget_amount = 0;
 			$ytd_budget = array();
+
 			foreach ($budget_amounts as $month => $amount) 
 			{
 				// Check if the month is in the same year and before or equal to the target month
@@ -444,7 +458,7 @@ if (isset($_POST['month']))
 		$i++;
 	}
 
-	log_event("\n" . "Budget update ended: " . date('Y-m-d H:i:s'));
+	log_event("Budget update ended: " . date('Y-m-d H:i:s'));
 }
 else
 {
@@ -459,119 +473,12 @@ else
 	<title>Document</title>
 </head>
 <body>
-	<a href="index.php">Back</a>
+	<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; with: 100vw; height: 100vh;">
+		<div style="font-size: 16px; margin-bottom: 20px; text-decoration: underline">UPDATE BUDGET COMPLETE</div>
+		<div style="margin-bottom: 20px;">Click <a href="budget_update_report.log" download>here</a> to download the report</div>
+		<div style="margin-bottom: 20px;">Click <a href="budget_update_report.log" download>here</a> to email the report</div>
+		<div><a href="index.php">Back to input form</a></div>
+	</div>
+	
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// $month_array = array(
-// 	["cm_pb" => "062024", "cm_pr" => "202406", "nm_pb" => "072024"],
-// 	["cm_pb" => "072024", "cm_pr" => "202407", "nm_pb" => "082024"],
-// 	["cm_pb" => "082024", "cm_pr" => "202408", "nm_pb" => "092024"],
-// 	["cm_pb" => "092024", "cm_pr" => "202409", "nm_pb" => "102024"],
-// 	["cm_pb" => "102024", "cm_pr" => "202410", "nm_pb" => "112024"],
-// 	["cm_pb" => "112024", "cm_pr" => "202411", "nm_pb" => "122024"],
-// 	["cm_pb" => "122024", "cm_pr" => "202412", "nm_pb" => "012025"]
-// );
-// $month_array = array(
-// 	["cm_pb" => "062024", "cm_pr" => "202406", "nm_pb" => "072024"],
-// 	["cp_pb" => "072024", "cm_pr" => "202407", "nm_pb" => "082024"]
-// );
-
-// print_r($month_array);
-// die();
-
-// $cm_pb = '122024';
-// $cm_pr = '202412'; 
-// $nm_pb = '012025';
-
-
-// foreach ($month_array as $month)
-// {
-	// $cm_pb = $month['cm_pb'];
-	// $cm_pr = $month['cm_pr']; 
-	// $nm_pb = $month['nm_pb'];
-
-	// $get_budget_amounts = get_budget_amounts($cm_pb);
-	// $budget_amounts = $get_budget_amounts['results'];
-	// $budget_serials = $get_budget_amounts['budget_serials'];
-
-	// $budget_used = get_budget_used($cm_pr);
-
-	// print_r($budget_amounts);
-	// print_r($budget_serials);
-	// print_r($budget_used);
-	// print_r($budget_names);
-
-	// foreach ($budget_serials as $serial) 
-	// {
-// 		$serial = 11888;
-// 		$amount = $budget_amounts[$serial];
-		
-// 		if (isset($budget_used[$serial]))
-// 		{
-// 			$used_total = $budget_used[$serial];
-// 			$diff = $amount - $used_total;
-// 			adjust_current_budget($cm_pb, $serial, $diff);
-// 			adjust_next_budget($nm_pb, $serial, $diff);
-// 		} 
-// 		else 
-// 		{
-// 			echo "Zilch found\n";
-// 			$used_total = 0;
-// 			move_budget($nm_pb, $serial, $amount);
-// 		}
-// 		$name = $budget_names[$serial];
-
-		
-// echo "ZZZ: $amount > $used_total > $diff\n";	
-		// if ($diff < 0)
-		// {
-		// 	$over_budget[$serial] = $diff;
-		// 	echo "Over budget";
-		// }
-		// else
-		// {
-			// $under_budget[$serial] = array("amount" => $amount, "used_total" => $used_total, "diff" => $diff);
-			// $a = $amount - $diff;
-			// $b = $amount + $diff;
-
-			// Decrease current budget
-			
-			// echo $a;
-
-			// Increase next month budget
-			// adjust_next_budget($nm_pb, $serial, $diff);
-
-			// echo $nm_pb . " > NM1: " . $amount . " => " . $used_total . " => " . $diff . "\n";
-			// echo "Current amount becomes: " . $a . "\n";
-			// echo "Next month amount becomes: " . $b . "\n\n";
-		// }
-
-		// echo "Serial: " . $name . " -> " . $serial . " -> . " . $amount . " -> " . $used_total . " === " . $diff . "\n";
-	// }
-	// echo "Completed: " . json_encode($month) . "\n";
-// }
-
-
-
-
-

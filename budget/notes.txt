@@ -1,3 +1,5 @@
+// view-source:http://localhost/icdev/budget/index.php?m=Jan
+
 Tables used:
 1. PURCHASE_BUDGET
 
