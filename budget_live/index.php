@@ -1,5 +1,12 @@
 <?php
-// require_once("class.html.mime.mail.inc");
+ob_start();
+require_once ("/usr/local/www/pages/php3/oracle.inc");
+require_once ("/usr/local/www/pages/php3/misc.inc");
+require_once ("/usr/local/www/pages/php3/sec.inc");
+require_once("class.html.mime.mail.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
 
 function oci_conn()
 {
@@ -27,9 +34,7 @@ function oci_conn()
 
 function get_budget_serials($month)
 {
-	global $range_budget;
-
-	$conn = oci_conn();
+	global $conn, $range_budget;
 
 	$data = array();
 	
@@ -60,9 +65,7 @@ function get_budget_serials($month)
 
 function get_budget_amounts($month, $serial)
 {
-	global $range_budget;
-
-	$conn = oci_conn();
+	global $conn, $range_budget;
 
 	$data = array();
 	
@@ -98,9 +101,7 @@ function get_budget_amounts($month, $serial)
 
 function get_budget_spend($month, $serial)
 {
-	global $range_spend;
-
-	$conn = oci_conn();
+	global $conn, $range_spend;
 
 	$data = array();
 
@@ -137,7 +138,7 @@ function get_budget_spend($month, $serial)
 
 function upd_budget_amounts($new_budget, $serial)
 {
-    $conn = oci_conn();
+    global $conn;
 
     try {
         foreach ($new_budget as $rundate => $amount) {
@@ -175,7 +176,7 @@ function upd_budget_amounts($new_budget, $serial)
 
 function get_budget_names()
 {
-	$conn = oci_conn();
+	global $conn;
 
 	$result = array();
 
@@ -199,9 +200,9 @@ function get_budget_names()
 
 function backupTables()
 {
-	$backup_table_name = 'purchase_budget_backup_' . date('ymdHis');
+	global $conn;
 
-	$conn = oci_conn();
+	$backup_table_name = 'purchase_budget_backup_' . date('ymdHis');
 
 	$sql = "CREATE TABLE " . $backup_table_name . " AS SELECT * FROM purchase_budget";
 		

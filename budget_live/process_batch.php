@@ -18,7 +18,7 @@ if ($currentBatch == 0)
 
 	log_event("Budget update started: " . date('Y-m-d H:i:s') . "\n");
 }
-/*
+
 foreach ($batch as $serial)
 {
 	// $serial = 11888;
@@ -30,12 +30,6 @@ foreach ($batch as $serial)
 
 	$total_budget = array_sum($budget_amounts);
 	$total_used = array_sum($budget_spend);
-
-	//print_r($budget_amounts);
-	//print_r($budget_spend);
-
-	// echo "Total budget: $total_budget\n";
-	// echo "Total used: $total_used\n";
 
 	// Get YTD budget
 	$ytd_budget_amount = 0;
@@ -71,10 +65,6 @@ foreach ($batch as $serial)
 
 	$diff = $ytd_budget[$work_month_budget] - $ytd_spend[$work_month_spend];
 	$adjustment = $budget_spend[$work_month_spend] - $diff;
-
-	// echo "YTD Budget: " . json_encode($ytd_budget) . "\n";
-	// echo "YTD Spend: " . json_encode($ytd_spend) . "\n";
-	// echo "Difference: $diff\n";
 
 	// Get work month new budget
 	$work_month_new_budget = $budget_amounts[$work_month_budget] + $adjustment;
@@ -135,13 +125,12 @@ foreach ($batch as $serial)
 	log_event("- Update result: " . json_encode($result) . "\n");
 }
 
-
 if ($currentBatch == 0)
 {
 	log_event("Budget update ended: " . date('Y-m-d H:i:s'));
 	log_email("</table></body></html>");
 	send_email();
-}*/
+}
 
 echo count($chunks);
 ?>
