@@ -26,6 +26,7 @@
                     if (xhr.readyState === 4 && xhr.status === 200) 
 					{
 						let res = xhr.responseText;
+						console.log('Response: ' + res);
 						totalBatches = res;
                         console.log('Batch ' + currentBatch + ' processed out of ' + totalBatches);
 						output.innerHTML = 'Batch ' + currentBatch + ' processed out of ' + (totalBatches - 1);

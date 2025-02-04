@@ -39,7 +39,7 @@ function get_budget_serials($month)
 	$range = str_replace(']', '', $range);
 	$range = str_replace('"', '\'', $range);
 
-	$sql = "SELECT serial FROM purchase_budget WHERE rundate IN ($range)";
+	$sql = "SELECT serial FROM purchase_budget WHERE rundate IN ($range) GROUP BY serial";
 
 	$cursor = oci_parse($conn, $sql);
 
@@ -79,6 +79,9 @@ function get_budget_amounts($month, $serial)
 		// Bind variables to prevent SQL injection
 		oci_bind_by_name($cursor, ':rundate', $rundate);
 		oci_bind_by_name($cursor, ':serial', $serial);
+
+		// Initialize the value to 0
+		$data[$rundate] = 0;
 	
 		oci_execute($cursor);
 	
@@ -347,10 +350,14 @@ $range_spend = array (
 
 $month_budget = array("7" => '062024',"8" => '072024',"9" => '082024',"10" => '092024',"11" => '102024',"12" => '112024',"1" => '122024',"2" => '012025',"3" => '022025',"4" => '032025',"5" => '042025');
 $month_spend = array("7" => '202406',"8" => '202407',"9" => '202408',"10" => '202409',"11" => '202410',"12" => '202411',"1" => '202412',"2" => '202501',"3" => '202502',"4" => '202503',"5" => '202504');
-$month_next = array("7" => '072024',"8" => '072024',"9" => '082024',"10" => '102024',"11" => '112024',"12" => '122024',"1" => '012025',"2" => '022025',"3" => '032025',"4" => '042025',"5" => '052025');
+$month_next = array("7" => '072024',"8" => '082024',"9" => '092024',"10" => '102024',"11" => '112024',"12" => '122024',"1" => '012025',"2" => '022025',"3" => '032025',"4" => '042025',"5" => '052025');
+$month_next_spend = array("7" => '202407',"8" => '202408',"9" => '202409',"10" => '202410',"11" => '202411',"12" => '202412',"1" => '202501',"2" => '202502',"3" => '202503',"4" => '202504',"5" => '202505');
 
 $the_month = date('n');
+
+// WARNNG
 $the_month = 2;
+// WARNNG
 
 if ($the_month == 6) 
 {
@@ -361,13 +368,11 @@ if ($the_month == 6)
 $work_month_budget = $month_budget[$the_month];
 $work_month_spend = $month_spend[$the_month];
 $next_month_budget = $month_next[$the_month];
+$next_month_spend = $month_next_spend[$the_month];
 
 log_event("Selected date range: " . json_encode($range_budget[$the_month]) . "\n");
 
 // Get data arrays
 $budget_serials = get_budget_serials($the_month);
 $budget_names = get_budget_names();
-
-$batch_size = 100;
-$chunks = array_chunk($budget_serials, $batch_size, true);
 ?>
