@@ -81,3 +81,20 @@ oci_close($conn);
 ROLLOUT:
 
 1. Create an array for 06 to 0125
+
+
+07022025
+: Add record to purchase_budget_log
+
+LOG_ID					Seq ?
+FROM_BUDGET_SERIAL		√
+TO_BUDGET_SERIAL		√
+AMOUNT					√ - adjustment/diff/nett
+TRANFER_DATE			e.g. 30/JAN/2025
+COMPANY					0
+BUDGET_TO_YM			YYMM
+BUDGET_FROM_YM			YYMM
+REASON					Surplus YTD budget adjustment
+USERNAME				VARCHAR2
+
+-> 2 records: 1 line per neg change and 1 line per pos change

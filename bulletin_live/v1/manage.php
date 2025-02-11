@@ -7,33 +7,8 @@ require_once ("../php3/sec.inc");
 if (!open_oracle()) { Exit; };
 if (!AllowedAccess("")) { Exit; };
 
-// function oci_conn()
-// {
-// 	$host = 'localhost';
-// 	$port = '1521';
-// 	$sid = 'XE';
-// 	$username = 'SYSTEM';
-// 	$password = 'dontletmedown3';
-
-// 	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
-
-// 	if (!$conn) 
-// 	{
-// 		$e = oci_error();
-// 		// echo "Connection failed: " . $e['message'];
-// 		exit;
-// 	} 
-// 	else 
-// 	{
-// 		// echo "Connection succeeded";
-// 	}
-
-// 	return $conn;
-// }
-
 $cursor = ora_open($conn);
 
-// Get bulletins from main intranet table
 $sql = "SELECT * FROM move_tech_bulletins WHERE mtb_status != 0 ORDER BY mtb_order";
 ora_parse($cursor, $sql);
 ora_exec($cursor);
@@ -79,8 +54,6 @@ ora_exec($cursor);
 		<div style="display: flex; align-items: center; width: 100%; border: 1px solid #000; border-left: 0px; border-bottom: 0px; height: 30px; margin-top: -1px;"><div style=" padding: 0px 5px">Active</div></div>
 		<div style="display: flex; align-items: center; width: 100%; border: 1px solid #000; border-right: 0px; border-bottom: 0px; height: 30px; margin-top: -1px;"><div style=" padding: 0px 5px">Remove</div></div>
 
-		<!-- <div style="grid-column: span 8; background: #000; height: 1px; margin-top: 0px; margin-bottom: 5px;">&nbsp;</div> -->
-
 		<?php
 		while (ora_fetch_into($cursor, $row, ORA_FETCHINTO_ASSOC)) 
 		{
@@ -103,7 +76,6 @@ ora_exec($cursor);
 			else 
 			{
 				$mtb_use_date = date('Y-m-d', $mtb_use_date);
-				// $mtb_use_date = date('Y-m-d', $mtb_use_date);
 			}
 			$mtb_date = $row['MTB_DATE'];
 			$mtb_date = date('Y-m-d', $mtb_date);
@@ -172,7 +144,7 @@ function addBulletin()
 
 	if (errCtr == 0)
 	{
-		const formData = { "mbr_action": 2, "bulletin_name": bulletinName, "bulletin_revision": bulletinRevision, "bulletin_url": bulletinUrl };
+		const formData = { "mtr_action": 2, "bulletin_name": bulletinName, "bulletin_revision": bulletinRevision, "bulletin_url": bulletinUrl };
 	
 		sendData(formData)
 		.then(result => 
@@ -192,13 +164,9 @@ function addBulletin()
 
 function setPriority(id)
 {
-	console.log('Set priority');
-
 	const cbPriority = document.getElementById(id);
 
-	console.log('Checkbox: ', cbPriority.checked, " > ", id);
-
-	const formData = { "mbr_action": 3, "mtb_id": id, "mtb_status": cbPriority.checked ? 2 : 1 };
+	const formData = { "mtr_action": 3, "mtb_id": id, "mtb_status": cbPriority.checked ? 2 : 1 };
 
 	sendData(formData)
 	.then(result => 
@@ -216,8 +184,7 @@ function setPriority(id)
 
 function removeBulletin(mtbId)
 {
-	console.log('Remove bulletin: ', mtbId);
-	const formData = { "mbr_action": 4, "mtb_id": mtbId };
+	const formData = { "mtr_action": 4, "mtb_id": mtbId };
 
 	sendData(formData)
 	.then(result => 
@@ -237,11 +204,9 @@ function removeBulletin(mtbId)
 
 function setOrder(id, value)
 {
-	console.log('Set order: ', id, ' > ', value);
 	let bits = id.split('_');
-	console.log('Set order: ', bits[1], ' > ', value);
 
-	const formData = { "mbr_action": 5, "mtb_id": bits[1], "mtb_order": value };
+	const formData = { "mtr_action": 5, "mtb_id": bits[1], "mtb_order": value };
 
 	sendData(formData)
 	.then(result => 
@@ -260,13 +225,11 @@ function setOrder(id, value)
 
 function setActive(id, checked)
 {
-	console.log('Set active 1: ', id, ' > ', checked);
 	let bits = id.split('_');
 	
 	const active = checked ? 1 : 0;;
-	console.log('Set active 2: ', bits[1], ' > ', checked, ' > ', active, ' > ', active);
 
-	const formData = { "mbr_action": 6, "mtb_id": bits[1], "mtb_active": active };
+	const formData = { "mtr_action": 6, "mtb_id": bits[1], "mtb_active": active };
 
 	sendData(formData)
 	.then(result => 
@@ -278,19 +241,18 @@ function setActive(id, checked)
 		}
 		else
 		{
-			alert('Order not changed');
+			alert('Active status not changed');
 		}
 	});
 }
 
 async function sendData(formData) 
 {
-	console.log('Send data: ', formData);
 	// const phpUrl = 'http://localhost/icdev/bulletin/move_bulletins_modal.php';
-	const phpUrl = '/move/bulletin/move_bulletins_modal.php';
+	const phpUrl = 'http://192.168.10.239/move/bulletin/move_bulletins_modal.php';
 	const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
 	const result = await response.text();
-	console.log('Result: ', result);
+	//console.log('Result: ', result);
 	return result;
 }
 </script>

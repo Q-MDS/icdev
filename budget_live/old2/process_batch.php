@@ -2,7 +2,7 @@
 include 'index.php';
 
 // Backup the budget table
-//QQQ backupTables();
+backupTables();
 
 // Clear the text/report file
 clearLogFile();
@@ -12,16 +12,13 @@ clearEmailLog();
 
 log_event("Budget update started: " . date('Y-m-d H:i:s') . "\n");
 
-$run_start = time();
-echo "Start\n";
-
-foreach ($budget_serials as $serial)
-{
-	//$serial = 12105; //11698
+// foreach ($budget_serials as $serial)
+// {
+	$serial = 11932;
 	
-	$budget_amounts = get_budget_amounts($serial);
+	$budget_amounts = get_budget_amounts($the_month, $serial);
 	$new_budget = $budget_amounts;
-	$budget_spend = get_budget_spend($serial);
+	$budget_spend = get_budget_spend($the_month, $serial);
 
 	if (!isset($budget_names[$serial]))
 	{
@@ -78,23 +75,12 @@ foreach ($budget_serials as $serial)
 
 	$nett = $total_budget - $total_used;
 
-	$tolerance = 1.0E-9;
-
-	if (abs($nett) < $tolerance) {
-		$nett = 0;
-	}
-
-	echo "Nett: $nett :: $total_budget - $total_used\n";
-
 	if ($nett > 0) 
 	{
 		$diff = $ytd_spend[$work_month_spend] - $ytd_budget[$work_month_budget];
 		$adjustment = $budget_spend[$work_month_spend] - $diff;
 		$current_new_budget = $diff + $budget_amounts[$work_month_budget];
 		$next_new_budget = ($diff * -1) + $budget_amounts[$next_month_budget];
-
-		// print_r($budget_amounts);
-		// print_r($budget_spend);
 
 		echo "Nett: $nett\n";
 		echo "Serial: $serial\n";
@@ -124,7 +110,6 @@ foreach ($budget_serials as $serial)
 
 		if ($new_budget[$second_last_key] < 0) 
 		{
-			
 			// Calculate the adjustment needed
 			$adjustment = abs($new_budget[$second_last_key]);
 			$new_budget[$second_last_key] = 0;
@@ -153,29 +138,10 @@ foreach ($budget_serials as $serial)
 		// print_r($new_budget);
 
 		log_event("- New budget amounts: " . json_encode($new_budget));
-		log_email("<tr><td align='left'>" . $budget_name . " (" . $serial . ")</td><td align='right'>" . number_format($total_budget, 2) . "</td><td align='right'>" . number_format($total_used, 2) . "</td><td align='right'>" . $email_adjustment . "</td><td align='right'>" . number_format($new_budget[$last_key], 2) . "</td></tr>");
+		log_email("<tr><td align='left'>" . $budget_name . " (" . $serial . ")</td><td align='right'>" . $total_budget . "</td><td align='right'>" . number_format($total_used, 2) . "</td><td align='right'>" . $email_adjustment . "</td><td align='right'>" . number_format($new_budget[$last_key], 2) . "</td></tr>");
 
 		// Update budget table
 		$result = upd_budget_amounts($new_budget, $serial);
-
-		if ($result['status'] == 'success') 
-		{
-			$amount = $total_budget - $total_used;
-			$transfer_date = date('d/M/y');
-			
-			$fmt_month_next_spend = substr($next_month_spend, 2, 2) . substr($next_month_spend, 4, 2);
-			$bud_to_ym = $fmt_month_next_spend;
-			$fmt_month_spend = substr($work_month_spend, 2, 2) . substr($work_month_spend, 4, 2);
-			$bud_from_ym = $fmt_month_spend;
-			$reason = 'Surplus YTD budget adjustment';
-			$user_name = 'SYSTEM';
-
-			// Neg change
-			add_pbl_entry('', $serial, $amount, $transfer_date, 0, $bud_to_ym, '', $reason, $user_name);
-
-			// Pos change
-			add_pbl_entry($serial, '', $amount, $transfer_date, 0, '', $bud_from_ym, $reason, $user_name);
-		} 
 
 		log_event("- Update result: " . json_encode($result) . "\n");
 	}
@@ -183,12 +149,11 @@ foreach ($budget_serials as $serial)
 	{
 		// Result was over budget, dont include or output here if needed
 	}
-}
+// }
 
 log_event("Budget update ended: " . date('Y-m-d H:i:s'));
 log_email("</table></body></html>");
-// QQQ send_email();
+send_email();
 
-$run_end = time();
-echo "\n\nDone in " . ($run_end - $run_start) . " seconds\n";
+echo "Done";
 ?>

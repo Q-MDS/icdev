@@ -1,13 +1,4 @@
 <?php
-$user_id = '123456';
-$bulletin_url = 'abc.pdf';
-$bulletin_name = 'Bulletin Name';
-$bulletin_url = './pdf_reader/pdf.php?u=' . $user_id . '&url='.urlencode($bulletin_url);
-?>
-<div id="bulletin_name" style="flex: 1"><a onclick="allowed_to_read = true;" href="<?php echo $bulletin_url; ?>" target="_blank"><?php echo $bulletin_name; ?></a></div>
-
-<?php
-die();
 ob_start();
 require_once ("../php3/oracle.inc");
 require_once ("../php3/misc.inc");
@@ -18,18 +9,19 @@ if (!isset($conn)) {
 	if (!AllowedAccess("")) { Exit; };
 }
 
-// Test mode only
-// $test_user = $_GET['u'];
-// $test_date = $_GET['d'];
-
 // Global vars
+$bulletin_id = 0;
 $bulletin_name = 'none';
 $bulletin_url = '';
 $mtb_revision = '0';
 $monday = start_date();
 $next_mbr_id = 0;
+$pdf_log = array();
+$has_seen_pdf = true;
+
 // Test
 // $user_id = $test_user;
+
 // Live
 $user_id = getuserserial();
 $mbr_id = 0;
@@ -37,8 +29,8 @@ $mbr_status = 0;
 $mbr_date_updated = 0;
 $now = strtotime(date("Y-m-d H:i:s"));
 $cycle = 12 * 60 * 60; // 12 hours
-// $cycle = 20; // 12 seconds
 
+$pdf_log = get_user_pdflog($user_id);
 load_banner();
 
 function start_date()
@@ -73,6 +65,30 @@ function check_user_group($user_id)
 	while (ora_fetch_into($cursor, $mbr_row, ORA_FETCHINTO_ASSOC)) {
         $data[] = $mbr_row['CTM_REF_ROSTER_GROUP'];
     }
+
+	ora_close($cursor);
+
+	return $data;
+}
+
+function get_user_pdflog($user_id)
+{
+	global $conn;
+
+	$data = array();
+
+	$cursor = ora_open($conn);
+	if ($cursor === false)
+		exit;
+
+	$sql = "SELECT BULLETIN_ID FROM move_tech_bulletins_pdflog WHERE userserial = $user_id";
+	ora_parse($cursor, $sql);
+	ora_exec($cursor);
+
+	while (ora_fetch_into($cursor, $row, ORA_FETCHINTO_ASSOC)) 
+	{
+		$data[] = $row['BULLETIN_ID'];
+	}
 
 	ora_close($cursor);
 
@@ -207,7 +223,7 @@ function create_mtr($user_id)
 
 function load_banner()
 {
-	global $conn, $bulletin_name, $bulletin_url, $monday, $user_id, $mtb_revision, $mbr_id, $mbr_status, $mbr_date_updated;
+	global $conn, $bulletin_name, $bulletin_url, $monday, $user_id, $mtb_revision, $mbr_id, $mbr_status, $mbr_date_updated, $bulletin_id;
 	
 	$cursor = ora_open($conn);
 
@@ -299,7 +315,8 @@ else
 if (($show == 1))
 {
 	echo "<script> allowed_to_read= false; </script>";
-	$bulletin_url = '/move/pdf.php?u=' . $user_id . '&url='.urlencode($bulletin_url);
+	$log_url = $bulletin_url;
+	$bulletin_url = '/move/pdf.php?u=' . $user_id . '&i=' . $bulletin_id . '&url='.urlencode($bulletin_url);
 ?>
 <div id="bulletin" style="display: flex; flex-direction: row; align-items: center; justify-content: flex-start; border: 5px solid #F00; padding: 10px 0px; column-gap: 0px">
 	<div style="padding-left: 40px; padding-right: 40px;">
@@ -312,10 +329,11 @@ if (($show == 1))
 	<div style="padding-right: 10px">Revision:</div>
 	<div style="padding-right: 10px"><?php echo $mtb_revision; ?></div>
 	<?php
-	if ($bulletin_url in array of bulletins for this user)
+	if (in_array($bulletin_id, $pdf_log))
 	{
+		// print_r($pdf_log);
 	?>
-		<div id=haveread style="background-color: #f5f5f5; color: #000; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; margin-right: 10px; cursor: pointer" onclick="if (allowed_to_read) {didRead(); document.getElementById('readwarning').innerHTML='';} else { document.getElementById('readwarning').innerHTML='<font color=red>Please open the document and read it first!</font>&nbsp;';   }  ">I have read the bulletin</div>
+	<div id=haveread style="background-color: #f5f5f5; color: #000; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; margin-right: 10px; cursor: pointer" onclick="if (allowed_to_read) {didRead(); document.getElementById('readwarning').innerHTML='';} else { document.getElementById('readwarning').innerHTML='<font color=red>Please open the document and read it first!</font>&nbsp;';   }  ">I have read the bulletin</div>
 	<?php
 	}
 	?>

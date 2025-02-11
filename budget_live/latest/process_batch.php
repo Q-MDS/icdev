@@ -2,7 +2,7 @@
 include 'index.php';
 
 // Backup the budget table
-//QQQ backupTables();
+backupTables();
 
 // Clear the text/report file
 clearLogFile();
@@ -17,11 +17,11 @@ echo "Start\n";
 
 foreach ($budget_serials as $serial)
 {
-	//$serial = 12105; //11698
+	// $serial = 12043; //11698
 	
-	$budget_amounts = get_budget_amounts($serial);
+	$budget_amounts = get_budget_amounts($the_month, $serial);
 	$new_budget = $budget_amounts;
-	$budget_spend = get_budget_spend($serial);
+	$budget_spend = get_budget_spend($the_month, $serial);
 
 	if (!isset($budget_names[$serial]))
 	{
@@ -84,7 +84,7 @@ foreach ($budget_serials as $serial)
 		$nett = 0;
 	}
 
-	echo "Nett: $nett :: $total_budget - $total_used\n";
+	// echo "Nett: $nett :: $total_budget - $total_used\n";
 
 	if ($nett > 0) 
 	{
@@ -96,14 +96,14 @@ foreach ($budget_serials as $serial)
 		// print_r($budget_amounts);
 		// print_r($budget_spend);
 
-		echo "Nett: $nett\n";
-		echo "Serial: $serial\n";
-		echo "Difference: $diff\n";
-		echo "Tot Budget: $total_budget\n";
-		echo "Tot Spend: $total_used\n";
-		echo "Adjustment: $adjustment\n";
-		echo "CNB: $current_new_budget\n";
-		echo "NNB: $next_new_budget\n";
+		// echo "Nett: $nett\n";
+		// echo "Serial: $serial\n";
+		// echo "Difference: $diff\n";
+		// echo "Tot Budget: $total_budget\n";
+		// echo "Tot Spend: $total_used\n";
+		// echo "Adjustment: $adjustment\n";
+		// echo "CNB: $current_new_budget\n";
+		// echo "NNB: $next_new_budget\n";
 		
 		$email_adjustment = number_format($diff * -1, 2);
 		log_event("- Budget name: " . $budget_name . " - Budget serial: " . $serial . "- Total budget: " . $total_budget . " - Total spend: " . $total_used . " - Difference: " . $total_budget - $total_used . " - Adjustment: " . $diff * -1);
@@ -187,7 +187,7 @@ foreach ($budget_serials as $serial)
 
 log_event("Budget update ended: " . date('Y-m-d H:i:s'));
 log_email("</table></body></html>");
-// QQQ send_email();
+send_email();
 
 $run_end = time();
 echo "\n\nDone in " . ($run_end - $run_start) . " seconds\n";

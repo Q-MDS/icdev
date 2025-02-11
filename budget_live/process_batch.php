@@ -1,35 +1,44 @@
 <?php
 include 'index.php';
 
-$currentBatch = isset($_POST['batch']) ? (int)$_POST['batch'] : 0;
+// Backup the budget table
+backupTables();
 
-$batch = $chunks[$currentBatch];
+// Clear the text/report file
+clearLogFile();
 
-if ($currentBatch == 0)
+// Clear the text/report file
+clearEmailLog();
+
+log_event("Budget update started: " . date('Y-m-d H:i:s') . "\n");
+
+$run_start = time();
+echo "Start\n";
+
+foreach ($budget_serials as $serial)
 {
-	// Backup the budget table
-	backupTables();
-
-	// Clear the text/report file
-	clearLogFile();
-
-	// Clear the text/report file
-	clearEmailLog();
-
-	log_event("Budget update started: " . date('Y-m-d H:i:s') . "\n");
-}
-
-foreach ($batch as $serial)
-{
-	// $serial = 11888;
+	// $serial = 12043; //11698
 	
-	$budget_amounts = get_budget_amounts($the_month, $serial);
+	$budget_amounts = get_budget_amounts($serial);
 	$new_budget = $budget_amounts;
-	$budget_spend = get_budget_spend($the_month, $serial);
-	$budget_name = $budget_names[$serial];
+	$budget_spend = get_budget_spend($serial);
 
-	$total_budget = array_sum($budget_amounts);
-	$total_used = array_sum($budget_spend);
+	if (!isset($budget_names[$serial]))
+	{
+		$budget_name = 'Unknown';
+	}
+	else 
+	{
+		$budget_name = $budget_names[$serial];
+	}
+
+	$budget_amounts_copy = $budget_amounts;
+	array_pop($budget_amounts_copy);
+	$total_budget = array_sum($budget_amounts_copy);
+
+	$budget_spend_copy = $budget_spend;
+	array_pop($budget_spend_copy);
+	$total_used = array_sum($budget_spend_copy);
 
 	// Get YTD budget
 	$ytd_budget_amount = 0;
@@ -37,16 +46,17 @@ foreach ($batch as $serial)
 
 	foreach ($budget_amounts as $month => $amount) 
 	{
-			
-		$ytd_budget_amount += $amount;
-		if (!isset($ytd_budget[$month])) 
+		if ($month != $next_month_budget) 
 		{
-			$ytd_budget[$month] = 0;
+			$ytd_budget_amount += $amount;
+			if (!isset($ytd_budget[$month])) 
+			{
+				$ytd_budget[$month] = 0;
+			}
+
+			$ytd_budget[$month] += $ytd_budget_amount;
 		}
-
-		$ytd_budget[$month] += $ytd_budget_amount;
 	}
-
 
 	// Get YTD Spend
 	$ytd_spend_amount = 0;
@@ -54,83 +64,131 @@ foreach ($batch as $serial)
 
 	foreach ($budget_spend as $month => $amount) 
 	{
-		$ytd_spend_amount += $amount;
-		if (!isset($ytd_spend[$month])) 
+		if ($month != $next_month_spend) 
 		{
-			$ytd_spend[$month] = 0;
-		}
-
-		$ytd_spend[$month] += $ytd_spend_amount;
-	}
-
-	$diff = $ytd_budget[$work_month_budget] - $ytd_spend[$work_month_spend];
-	$adjustment = $budget_spend[$work_month_spend] - $diff;
-
-	// Get work month new budget
-	$work_month_new_budget = $budget_amounts[$work_month_budget] + $adjustment;
-
-	// Get next month new budget
-	$next_month_new_budget = $budget_amounts[$next_month_budget] - $adjustment;
-	//echo "Adjustment: $adjustment\n";
-	$email_adjustment = number_format($adjustment * -1, 2);
-	log_event("- Budget name: " . $budget_name . " - Budget serial: " . $serial . "- Total budget: " . $total_budget . " - Total spend: " . $total_used . " - Difference: " . $total_budget - $total_used . " - Adjustment: " . $adjustment * -1);
-
-	$new_budget[$work_month_budget] = $work_month_new_budget;
-	$new_budget[$next_month_budget] = $next_month_new_budget;
-	
-	// Borrow
-	// Calculate the total sum
-	$total_sum = array_sum($new_budget);
-
-	// Check if the second last item is negative
-	$keys = array_keys($new_budget);
-	$second_last_key = $keys[count($keys) - 2];
-	$last_key = $keys[count($keys) - 1];
-	$last_value = $new_budget[$last_key];
-
-	if ($new_budget[$second_last_key] < 0) 
-	{
-		// Calculate the adjustment needed
-		$adjustment = abs($new_budget[$second_last_key]);
-		$new_budget[$second_last_key] = 0;
-
-		// Adjust the previous items to maintain the total sum
-		for ($i = count($keys) - 3; $i >= 0; $i--) 
-		{
-			$key = $keys[$i];
-			if ($new_budget[$key] >= $adjustment) 
+			$ytd_spend_amount += $amount;
+			if (!isset($ytd_spend[$month])) 
 			{
-				$new_budget[$key] -= $adjustment;
-				break;
-			} 
-			else 
-			{
-				$adjustment -= $new_budget[$key];
-				$new_budget[$key] = 0;
+				$ytd_spend[$month] = 0;
 			}
-		}
 
-		// Ensure the total sum remains the same
-		$new_budget[$keys[count($keys) - 1]] = $total_sum - array_sum($new_budget);
+			$ytd_spend[$month] += $ytd_spend_amount;
+		}
 	}
 
-	$new_budget[$last_key] = $last_value;
+	$nett = $total_budget - $total_used;
 
-	log_event("- New budget amounts: " . json_encode($new_budget));
-	log_email("<tr><td align='left'>" . $budget_name . " (" . $serial . ")</td><td align='right'>" . $total_budget . "</td><td align='right'>" . number_format($total_used, 2) . "</td><td align='right'>" . $email_adjustment . "</td><td align='right'>" . number_format($new_budget[$last_key], 2) . "</td></tr>");
+	$tolerance = 1.0E-9;
 
-	// Update budget table
-	$result = upd_budget_amounts($new_budget, $serial);
+	if (abs($nett) < $tolerance) {
+		$nett = 0;
+	}
 
-	log_event("- Update result: " . json_encode($result) . "\n");
+	// echo "Nett: $nett :: $total_budget - $total_used\n";
+
+	if ($nett > 0) 
+	{
+		$diff = $ytd_spend[$work_month_spend] - $ytd_budget[$work_month_budget];
+		$adjustment = $budget_spend[$work_month_spend] - $diff;
+		$current_new_budget = $diff + $budget_amounts[$work_month_budget];
+		$next_new_budget = ($diff * -1) + $budget_amounts[$next_month_budget];
+
+		// print_r($budget_amounts);
+		// print_r($budget_spend);
+
+		// echo "Nett: $nett\n";
+		// echo "Serial: $serial\n";
+		// echo "Difference: $diff\n";
+		// echo "Tot Budget: $total_budget\n";
+		// echo "Tot Spend: $total_used\n";
+		// echo "Adjustment: $adjustment\n";
+		// echo "CNB: $current_new_budget\n";
+		// echo "NNB: $next_new_budget\n";
+		
+		$email_adjustment = number_format($diff * -1, 2);
+		log_event("- Budget name: " . $budget_name . " - Budget serial: " . $serial . "- Total budget: " . $total_budget . " - Total spend: " . $total_used . " - Difference: " . $total_budget - $total_used . " - Adjustment: " . $diff * -1);
+
+		$new_budget[$work_month_budget] = $current_new_budget;
+		$new_budget[$next_month_budget] = $next_new_budget;
+		
+		// Borrow
+		// Calculate the total sum
+		$total_sum = array_sum($new_budget);
+
+		// Check if the second last item is negative
+		$keys = array_keys($new_budget);
+		$second_last_key = $keys[count($keys) - 2];
+		
+		$last_key = $keys[count($keys) - 1];
+		$last_value = $new_budget[$last_key];
+
+		if ($new_budget[$second_last_key] < 0) 
+		{
+			
+			// Calculate the adjustment needed
+			$adjustment = abs($new_budget[$second_last_key]);
+			$new_budget[$second_last_key] = 0;
+
+			// Adjust the previous items to maintain the total sum
+			for ($i = count($keys) - 3; $i >= 0; $i--) 
+			{
+				$key = $keys[$i];
+				if ($new_budget[$key] >= $adjustment) 
+				{
+					$new_budget[$key] -= $adjustment;
+					break;
+				} 
+				else 
+				{
+					$adjustment -= $new_budget[$key];
+					$new_budget[$key] = 0;
+				}
+			}
+
+			// Ensure the total sum remains the same
+			$new_budget[$keys[count($keys) - 1]] = $total_sum - array_sum($new_budget);
+		}
+
+		$new_budget[$last_key] = $last_value;
+		// print_r($new_budget);
+
+		log_event("- New budget amounts: " . json_encode($new_budget));
+		log_email("<tr><td align='left'>" . $budget_name . " (" . $serial . ")</td><td align='right'>" . number_format($total_budget, 2) . "</td><td align='right'>" . number_format($total_used, 2) . "</td><td align='right'>" . $email_adjustment . "</td><td align='right'>" . number_format($new_budget[$last_key], 2) . "</td></tr>");
+
+		// Update budget table
+		$result = upd_budget_amounts($new_budget, $serial);
+
+		if ($result['status'] == 'success') 
+		{
+			$amount = $total_budget - $total_used;
+			$transfer_date = date('d/M/y');
+			
+			$fmt_month_next_spend = substr($next_month_spend, 2, 2) . substr($next_month_spend, 4, 2);
+			$bud_to_ym = $fmt_month_next_spend;
+			$fmt_month_spend = substr($work_month_spend, 2, 2) . substr($work_month_spend, 4, 2);
+			$bud_from_ym = $fmt_month_spend;
+			$reason = 'Surplus YTD budget adjustment';
+			$user_name = 'SYSTEM';
+
+			// Neg change
+			add_pbl_entry('', $serial, $amount, $transfer_date, 0, $bud_to_ym, '', $reason, $user_name);
+
+			// Pos change
+			add_pbl_entry($serial, '', $amount, $transfer_date, 0, '', $bud_from_ym, $reason, $user_name);
+		} 
+
+		log_event("- Update result: " . json_encode($result) . "\n");
+	}
+	else
+	{
+		// Result was over budget, dont include or output here if needed
+	}
 }
 
-if ($currentBatch == 0)
-{
-	log_event("Budget update ended: " . date('Y-m-d H:i:s'));
-	log_email("</table></body></html>");
-	send_email();
-}
+log_event("Budget update ended: " . date('Y-m-d H:i:s'));
+log_email("</table></body></html>");
+send_email();
 
-echo count($chunks);
+$run_end = time();
+echo "\n\nDone in " . ($run_end - $run_start) . " seconds\n";
 ?>

@@ -10,19 +10,19 @@ if (!AllowedAccess("")) { Exit; };
 $ajax_data = file_get_contents("php://input");
 $json_data = json_decode($ajax_data);
 
-$mbr_action = $json_data->mbr_action;
+$mtr_action = $json_data->mtr_action;
 
-switch ($mbr_action)
+switch ($mtr_action)
 {
 	case 0:
-		$mbr_id = $json_data->mbr_id;
-		$mbr_status = $json_data->mbr_status;
-		did_read($mbr_id);
+		$mtr_id = $json_data->mtr_id;
+		$mtr_status = $json_data->mtr_status;
+		did_read($mtr_id);
 	break;
 	case 1:
-		$mbr_id = $json_data->mbr_id;
-		$mbr_status = $json_data->mbr_status;
-		did_not_read($mbr_id, $mbr_status);
+		$mtr_id = $json_data->mtr_id;
+		$mtr_status = $json_data->mtr_status;
+		did_not_read($mtr_id, $mtr_status);
 	break;
 	case 2:
 		$bulletin_name = $json_data->bulletin_name;
@@ -53,61 +53,37 @@ switch ($mbr_action)
 	break;
 }
 
-// function oci_conn()
-// {
-// 	$host = 'localhost';
-// 	$port = '1521';
-// 	$sid = 'XE';
-// 	$username = 'SYSTEM';
-// 	$password = 'dontletmedown3';
-
-// 	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
-
-// 	if (!$conn) 
-// 	{
-// 		$e = oci_error();
-// 		// echo "Connection failed: " . $e['message'];
-// 		exit;
-// 	} 
-// 	else 
-// 	{
-// 		// echo "Connection succeeded";
-// 	}
-
-// 	return $conn;
-// }
-
-function did_read($mbr_id)
+function did_read($mtr_id)
 {
 	global $conn;
 	$cursor = ora_open($conn);
 
 	$now = strtotime("now");
 
-	$sql = "UPDATE move_tech_bulletins_read SET mbr_status = 100, mbr_date_updated = $now  WHERE mbr_id = $mbr_id";
+	$sql = "UPDATE move_tech_bulletins_read SET mtr_status = 100, mtr_date_updated = $now  WHERE mtr_id = $mtr_id";
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
 
 	ora_close($cursor);
 }
 
-function did_not_read($mbr_id, $mbr_status)
+function did_not_read($mtr_id, $mtr_status)
 {
 	global $conn;
 	$cursor = ora_open($conn);
 
-	if ($mbr_status == 0)
+	if ($mtr_status == 0)
 	{
-		$mbr_status = 1;
+		$mtr_status = 1;
 	}
 	else 
 	{
-		$mbr_status = 2;
+		$mtr_status = 2;
 	}
 	
 	$now = strtotime("now");
 	
-	$sql = "UPDATE move_tech_bulletins_read SET mbr_status = $mbr_status, mbr_date_updated = $now  WHERE mbr_id = $mbr_id";
+	$sql = "UPDATE move_tech_bulletins_read SET mtr_status = $mtr_status, mtr_date_updated = $now  WHERE mtr_id = $mtr_id";
 	
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);

@@ -1,3 +1,6 @@
+START WITH: http://192.168.10.239/booking/main.phtml
+
+
 http://192.168.10.239/move/jobcard_daily_auth.phtml?stage=4&subjob_more=true&jobserial=16213330&goback=Y
 
 http://192.168.10.239/move/dev_jobcard_daily_auth.phtml?stage=4&subjob_more=true&jobserial=16213330&goback=Y
@@ -129,3 +132,4 @@ Bulletin
 Checkbox: debtors_info
 
 statements...
+

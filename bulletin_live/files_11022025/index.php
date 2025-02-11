@@ -1,13 +1,4 @@
 <?php
-$user_id = '123456';
-$bulletin_url = 'abc.pdf';
-$bulletin_name = 'Bulletin Name';
-$bulletin_url = './pdf_reader/pdf.php?u=' . $user_id . '&url='.urlencode($bulletin_url);
-?>
-<div id="bulletin_name" style="flex: 1"><a onclick="allowed_to_read = true;" href="<?php echo $bulletin_url; ?>" target="_blank"><?php echo $bulletin_name; ?></a></div>
-
-<?php
-die();
 ob_start();
 require_once ("../php3/oracle.inc");
 require_once ("../php3/misc.inc");
@@ -299,7 +290,7 @@ else
 if (($show == 1))
 {
 	echo "<script> allowed_to_read= false; </script>";
-	$bulletin_url = '/move/pdf.php?u=' . $user_id . '&url='.urlencode($bulletin_url);
+	$bulletin_url = '/move/pdf.php?url='.urlencode($bulletin_url);
 ?>
 <div id="bulletin" style="display: flex; flex-direction: row; align-items: center; justify-content: flex-start; border: 5px solid #F00; padding: 10px 0px; column-gap: 0px">
 	<div style="padding-left: 40px; padding-right: 40px;">
@@ -311,14 +302,7 @@ if (($show == 1))
 	<div id="bulletin_name" style="flex: 1"><a onclick="allowed_to_read = true;" href="<?php echo $bulletin_url; ?>" target="_blank"><?php echo $bulletin_name; ?></a></div>
 	<div style="padding-right: 10px">Revision:</div>
 	<div style="padding-right: 10px"><?php echo $mtb_revision; ?></div>
-	<?php
-	if ($bulletin_url in array of bulletins for this user)
-	{
-	?>
-		<div id=haveread style="background-color: #f5f5f5; color: #000; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; margin-right: 10px; cursor: pointer" onclick="if (allowed_to_read) {didRead(); document.getElementById('readwarning').innerHTML='';} else { document.getElementById('readwarning').innerHTML='<font color=red>Please open the document and read it first!</font>&nbsp;';   }  ">I have read the bulletin</div>
-	<?php
-	}
-	?>
+	<div id=haveread style="background-color: #f5f5f5; color: #000; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; margin-right: 10px; cursor: pointer" onclick="if (allowed_to_read) {didRead(); document.getElementById('readwarning').innerHTML='';} else { document.getElementById('readwarning').innerHTML='<font color=red>Please open the document and read it first!</font>&nbsp;';   }  ">I have read the bulletin</div>
 	<div id=readwarning></div>
 	<?php
 	if ($mbr_status != 2)
