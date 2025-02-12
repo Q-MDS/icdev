@@ -325,13 +325,13 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
                                         echo "<table border=1 cellpadding=0 cellspacing=0><Tr class=head><td><b>Instruction</td><td><center>Notes</center></td><td width=40><B>YES</td><td width=40><b>NO.</td><td>Queue for Repair</td></tr>";
 					echo "<script> document.getElementById('block2').disabled=true; document.getElementById('blockme').style.display='none'; </script>\n";
 				}
-					$rowno++;
-					$list_outstanding++;
-					$klik=" onclick=\"list_outstanding[$list_outstanding]=0; document.getElementById('myrow$rowno').style.display='none';\" ";
-					$clickscript.="list_outstanding[$list_outstanding]=$cbsrl;\n";
-					echo "<tr class=cell id=myrow$rowno><Td>".getdata($kcur,0)."</td><td><input name=rnotes$cbsrl size=10 maxlength=30></td><td><input type=radio id=radio1$cbsrl name=cb$cbsrl value=Y $doney $klik></td><td><input type=radio name=cb$cbsrl id=radio2$cbsrl value=N $donen  \"  ></td><td><input type=radio name=cb$cbsrl id=radio3$cbsrl value=R  \"  ></td><td>$donex</td></tr><input type=hidden name=cbneed$cbsrl value=Y>";
+				$rowno++;
+				$list_outstanding++;
+				$klik=" onclick=\"list_outstanding[$list_outstanding]=0; document.getElementById('myrow$rowno').style.display='none';\" ";
+				$clickscript.="list_outstanding[$list_outstanding]=$cbsrl;\n";
+                                echo "<tr class=cell id=myrow$rowno><Td>".getdata($kcur,0)."</td><td><input name=rnotes$cbsrl size=10 maxlength=30></td><td><input type=radio id=radio1$cbsrl name=cb$cbsrl value=Y $doney $klik></td><td><input type=radio name=cb$cbsrl id=radio2$cbsrl value=N $donen  \"  ></td><td><input type=radio name=cb$cbsrl id=radio3$cbsrl value=R  \"  ></td><td>$donex</td></tr><input type=hidden name=cbneed$cbsrl value=Y>";
 				
-					$cbfound++;
+                                $cbfound++;
 				} // cbseen
                         }
 			if ($cbfound>0)

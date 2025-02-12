@@ -9,18 +9,19 @@ if (!isset($conn)) {
 	if (!AllowedAccess("")) { Exit; };
 }
 
-// Test mode only
-// $test_user = $_GET['u'];
-// $test_date = $_GET['d'];
-
 // Global vars
+$bulletin_id = 0;
 $bulletin_name = 'none';
 $bulletin_url = '';
 $mtb_revision = '0';
 $monday = start_date();
 $next_mbr_id = 0;
+$pdf_log = array();
+$has_seen_pdf = true;
+
 // Test
 // $user_id = $test_user;
+
 // Live
 $user_id = getuserserial();
 $mbr_id = 0;
@@ -28,30 +29,8 @@ $mbr_status = 0;
 $mbr_date_updated = 0;
 $now = strtotime(date("Y-m-d H:i:s"));
 $cycle = 12 * 60 * 60; // 12 hours
-// $cycle = 20; // 12 seconds
 
-/**
- * Quintin
- * 06-02-2025
- * Check if user is part of certain clocking group to decide whether to show the banner or not
- */
-/*$show_to_groups = array(82,83,95,31,35,30,58,29,43,44,72,32,33,34,80,84,85,77,36,78,76,62,64,63,71,68,61,69,66,67,65,70,81,93);
-// $user_groups = check_user_group($user_id);
-$user_groups = array(91,87,38,39,75,92,50,94,101,86,40);
-
-$common_groups = array_intersect($user_groups, $show_to_groups);
-
-if (!empty($common_groups))
-{
-	// echo "User is part of the group<br>";
-	// load_banner();
-}
-else 
-{
-	echo "User is not part of the group<br>";
-	exit;
-	// load_banner();
-}*/
+$pdf_log = get_user_pdflog($user_id);
 load_banner();
 
 function start_date()
@@ -78,15 +57,38 @@ function check_user_group($user_id)
 	if ($cursor === false)
 		exit;
 
-	$sql = "SELECT ctm_ref_roster_group FROM clocking_roster_group_members A WHERE ctm_end_date is null AND ctm_ref_user = $user_id;";
+	$sql = "SELECT ctm_ref_roster_group FROM clocking_roster_group_members A WHERE ctm_end_date is null AND ctm_ref_user = $user_id";
+	// $sql = "SELECT ctm_ref_roster_group FROM clocking_roster_group_members A WHERE ctm_end_date is null AND ctm_ref_user = 2147478626";
 	ora_parse($cursor, $sql);
 	ora_exec($cursor);
-	
 
-	if (ora_fetch_into($cursor, $mbr_row, ORA_FETCHINTO_ASSOC)) 
+	while (ora_fetch_into($cursor, $mbr_row, ORA_FETCHINTO_ASSOC)) {
+        $data[] = $mbr_row['CTM_REF_ROSTER_GROUP'];
+    }
+
+	ora_close($cursor);
+
+	return $data;
+}
+
+function get_user_pdflog($user_id)
+{
+	global $conn;
+
+	$data = array();
+
+	$cursor = ora_open($conn);
+	if ($cursor === false)
+		exit;
+
+	$sql = "SELECT BULLETIN_ID FROM move_tech_bulletins_pdflog WHERE userserial = $user_id";
+	ora_parse($cursor, $sql);
+	ora_exec($cursor);
+
+	while (ora_fetch_into($cursor, $row, ORA_FETCHINTO_ASSOC)) 
 	{
-		$user_group = $mbr_row['CTM_REF_ROSTER_GROUP'];
-	} 
+		$data[] = $row['BULLETIN_ID'];
+	}
 
 	ora_close($cursor);
 
@@ -221,7 +223,7 @@ function create_mtr($user_id)
 
 function load_banner()
 {
-	global $conn, $bulletin_name, $bulletin_url, $monday, $user_id, $mtb_revision, $mbr_id, $mbr_status, $mbr_date_updated;
+	global $conn, $bulletin_name, $bulletin_url, $monday, $user_id, $mtb_revision, $mbr_id, $mbr_status, $mbr_date_updated, $bulletin_id;
 	
 	$cursor = ora_open($conn);
 
@@ -288,10 +290,35 @@ if ($mbr_status == 100)
 	$show = 0;
 }
 
+/**
+ * Quintin
+ * 06-02-2025
+ * Check if user is part of certain clocking group to decide whether to show the banner or not
+ */
+// Was previous dont show to list: $show_to_groups = array(82,83,95,31,35,30,58,29,43,44,72,32,33,34,80,84,85,77,36,78,76,62,64,63,71,68,61,69,66,67,65,70,81,93);
+$show_to_groups = array(82,95,31,35,30,29,32,33,34,80,84,85,77,78,76,62,63,71,68,61,69,66,67,65,70,81,93);
+
+// Test: $user_groups = array(36,28, 34);
+$user_groups = check_user_group($user_id);
+
+$common_groups = array_intersect($user_groups, $show_to_groups);
+
+if (!empty($common_groups))
+{
+	// echo "User is part of the group<br>";
+	$show = 1;
+} 
+else 
+{
+	// echo "User is not part of the group<br>";
+	$show = 0;
+}
+
 if (($show == 1))
 {
 	echo "<script> allowed_to_read= false; </script>";
-	$bulletin_url = '/move/pdf.php?url='.urlencode($bulletin_url);
+	$log_url = $bulletin_url;
+	$bulletin_url = '/move/pdf.php?u=' . $user_id . '&i=' . $bulletin_id . '&url='.urlencode($bulletin_url);
 ?>
 <div id="bulletin" style="display: flex; flex-direction: row; align-items: center; justify-content: flex-start; border: 5px solid #F00; padding: 10px 0px; column-gap: 0px">
 	<div style="padding-left: 40px; padding-right: 40px;">
@@ -303,7 +330,15 @@ if (($show == 1))
 	<div id="bulletin_name" style="flex: 1"><a onclick="allowed_to_read = true;" href="<?php echo $bulletin_url; ?>" target="_blank"><?php echo $bulletin_name; ?></a></div>
 	<div style="padding-right: 10px">Revision:</div>
 	<div style="padding-right: 10px"><?php echo $mtb_revision; ?></div>
+	<?php
+	if (in_array($bulletin_id, $pdf_log))
+	{
+		// print_r($pdf_log);
+	?>
 	<div id=haveread style="background-color: #f5f5f5; color: #000; border-radius: 5px; border: 1px solid #000; padding: 5px 20px; margin-right: 10px; cursor: pointer" onclick="if (allowed_to_read) {didRead(); document.getElementById('readwarning').innerHTML='';} else { document.getElementById('readwarning').innerHTML='<font color=red>Please open the document and read it first!</font>&nbsp;';   }  ">I have read the bulletin</div>
+	<?php
+	}
+	?>
 	<div id=readwarning></div>
 	<?php
 	if ($mbr_status != 2)
@@ -355,31 +390,3 @@ if (($show == 1))
 		console.log('Result:', result);
 	}
 </script>
-
-"82",
-"95",
-"31",
-"35",
-"30",
-"29",
-"32",
-"33",
-"34",
-"80",
-"84",
-"85",
-"77",
-"78",
-"76",
-"62",
-"63",
-"71",
-"68",
-"61",
-"69",
-"66",
-"67",
-"65",
-"70",
-"81",
-"93"

@@ -1,0 +1,20 @@
+Initial Notes
+
+- New task: move/check  
+move_jobgeneral_done  
+- add submit  
+- process only that line  
+- must have notes and mech selected  
+- return to page or close  
+- pass url - rnd  
+move > depot > company > find jobcard > select a jobcard  
+- clearitem.php
+
+1. This screen shows a checklist of items to do
+2. If user clicks on Y the line item dissappears
+3. Need to add a button SUBMIT on each line: If user clicks on QFR radio button then the SUBMIT btn appears
+4. Isolate the record, use existing code to save it. Prob a stage=x php process
+5. let php do it's thing and save and then redirect to the url. Have a look at how the Y option work_month_spend
+6. VALIDATION: Must have a note and a mech selected.
+7. User clicks on QFR, disabled submit appears, user selects mech && adds a note then submit is enabled
+8. Do validation stuff... Click on SUBMIT... Status = R, need notes and mechanic
