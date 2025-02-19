@@ -125,7 +125,13 @@ function get_budget_spend($serial)
 	
 		oci_execute($cursor);
 	
-		while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) {
+		while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
+		{
+			if ($row['TOTAL'] < 0)
+			{
+				$row['TOTAL'] = 0;
+			}
+			
 			$data[$row['BUDGET_MONTH']] = $row['TOTAL'];
 		}
 	
@@ -210,14 +216,18 @@ function add_pbl_entry($from_budget_serial, $to_budget_serial, $amount, $transfe
 {
 	$conn = oci_conn();
 
-	$sql = "INSERT INTO purchase_budget_log (log_id, from_budget_serial, to_budget_serial, amount, TRANFER_DATE, company, BUDGET_TO_YM, BUDGET_FROM_YM, reason, username) VALUES (PURCHASE_BUDGET_LOG_ID.nextval, :from_bud_serial, :to_bud_serial, :amount, :transfer_date, :company, :bud_to_ym, :bud_from_ym, :reason, :user_name)";
+	// $formatted_transfer_date = date('d/M/y H:i:s', strtotime($transfer_date));
+	$now = strtotime("now");
+	$formatted_transfer_date = date('d/M/y H:i:s', $now);
+
+	$sql = "INSERT INTO purchase_budget_log (log_id, from_budget_serial, to_budget_serial, amount, TRANFER_DATE, company, BUDGET_TO_YM, BUDGET_FROM_YM, reason, username) VALUES (PURCHASE_BUDGET_LOG_ID.nextval, :from_bud_serial, :to_bud_serial, :amount, TO_DATE(:transfer_date, 'YYYY-MM-DD HH24:MI:SS'), :company, :bud_to_ym, :bud_from_ym, :reason, :user_name)";
 		
 	$cursor = oci_parse($conn, $sql);
 
 	oci_bind_by_name($cursor, ':from_bud_serial', $from_budget_serial);
 	oci_bind_by_name($cursor, ':to_bud_serial', $to_budget_serial);
 	oci_bind_by_name($cursor, ':amount', $amount);
-	oci_bind_by_name($cursor, ':transfer_date', $transfer_date);
+	oci_bind_by_name($cursor, ':transfer_date', $formatted_transfer_date);
 	oci_bind_by_name($cursor, ':company', $company);
 	oci_bind_by_name($cursor, ':bud_to_ym', $bud_to_ym);
 	oci_bind_by_name($cursor, ':bud_from_ym', $bud_from_ym);
@@ -256,7 +266,7 @@ function clearLogFile()
 	log_event("| |   / _ \ / _` |");
 	log_event("| |__| (_) | (_| |");
 	log_event("|_____\___/ \__, |");
-	log_event("            |___/ " . "\n");
+	log_event("v1.2.14     |___/ " . "\n");
 }
 
 function log_event($message) 
@@ -288,6 +298,7 @@ function clearEmailLog()
 
 	log_email("<html><head><title>Budget Update Report</title></head><body><h1>Budget Update Report</h1>");
 	log_email("<p>Report generated on: " . date('Y-m-d H:i:s') . "</p>");
+	log_email("<div style='font-size: 10px; padding-bottom: 10px;'>v1.2.14</div>");
 	log_email("<table border='1'><tr><th align='left'>Budget Name</th><th align='right'>YTD Budget</th><th align='right'>YTD Spend</th><th align='right'>$this_month Adjustment</th><th align='right'>$this_month Budget</th></tr>");
 }
 
@@ -337,7 +348,7 @@ function send_email()
 
 		foreach ($email_list as $email_address) 
 		{
-			$result = $mail->smtp_send($from, $email_address);
+			$result = $mail->smtp_send($from, $subject, $email_address);
 			if (!$result) {
                 echo "Failed to send email to $email_address";
             }
@@ -479,8 +490,12 @@ $next_month_spend = $get_ranges['next_month_spend'];
 
 log_event("Selected date range: " . json_encode($range_budget) . "\n");
 
+
+// $budget_spend = get_budget_spend(11698);
+// print_r($budget_spend);
+
 // Get data arrays
 $budget_serials = get_budget_serials();
-print_r($budget_serials);
+// print_r($budget_serials);
 $budget_names = get_budget_names();
 ?>

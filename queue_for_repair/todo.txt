@@ -14,7 +14,36 @@ move > depot > company > find jobcard > select a jobcard
 2. If user clicks on Y the line item dissappears
 3. Need to add a button SUBMIT on each line: If user clicks on QFR radio button then the SUBMIT btn appears
 4. Isolate the record, use existing code to save it. Prob a stage=x php process
-5. let php do it's thing and save and then redirect to the url. Have a look at how the Y option work_month_spend
+5. let php do it's thing and save 
+
+
+
+
+
+
+
+
+
+and then redirect to the url. Have a look at how the Y option work_month_spend
 6. VALIDATION: Must have a note and a mech selected.
 7. User clicks on QFR, disabled submit appears, user selects mech && adds a note then submit is enabled
 8. Do validation stuff... Click on SUBMIT... Status = R, need notes and mechanic
+
+Clockify
+13-2-25
+Budget - 10:00 - 10:32
+QFR - 11 - 
+
+Process
+
+Update params stage = 2
+
+14022025
+- Budget changes
+notes from budget code:   
+(√) transfer_date is only storing the date, not the time.      
+- there are transfers being logged for amounts like  0.0010500000207685 - 
+- I think you should round all budget amounts and YTD spend to the nearest cent before comparing them, please.      Thanks!
+12755, 11924, 11940
+
+- Tech bull changes

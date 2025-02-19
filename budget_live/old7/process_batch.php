@@ -17,7 +17,7 @@ $run_start = time();
 
 foreach ($budget_serials as $serial)
 {
-	// $serial = 11698; //11698, 12043
+	// $serial = 12043; //11698
 	
 	$budget_amounts = get_budget_amounts($serial);
 	$new_budget = $budget_amounts;
@@ -91,7 +91,6 @@ foreach ($budget_serials as $serial)
 		$diff = $ytd_spend[$work_month_spend] - $ytd_budget[$work_month_budget];
 		$diff = round($diff, 2);
 		$adjustment = $budget_spend[$work_month_spend] - $diff;
-		// QXQ $adjustment = round($adjustment, 2);
 		$current_new_budget = $diff + $budget_amounts[$work_month_budget];
 		$current_new_budget = round($current_new_budget, 2);
 		$next_new_budget = ($diff * -1) + $budget_amounts[$next_month_budget];
@@ -158,7 +157,7 @@ foreach ($budget_serials as $serial)
 		$new_budget[$last_key] = $last_value;
 
 		log_event("- New budget amounts: " . json_encode($new_budget));
-		log_email("<tr><td align='left'>" . $budget_name . " (" . $serial . ")</td><td align='right'>" . number_format($total_budget, 2) . "</td><td align='right'>" . number_format($total_used, 2) . "</td><td align='right'>" . number_format($email_adjustment, 2) . "</td><td align='right'>" . number_format($new_budget[$last_key], 2) . "</td></tr>");
+		log_email("<tr><td align='left'>" . $budget_name . " (" . $serial . ")</td><td align='right'>" . number_format($total_budget, 2) . "</td><td align='right'>" . number_format($total_used, 2) . "</td><td align='right'>" . $email_adjustment . "</td><td align='right'>" . number_format($new_budget[$last_key], 2) . "</td></tr>");
 
 		// Update budget table
 		$result = upd_budget_amounts($new_budget, $serial);

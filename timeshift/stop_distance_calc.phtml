@@ -1,0 +1,71 @@
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/misc.inc");
+
+if (!open_oracle()) { Exit; };
+
+
+$apikey="r0wk1gHnkcLWTawHEZC1YCRWs9SuF3KyO7z7dSgidJ4";
+
+
+$kcur=ora_open($conn);
+
+ora_parse($cursor," select shortname, latitude||','||longitude booking , mil_location mix from stop_details2  left join mix_locations on mil_ref_stop_Details=stop_serial where active='Y' order by 1");
+ora_exec($cursor);
+while (ora_Fetch($cursor)) {
+	$stop = getdata($cursor,0);
+	$gpsloc = getdata($cursor,2);
+	if ($gpsloc == "")
+		$gpsloc = getdata($cursor,1);
+	$gps[$stop] = $gpsloc;
+}
+ 
+
+$today=date("Ymd");
+
+ora_parse($cursor,"select route_serial, short_name, display_order, route_no from route_stops where date_to>=$today order by route_no, route_serial, display_order");
+ora_Exec($cursor);
+$lastrs="";
+$last_stop="";
+while (ora_fetch($cursor)) {
+	$rs=getdata($cursor,0);
+	$rn=getdata($cursor,3);
+	if ($lastrs!=$rs) {
+		$last_stop=getdata($cursor,1);
+		$lastrs=$rs;
+		// now continue to get the next stop
+	} else {
+		$stop = getdata($cursor,1;
+		echo "Route $rs ($rn) from $last_stop to $stop ";
+		$from_stop = $gps[$last_stop];
+		$to_stop = $gps[$stop];
+		echo "$from_stop - $to_stop : ";
+		$curl = curl_init('https://router.hereapi.com/v8/routes?transportMode=truck&origin='.$from_stop.'&destination='.$to_stop.'&return=summary&apiKey=your_api_key&vehicle[speedCap]=27');
+		curl_setopt($curl, CURLOPT_HEADER, 0);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		$result = curl_exec($curl);
+		unset($curl);
+
+		echo "\n";
+		echo $result."\n";
+		$data = json_decode($result);
+		var_export($data);
+		exit;
+
+
+
+
+		$last_stop = $stop;
+	}
+
+}
+
+$curl = curl_init('https://router.hereapi.com/v8/routes?transportMode=truck&origin='.$from_stop.'&destination='.$to_stop.'&return=summary&apiKey=your_api_key&vehicle[speedCap]=27');
+curl_setopt($curl, CURLOPT_HEADER, 0);  
+curl_setopt($curl, CURLOPT_RETURNTRANSFER, true); 
+$result = curl_exec($curl);
+unset($curl);
+
+
+
+?>

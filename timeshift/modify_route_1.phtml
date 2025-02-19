@@ -1,0 +1,88 @@
+<HTML>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); 
+require_once("../php3/misc.inc");
+?>
+<h2>List of routes with route #<?echo $routeno?></H2>
+<br>
+<?
+function splitdate($compdate)
+{
+	$year = substr($compdate,0,4);
+	$month= substr($compdate,4,2);
+	$day  = substr($compdate,6,2);
+	return $day."/".$month."/".$year;
+}
+
+require_once ("../php3/oracle.inc");
+require_once ("../php3/sec.inc");
+require_once ("../php3/colors.inc");
+
+if (!open_Oracle()) { Exit;}; 
+if (!AllowedAccess("MODIFY_ROUTE")) { Exit; };
+
+$tmpuser=getenv("REMOTE_USER");
+get_colors($tmpuser);
+
+if ($showold=="Y")
+	ora_parse($cursor,"select * from route_details where route_no='$routeno' order by date_to desc");
+else
+{
+	ora_parse($cursor,"select * from route_details where route_no='$routeno' and carrier_code!='AR' order by date_to desc");
+	echo "<a href=modify_route_1.phtml?routeno=$routeno&showold=Y>Include old serials</a><bR>";
+}
+
+ora_exec($cursor);
+
+echo "<table border=0 bgcolor='#$table_bg'>";
+echo "<tr bgcolor='#$table_title'><td>Serial#</td><td>Route#</td><td>Description</td><td>From</td>";
+echo "<td>To</td><td>Carrier</td><td>&nbsp;</td></tr>";
+$kcur=ora_open($conn);
+while (ora_fetch($cursor))
+{
+	$testrs=getdata($cursor,0);
+	
+	echo "<tr bgcolor='#$table_cell'><td>";
+	echo chop(ora_getColumn($cursor,0));
+	echo "</td><td>";
+	echo chop(ora_getColumn($cursor,1));
+	echo "</td><td>";
+	echo chop(ora_getColumn($cursor,12));
+	ora_parse($kcur,"select min(run_date),max(run_date) from open_coach where route_serial='$testrs' and is_open='Y'");
+	ora_exec($kcur);
+	ora_fetch($kcur);
+	if (is_numeric(getdata($kcur,0))) {
+		if (getdata($kcur,1)>getdata($cursor,3))
+			echo "<font color=red><b>";
+		echo "<br><center><i><font size=2>Open from ";
+
+		echo splitdate(getdata($kcur,0))." to ".splitdate(getdata($kcur,1));
+
+	}
+	echo "</td><td>";
+	echo splitdate(chop(ora_getColumn($cursor,2)));
+	echo "</td><td>";
+	echo splitdate(chop(ora_getColumn($cursor,3)));
+	echo "</td><td>";
+	echo chop(ora_getColumn($cursor,9));
+	echo "</td><td>";
+	echo "<form action=modify_route_2.phtml method=post>";
+	echo "<input type=hidden name='serial' value='";
+	echo chop(ora_getColumn($cursor,0));
+	echo "'><input type=submit value='Edit'>";
+	echo "</form></td></tr>";
+}
+echo "</table>";
+ora_close($kcur);
+
+close_Oracle();
+?>
+
+<br>
+<form action=modify_route.phtml method=post>
+<input type=submit value="Back to Modify Route Main Page">
+</form>
+
+</BODY>
+</HTML>

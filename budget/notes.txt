@@ -98,3 +98,25 @@ REASON					Surplus YTD budget adjustment
 USERNAME				VARCHAR2
 
 -> 2 records: 1 line per neg change and 1 line per pos change
+
+12047, 11698
+pb amount total: 
+8 636 398 321.406650400017
+8 636 398 321.406650400017
+8 636 398 321.406650400017
+
+19-02-2025 Data
+Before:
+17514483625.936650400017
+17514501796.696650400017
+
+With the current data I ran the script and did get a difference in the before and after totals, There was a difference of 18170.76 which I traced to 1 account/budget (#11698).  The purchase_budget table has no amounts allocated to this budget but the spend has 3 records:
+11698	202405	-69000.66	0
+11698	202406	-17370.75	0
+11698	202407	-800.01	        0
+the last 2 add up to 18170.76 and it looks like the script is adding 18170.76 to the budget to balance the spend
+
+
+
+17514483625.936650400017
+17514483625.936650400017

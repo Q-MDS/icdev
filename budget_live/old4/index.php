@@ -81,12 +81,12 @@ function get_budget_spend($serial)
 
 	$data = array();
 
-	$range = $range_spend;
+	$range = $range_spend[$month];
 	// $range = array('202406','202407','202408','202409','202410','202411','202412','202501');
 
 	foreach ($range as $budget_month)
 	{
-		$sql = "SELECT budget_month, total FROM purchase_running6 WHERE budget = :budget AND budget_month = :budget_month";
+		$sql = "SELECT budget_month, total FROM icape.purchase_running6@livesys WHERE budget = :budget AND budget_month = :budget_month";
 
 		$cursor = oci_parse($conn, $sql);
 	
@@ -99,13 +99,7 @@ function get_budget_spend($serial)
 	
 		oci_execute($cursor);
 	
-		while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
-		{
-			if ($row['TOTAL'] < 0)
-			{
-				$row['TOTAL'] = 0;
-			}
-			
+		while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) {
 			$data[$row['BUDGET_MONTH']] = $row['TOTAL'];
 		}
 	
@@ -196,10 +190,7 @@ function add_pbl_entry($from_budget_serial, $to_budget_serial, $amount, $transfe
 {
 	global $conn;
 
-	$now = strtotime("now");
-	$transfer_date = date('d/M/y H:i:s', $now);
-
-	$sql = "INSERT INTO purchase_budget_log (log_id, from_budget_serial, to_budget_serial, amount, TRANFER_DATE, company, BUDGET_TO_YM, BUDGET_FROM_YM, reason, username) VALUES (PURCHASE_BUDGET_LOG_ID.nextval, :from_bud_serial, :to_bud_serial, :amount, TO_DATE(:transfer_date, 'YYYY-MM-DD HH24:MI:SS'), :company, :bud_to_ym, :bud_from_ym, :reason, :user_name)";
+	$sql = "INSERT INTO purchase_budget_log (log_id, from_budget_serial, to_budget_serial, amount, TRANFER_DATE, company, BUDGET_TO_YM, BUDGET_FROM_YM, reason, username) VALUES (PURCHASE_BUDGET_LOG_ID.nextval, :from_bud_serial, :to_bud_serial, :amount, :transfer_date, :company, :bud_to_ym, :bud_from_ym, :reason, :user_name)";
 		
 	$cursor = oci_parse($conn, $sql);
 
@@ -229,7 +220,7 @@ function clearLogFile()
 	log_event("| |   / _ \ / _` |");
 	log_event("| |__| (_) | (_| |");
 	log_event("|_____\___/ \__, |");
-	log_event("v1.2.14     |___/ " . "\n");
+	log_event("            |___/ " . "\n");
 }
 
 function log_event($message) 
@@ -259,9 +250,8 @@ function clearEmailLog()
 
 	$email_html = "";
 
-	log_email("<html><head><title>Budget Update Report</title></head><body><h1>Budget Amounts Shifted Report</h1>");
-	log_email("<p>Report generated on: " . date('Y-m-d H:i:s') . "\nv1.2.14</p>");
-	log_email("<div style='font-size: 10px; padding-bottom: 10px;'>v1.2.14</div>");
+	log_email("<html><head><title>Budget Update Report</title></head><body><h1>Budget Update Report</h1>");
+	log_email("<p>Report generated on: " . date('Y-m-d H:i:s') . "</p>");
 	log_email("<table border='1'><tr><th align='left'>Budget Name</th><th align='right'>YTD Budget</th><th align='right'>YTD Spend</th><th align='right'>$this_month Adjustment</th><th align='right'>$this_month Budget</th></tr>");
 }
 
@@ -288,9 +278,9 @@ function send_email()
 	global $noreply_email;
 
 	// $email_list = ["keith@intercape.co.za", "quintin@moderndaystrategy.com"];
-	$email_list = ["keith@intercape.co.za", "quintin@pxo.co.za"];
+	$email_list = ["quintin@moderndaystrategy.com", "quintin@pxo.co.za"];
 	$from = $noreply_email;
-	$subject = "Budget Amounts Shifted";
+	$subject = "Budget Update Report - " . date("Y-m-d H:i:s");
 	$text_message = str_replace("<br>", "\n", $html_message);
 
 	// Read the contents of the email.html file
@@ -311,7 +301,7 @@ function send_email()
 
 		foreach ($email_list as $email_address) 
 		{
-			$result = $mail->smtp_send($from, $subject, $email_address);
+			$result = $mail->smtp_send($from, $email_address);
 			if (!$result) {
                 echo "Failed to send email to $email_address";
             }

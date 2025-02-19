@@ -1,0 +1,718 @@
+
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+require_once("../php3/opstimes.inc");
+
+VV("highlight");
+VV("returnto");
+VV("lastser",-999);
+
+if ($returnto!="")
+{
+        echo " <a href='$returnto'>Click here to Return</a><br>";
+	$returnto=urlencode($returnto);
+}
+
+
+if (!open_oracle()) { Exit;};
+if (!AllowedAccess("MODIFY_ROUTE")) { Exit; };
+
+
+if (!is_numeric($serial))
+	exit;
+
+$choices = array();
+
+$returnto_2fa = $_SERVER["REQUEST_URI"]."?serial=$serial";
+require_once("../booking/2fa.phtml");
+
+
+
+
+if (isset($splitfrom) && is_numeric($splitfrom) && is_numeric($splitto) && $splitto>=$splitfrom) {
+	for ($loopdate=$splitfrom;$loopdate<=$splitto;$loopdate=nextdate($loopdate)) {
+		$_POST["split$loopdate"] = "Y";
+	}
+}
+
+reset($_POST);
+foreach($_POST as $key => $val) if (substr($key,0,5)=="split") {
+	$date=substr($key,5,8);
+	if (is_numeric($date) && $key!="splitfrom" && $key!="splitto") {
+		$kcur=ora_open($conn);
+
+                $days="_______";
+
+                $thedate=vgetdate($date);
+                $days[date("w",$date)]=substr(date("D",$date),0,1);
+
+		ora_parse($cursor,"select * from price_group where route_serial='$serial' and valid_from<=$date and valid_to>=$date and days like '$days'");
+		ora_exec($cursor);
+		unset($old);
+		if (!ora_fetch_into($cursor,$prices)) {
+			echo "No range found that covers $date";
+			exit;
+		}
+			$rundate=$date;
+
+                        $pgs=$prices[0];
+			$rs=$prices[1];
+                        $vfrom=$prices[2];
+                        $vto=$prices[3];
+                        $days=$prices[4];
+                        $ctk1=$prices[5];
+                        $ctk2=$prices[6];
+                        $yield=$prices[7];
+                        $waste=$prices[8];
+			$minprice=$prices[10];
+			$otherfactor=$prices[11];
+			
+
+			// get CS for the log entry
+			orA_parse($cursor,"select coach_serial from open_coach where route_serial='$rs' and run_date='$date' order by is_open desc");
+			ora_Exec($cursor);
+			if (ora_fetch($cursor))
+				$cs=getdata($cursor,0);
+			else
+				$cs="null";
+
+
+                        if ($yield=="")
+                                $yield="null";
+                        if ($waste=="")
+                                $waste="null";
+			if (!is_numeric($minprice))
+                                        $minprice=110;
+                        if (!is_numeric($otherfactor))
+                                        $otherfactor=1.2;
+
+
+                        ora_parse($cursor,"select count(*) from price_group where price_group_serial=$pgs");
+                        ora_exec($cursor);
+                        ora_fetch($cursor);
+                        $pgcount=getdata($cursor,0);
+
+
+                        $allcorrect=true;
+//                      echo "Checking $vfrom!=$vto or $pgcount>1<bR>";
+                        if ($vfrom!=$vto || $pgcount>1) {
+				$rs=$serial;
+
+                                // need new date
+                                if ($vfrom<$rundate) {
+                                        $newto=prevdate($rundate);
+                                        $qry="insert into PRICE_GROUP (PRICE_GROUP_SERIAL,ROUTE_SERIAL,VALID_FROM,VALID_TO,DAYS,COMPUTICKET_LEVEL,COMPUTICKET_MODE,PRED_YIELD,WASTE_ESCALATE,LASTMINUTE_ON,MIN_PRICE,OTHER_FACTOR) values ($pgs,$rs,$vfrom,$newto,'$days','$ctk1','$ctk2',$yield,$waste,'N',$minprice,$otherfactor)";
+//                                      $msg.= "$qry<BR>\n";
+                                        ora_parse($cursor,$qry);
+                                        if (!ora_exec($cursor))
+                                                $allcorrect=false;
+
+                                }
+                                if ($vto>$rundate && $allcorrect) {
+                                        $newfrom=nextdate($rundate);
+                                        $qry="insert into PRICE_GROUP (PRICE_GROUP_SERIAL,ROUTE_SERIAL,VALID_FROM,VALID_TO,DAYS,COMPUTICKET_LEVEL,COMPUTICKET_MODE,PRED_YIELD,WASTE_ESCALATE,LASTMINUTE_ON,MIN_PRICE,OTHER_FACTOR) values ($pgs,$rs,$newfrom,$vto,'$days','$ctk1','$ctk2',$yield,$waste,'N',$minprice,$otherfactor)";
+                                       // $msg.= "$qry<BR>\n";
+                                        ora_parse($cursor,$qry);
+                                        if (!ora_exec($cursor))
+                                                $allcorrect=false;
+                                }
+                                ora_parse($cursor,"delete from price_group where price_group_serial=$pgs and valid_from=$vfrom and valid_to=$vto and days='$days'");
+                                if (!ora_exec($cursor))
+                                        $allcorrect=false;
+
+                                ora_parse($cursor,"select price_group_seq.nextval from dual");
+                                ora_exec($cursor);
+                                ora_Fetch($cursor);
+
+                                $oldpgs=$pgs;
+                                $pgs=getdata($cursor,0);
+                                if (!is_numeric($pgs))
+                                        $allcorrect=false;
+                                $qry="insert into PRICE_GROUP (PRICE_GROUP_SERIAL,ROUTE_SERIAL,VALID_FROM,VALID_TO,DAYS,COMPUTICKET_LEVEL,COMPUTICKET_MODE,PRED_YIELD,WASTE_ESCALATE,LASTMINUTE_ON, MIN_PRICE, OTHER_FACTOR) values ($pgs,$rs,$rundate,$rundate,'$days','$ctk1','$ctk2',$yield,$waste,'N',$minprice,$otherfactor)";
+                                ora_parse($cursor,$qry);
+                                if (!ora_exec($cursor))
+                                        $allcorrect=false;
+
+                                if (!$allcorrect) {
+                                        echo "REPLY: Error creating new price group serial";
+                                        ora_rollback($conn);
+                                        exit;
+                                }
+
+                                ora_parse($cursor,"insert into PRICE_OTHER select $pgs,from_stop,to_stop,route_serial,price,'N' from PRICE_OTHER where price_group_serial=$oldpgs");
+                                if (!ora_exec($cursor))
+                                        $allcorrect=false;
+                                ora_parse($cursor,"insert into PRICE_DATA select $pgs,price_class,from_group,to_group,level_perc,level_seats,min_seats,rebate_seats,price,'N' from PRICE_DATA where price_group_serial=$oldpgs");
+                                if (!ora_exec($cursor))
+                                        $allcorrect=false;
+                                if (!$allcorrect) {
+                                        echo "REPLY: Error copying prices to new price group serial";
+                                        ora_rollback($conn);
+                                        exit;
+                                } else {
+					//log it
+					$myuname=getenv("REMOTE_USER");
+					ora_parse($cursor,"insert into last_view_pricing (pgs,cs,who,viewtime,page,details)  values ('$pgs',$cs,'$myuname',CURRENT_TIMESTAMP,'s','##Split out $date')");
+		                        ora_exec($cursor);
+				}
+
+                                $insert=true;
+                        } else $insert=false;
+
+					
+		
+
+	}
+}
+if (isset($exit) && $exit=="Y") {
+	echo "Done!";
+	exit;
+}
+
+ora_parse($cursor,"select ops_name,sub_route_one,sub_route_two,route_no,date_to,crossover from route_details where route_serial='$serial'");
+ora_exec($cursor);
+if (!ora_fetch($cursor)) {
+	echo "Route $serial not found!~<bR>";
+	exit;
+}
+$routeno=getdata($cursor,3);
+$opscode=getdata($cursor,0);
+$subroute1=getdata($cursor,1);
+$subroute2=getdata($cursor,2);
+$ending_date=getdata($cursor,4);
+$crossover_stop=getdata($cursor,5);
+$subroute=false;
+if (is_numeric($subroute1)) {
+	$subroute=true;
+	ora_parse($cursor,"select date_from, date_to from route_Details where route_serial='$subroute1'");
+	ora_Exec($cursor);
+	if (ora_Fetch($cursor)) {
+		$sr1details="(".getdata($cursor,0)."-".getdata($cursor,1).")";
+	}
+	ora_parse($cursor,"select short_name, route_no from route_stops where route_serial='$subroute1' order by stop_order");
+	ora_exec($cursor);
+	ora_fetch($cursor);
+	$sr1firststop = chop(ora_getColumn($cursor,0));
+	$firststop=$sr1firststop;
+        $sr1routeno = chop(ora_getColumn($cursor,1));
+
+	
+	while (ora_fetch($cursor)) {
+		$sr1laststop = chop(ora_getColumn($cursor,0));
+		if ($sr1laststop==$crossover_stop)
+			$gothru[$sr1laststop]=1;
+//		echo "Set $sr1laststop<Br>";
+	}
+}
+$gotconnect="";
+if (is_numeric($subroute2)) {
+	$subroute=true;
+	ora_parse($cursor,"select date_from, date_to from route_Details where route_serial='$subroute2'");
+        ora_Exec($cursor);
+        if (ora_Fetch($cursor)) {
+                $sr2details="(".getdata($cursor,0)."-".getdata($cursor,1).")";
+        }
+
+        ora_parse($cursor,"select short_name, route_no from route_stops where route_serial='$subroute2' order by stop_order");
+        ora_exec($cursor);
+        ora_fetch($cursor);
+        $sr2firststop = chop(ora_getColumn($cursor,0));
+	$sr2routeno = chop(ora_getColumn($cursor,1));
+	if (isset($gothru[$sr2firststop]))
+		$gotconnect=$sr2firststop;
+//	else
+//		echo "$sr2firststop is not connect<bR>";
+        while (ora_fetch($cursor)) {
+	        $sr2laststop = chop(ora_getColumn($cursor,0));
+		if (/*$gotconnect=="" &&*/ isset($gothru[$sr2laststop]))
+			$gotconnect=$sr2laststop;
+	}
+	$laststop=$sr2laststop;
+}
+
+
+ora_parse($cursor,"select short_name, route_no from route_stops where route_serial='$serial' order by stop_order");
+ora_exec($cursor);
+if (ora_fetch($cursor)) {
+	if ($subroute) {
+		ora_parse($cursor,"delete from route_stops where route_serial='$serial'");
+		ora_exec($cursor);
+
+	} else {
+		$firststop = chop(ora_getColumn($cursor,0));
+		while (ora_fetch($cursor))
+			$laststop = chop(ora_getColumn($cursor,0));
+		if ($routeno=="")
+			$routeno = chop(ora_getColumn($cursor,1));
+	}
+}
+?>
+
+<H3>
+<? settype($routeno, "string");
+if ($showtitle=="" && $highlight!="")
+	$showtitle=afrikdate($highlight);
+
+ ?>
+Serial #<?echo $serial?> (route: <?echo $routeno." <font style='background:yellow'>$showtitle</font>";?>)<br>
+<? echo "$firststop to $laststop" ?>
+</H3>
+<?
+
+if (is_numeric($subroute1)) {
+	if (is_numeric($subroute2)) {
+		echo "<font color=red>Sub route 1: $sr1routeno $sr1details  from $sr1firststop to $sr1laststop<br>Sub route 2: $sr2routeno $sr2details from $sr2firststop to $sr2laststop ";
+		if ($gotconnect=="")
+			echo "<b> WARNING! Routes dont seem to feed each other!</b><br>";
+		else
+			echo " (Connecting at $gotconnect)<br>";
+		echo "</font>";
+	} else {
+		echo "<font color=red>Sub route 1: $sr1routeno $sr1details from $sr1firststop to $sr1laststop, <b>PLEASE SET UP SUB ROUTE 2</font></b><bR>";
+	}
+} elseif (is_numeric($subroute2))
+	 echo "<font color=red>Sub route 2: $sr2routeno $sr2details from $sr2firststop to $sr2laststop, <b>PLEASE SET UP SUB ROUTE 1</font></b><bR>";
+
+if (!$subroute) {
+echo "<table border=1 cellspacing=0><tr><td colspan=2><center><b>Checklist</td></tr>";
+$today=date("Ymd");
+echo "<tr><td>Route End Date</td><td>";
+if ($ending_date>=$today)
+	echo "<font color=green>".$ending_date;
+else
+	echo "<font color=red>".$ending_date;
+echo "</td></tR>";
+echo "<tr><td>SOPS: </td><td>";
+ora_parse($cursor,"select short_name from ops_routes where first_route_no=$routeno or second_route_no=$routeno");
+ora_exec($cursor);
+if (ora_fetch($cursor))
+        echo "<font color=green>".getdata($cursor,0);
+else
+        echo "<font color=red>NOT YET";
+echo "</td></tr>";
+echo "<tr><td>Stats system:</td><td>";
+
+	ora_parse($cursor,"select Owner from sales_routes where ID=$routeno");
+	ora_Exec($cursor);
+	if (ora_fetch($cursor))
+	{
+		echo "<font color=green>Owner ".getdata($cursor,0)."</font><br>";
+		ora_parse($cursor,"select BudgetID, ForwardID from sales_route_budget_map where RouteID=$routeno");
+		ora_exec($cursor);
+		if (ora_fetch($cursor)) {
+			echo "<font color=green>Budget ".getdata($cursor,0)." ForwardID=".getdata($cursor,1)."</font>";
+		} else {
+			echo "<font color=red>DOESNT EXIST IN BUGET MAP</font>";
+		}
+	}
+	else
+		echo "<font color=red>DOESNT EXIST</font><br>";
+//       $query="INSERT into sales_routes (ID,Route,Area,Owner,Tags,cpk,Archived) values ($copyto,'$shortname','$area','$owner','$tags',$cpk,'N')";
+//                $query="INSERT into sales_route_budget_map (RouteID, BudgetID, ForwardID) values ($copyto, $budgetid, $forwardid)";
+
+echo "</td></tr><tr><td>Forecast Tool</td><td>";
+
+       // Parameters for connection to mysql forecast database
+        $myServer = "127.0.0.1";
+        $myUser = "root";
+        $myPass = "fast#SQL!";
+        $myDB = "forecast";
+
+        // Create database connection
+      try {
+                $mylink = new PDO  ("mysql:host=$myServer;dbname=$myDB",$myUser,$myPass);
+          } catch ( PDOException $e){
+		echo "<font color=red>Cannot connect to database</font>";
+		unset($mylink);
+	}
+if (isset($mylink)) {
+  $stmt=$mylink->prepare("select 'x' from fc_routeprofile where RouteID=$routeno");
+  $stmt->execute();
+  if ($row=$stmt->fetch()) 
+	echo "<font color=green>OK</font>";
+  else
+	echo "<font color=red>NOT YET</font>";
+}
+
+echo "</td></tr>";
+echo "<tr><td>Open for bookings</td><td>";
+$today=date("Ymd");
+ora_parse($cursor,"select run_date from open_coach where route_serial='$serial' and is_open='Y' and run_date>=$today order by run_date");
+ora_exec($cursor);
+if (ora_fetch($cursor)):
+        $start=getdata($cursor,0);
+        while (ora_fetch($cursor))
+                $end=getdata($cursor,0);
+        echo "<font color=green>Open from ";
+        echo substr($start,6,2),"/",substr($start,4,2),"/",substr($start,0,4);
+        echo " to ";
+        echo substr($end,6,2),"/",substr($end,4,2),"/",substr($end,0,4);
+else:
+        echo "<font color=red>not currently open.";
+endif;
+
+
+echo "</td></tr></table>";
+}
+$thistoday=date("Ymd");
+ora_parse($cursor,"select count(*) from ( select trim(short_name) from route_Stops where route_serial='$serial' and date_to>=$thistoday intersect select trim(shortname) from stop_details2 where active='N')");
+ora_Exec($cursor);
+ora_Fetch($cursor);
+$numdelstops=getdata($cursor,0);
+if ($numdelstops>0)
+	echo "<font size=+2 color=red><b>WARNING</b> $numdelstops stops are deleted!!!</font><br>";
+
+?>
+<hr>
+<form method=post action='modify_route_details.phtml'>
+<input type=hidden name=serial value='<? echo $serial ?>'>
+<input type=hidden name=passrn value='<? echo $routeno ?>'>
+<input type=hidden name=passft value='<? echo "$firststop to $laststop"?>'>
+<input type=submit value="Edit Route Details">
+</form>
+
+<form method=post action='modify_route_stops.phtml'>
+<input type=hidden name=serial value='<? echo $serial ?>'>
+<input type=hidden name=passrn value='<? echo $routeno ?>'>
+<input type=hidden name=passft value='<? echo "$firststop to $laststop"?>'>
+<input type=submit value="Edit Route Stops"> <a target='_blank' href=stop_distance_calc.phtml?serial=<?=$serial?>>Recalculate stop distances</a>
+</form>
+<? if (!$subroute):  // triangle code for subroute not done yet!
+?>
+<form method=post target='_new' action='triangle.phtml'>
+<input type=hidden name=rs value='<? echo $serial ?>'>
+<input type=submit value="Show Prices in Triangles (SLOW!)">
+</form>
+<?
+endif;
+Srand(date("s"));
+
+function check_price_serial($checknum)
+{
+	global $cursor;
+        ora_parse($cursor, "select price_serial from route_prices where price_serial='$checknum'");
+	ora_exec($cursor);
+	return ora_fetch($cursor);
+};
+
+function generate_price_serial()
+{
+        $tserial = Rand();
+        if (check_price_serial($tserial)==1):
+                generate_serial();
+        else:
+                return $tserial;
+        endif;
+};
+
+function printdate($pdate)
+{
+	global $todisp; 
+
+	$todisp.= substr($pdate,6,2);
+	$todisp.= "/";
+	$todisp.=substr($pdate,4,2);
+	$todisp.= "/";
+	$todisp.= substr($pdate,0,4);
+};
+if (!isset($long)):
+	$long="N";
+endif;
+$tcursor=ora_open($conn);
+
+/////////// NEW PRICES
+if (!is_numeric($serial))
+	exit;
+if ($long=="Y")
+	$xtra="";
+else
+{
+	$today=date("Ymd");
+	$xtra=" and valid_to>=$today ";
+}
+$kcur=ora_open($conn);
+$previous_to="00000000";
+ora_parse($cursor,"select price_group_serial,valid_from,valid_to,days,pred_yield,min_price,other_factor from price_group where route_serial=$serial $xtra order by valid_from,price_group_serial");
+ora_exec($cursor);
+$lastpgs="";
+unset($data);
+//echo "<a href=modify_new_prices.phtml?pgs=NEW&rs=$serial>Create New Price Range</a><br>";
+echo "<table border=1><tr><td>Price Serial</td><td>Date Range</td><td><font size=1>Days</td><td>Max Price</td><td>Pred Yield</td><td>Min Price</td><td>Factor</td></tr>";
+echo "<tr><form method=post action=modify_new_prices.phtml><input type=hidden name=pgs value=NEW><input type=hidden name=rs value='$serial'>";
+echo "<td><input type=submit value='Create New/Copy'><br>Blank: <input type=radio name=copyfrom value=NEW CHECKED><br>Route <input name=newroute size=4 maxlength=4></td><td><input name=rangefrom value='yyyymmdd' onfocus=\" if (rangefrom.value=='yyyymmdd') rangefrom.value='';\"  size=8 maxlength=8>-<input name=rangeto size=8  onfocus=\" if (rangeto.value=='yyyymmdd') rangeto.value='';\" value='yyyymmdd' maxlength=8></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
+$today=date("Ymd");
+$lookfor=$today;
+while (ora_fetch_into($cursor,$data)) {
+	ora_parse($kcur,"select 'x' from price_data where price_group_serial=$data[0] and price_class='X'");
+	ora_exec($kcur);
+	if (ora_fetch($kcur))
+		echo "<tr bgcolor=yellow>";
+	else
+		echo "<tr>";
+	echo "<td>";
+	if ($data[0]!=$lastpgs) {
+		$last5=sprintf("%05d",$data[0]%10000);
+//		echo "<a href=modify_new_prices.phtml?pgs=$data[0]&rs=$serial>$last5</a> Copy:<input type=radio name=copyfrom value=$data[0]>";
+		$lastpgs=$data[0];
+	}	
+//	else 
+//		echo "&nbsp;";
+	echo "<a href='modify_new_prices.phtml?pgs=$data[0]&rs=$serial&highlight=$highlight&returnto=$returnto'>$last5</a> Copy:<input type=radio name=copyfrom value=$data[0]> | <a onclick=\" return confirm('This is serious. Click OK to delete, or cancel to not delete');\" href='modify_new_prices.phtml?delserial=$data[0]&serial=$serial&highlight=$highlight&returnto=$returnto'>Del</a>";
+
+	$data[3]=str_replace(" ","-",$data[3]);
+	echo "</td><td>";
+	if ($lastser==$data[0]) {
+		$lookfor=prevdate($lookfor);
+		unset($lastser);
+	}
+	if ($data[1]==$lookfor && $data[2]==$lookfor) {
+		$lookfor=nextdate($lookfor);
+		$lastser=$data[0];
+	}
+	if ($data[1]<=$today && $data[2]>=$today)
+		echo "<font color=red>";	
+	if (is_numeric($highlight))
+	  if ($data[1]<=$highlight && $data[2]>=$highlight)
+                echo "<font color=red style='background:yellow'>";
+	if ($data[1]<=$previous_to) {
+		$overlap=true;
+		echo "<font style='background: yellow'>";
+	}
+	$previous_to=$data[2];
+	echo substr($data[1],6,2)."/".substr($data[1],4,2)."/".substr($data[1],0,4)." - ".substr($data[2],6,2)."/".substr($data[2],4,2)."/".substr($data[2],0,4);
+	if ($data[3]=="SMTWTFS")
+		$data[3]="All";
+	echo "</td><td><font face='Courier New' size=1>$data[3]</td><td align=right>";
+
+	ora_parse($tcursor,"select max(price) from ( select max(price) price  from price_data where price_group_serial=$data[0] union select max(price) price from price_other where price_group_serial=$data[0])");
+	ora_exec($tcursor);
+	if (ora_fetch($tcursor))
+		echo getdata($tcursor,0);
+	else
+		echo "&nbsp;";
+ 
+	echo "<td align=right>$data[4]</td>";
+	echo "<td><input name='mp$data[0]"."_$data[1]"."_$data[2]' size=4 value='$data[5]'></td>";
+	echo "<input name='omp$data[0]"."_$data[1]"."_$data[2]' type=hidden  value='$data[5]'>";
+	echo "<input name='ofa$data[0]"."_$data[1]"."_$data[2]' type=hidden value='$data[6]'>";
+	echo "<td><input name='fa$data[0]"."_$data[1]"."_$data[2]' size=4 value='$data[6]'></td>";
+
+	echo "</tR>";
+	unset($data);
+} // while
+if (isset($overlap))
+	echo "<script> alert('Please note: there is at least one date overlap'); </script>";
+$looknice=afrikdate($lookfor);
+echo "<tr><td colspan=20 align=right><input type=submit name=pfupdate value='Update Price + Factor'></td></tr>";
+echo "</form><form method=post><input type=hidden name=serial value='$serial'>";
+echo "<tr><td colspan=5><input type=submit name=split$lookfor value='Split out $looknice'> <input type=button onclick=\"document.getElementById('allsplit').style.display='block'; return false;\" value='More'>";
+$spstart=time();
+$spend=$spstart+2*86400;
+echo "<div id=allsplit style='display: none'>";
+for ($spdate = $spstart; $spdate<=$spend ; $spdate+=86400) {
+	$dt1=date("Ymd",$spdate);
+	//$dt2=date("d M", $spdate);
+	$dt2=afrikdate($dt1);
+	if ($dt1!=$lookfor) {
+		echo "<input type=submit name=split$dt1 value='Split out $dt2'> ";
+	}
+
+
+}
+echo "<br>Or split all individual dates from <input name=splitfrom size=8 maxlength=8> to <input name=splitto size=8 maxlength=8> <input type=submit value=Go>";
+echo "</div>";
+
+echo "</form><form method=get action=modify_new_prices.phtml><input type=hidden name=serial value='$serial'> or DELETE all serials from <input name=delsfrom size=8 maxlength=8> to <input name=delsto size=8 maxlength=8> <input type=submit value=Go></td></tr>";
+
+echo "</form></table>";
+////////// END NEW PRICES
+echo "<hr><font color=red><b>*** OLD PRICE SYSTEM: ****</b></font><br>";
+ora_parse($cursor,"select distinct price_serial from route_prices where route_serial='$serial'");
+ora_exec($cursor);
+while (ora_fetch($cursor))
+{
+	$tps = chop(ora_getColumn($cursor,0));
+	$todisp.= "<form method=post action='modify_route_prices.phtml'>";
+	$todisp.="<input type=hidden name=serial value='$serial'>";
+	$todisp.="<input type=hidden name=passrn value='$routeno'>";
+	$todisp.="<input type=hidden name=passft value='$firststop to $laststop'>";
+	$todisp.="<input type=hidden name=price_serial value='$tps'>";
+	$todisp.="<table><tr>";
+	$todisp.="<td>";
+	$todisp.="<input type=submit value='Modify Price Range'><br>";
+	$todisp.="<input type=submit onclick='return confirm(\"Are You Sure\")' ";
+	$todisp.="name=dodelete value='Delete Price Range'>";
+	$thisss=substr($tps,-5,5);
+	$todisp.="<br>Serial $thisss<br>";
+	$todisp.="<a target=triangle href=triangle.phtml?psonly=$tps&rs=$serial>Show Triangle</a><br>";
+
+	$todisp.="</td><td>";
+	ora_parse($tcursor,"select valid_from, valid_to, description from route_prices_valid where price_serial='$tps'");
+	ora_exec($tcursor);
+	$todisp.="&nbsp;&nbsp;&nbsp;";
+	$todisp.="<b>Price Ranges</b><br>";
+	while (ora_fetch($tcursor)):
+		$todisp.="&nbsp;&nbsp;&nbsp;";
+		$fdate=chop(ora_getColumn($tcursor,0));
+		$ldate=chop(ora_getColumn($tcursor,1));
+		$todayd=date("Ymd");
+		if ($todayd<=$ldate || $long=="Y"):
+			$current="Y";
+			 $thisss=substr($tps,-5,5);
+			 $choices[$tps]=$thisss;
+
+		endif;
+		if (($todayd<=$ldate)&&($todayd>=$fdate)):
+			$todisp.="<font color=red>";
+		endif;
+		printdate(chop(ora_getColumn($tcursor,0)));
+		$todisp.=" - ";
+		printdate(chop(ora_getColumn($tcursor,1)));
+		$todisp.="<br>&nbsp;&nbsp;&nbsp;";
+		$todisp.="(". chop(ora_getColumn($tcursor,2)). ") ";
+		$todisp.="<br>";
+	endwhile;
+	$todisp.="</td><td>";
+	ora_parse($tcursor,"select distinct currency from route_prices where price_serial='$tps'");
+	ora_exec($tcursor);
+	$todisp.="&nbsp;&nbsp;&nbsp;";
+	$todisp.="<b>Currency for this range</b><br>";
+	$todisp.="&nbsp;&nbsp;&nbsp;";
+	$todisp.="<SELECT name=currency>";
+	while (ora_fetch($tcursor)):
+		$todisp.="<option value='";
+		$todisp.=chop(ora_getColumn($tcursor,0));
+		$todisp.="'>";
+		$todisp.=chop(ora_getColumn($tcursor,0));
+		$todisp.="</option>";
+	endwhile;
+	$todisp.="<option value='NEW'>New Currency</option>";
+	$todisp.="</select>";
+	$todisp.="</td></tr></table>";
+	$todisp.="</form>\r\n";
+	if ((($long=="N")&&($current=="Y"))||($long=="Y")):
+		echo $todisp;
+	endif;
+		$todisp="";
+		$current="N";
+};
+
+ora_close($tcursor);
+?>
+</form>
+
+<?
+if ($long=="N"):
+
+echo "<form method=post><input type=hidden name=serial value=$serial><input type=submit value='Show all'><input type=hidden name=long value=Y></form>";
+
+endif;
+
+?>
+
+<form method=post action='add_newprices.phtml'>
+<table border=0>
+<tr>
+<td><input type=submit value='New Price Range'></td>
+<td>
+<?echo "&nbsp;&nbsp;&nbsp;"; ?>
+<input type=text maxlength=2 size=3 name=fday> / 
+<input type=text maxlength=2 size=3 name=fmonth> / 
+<input type=text maxlength=4 size=5 name=fyear> 
+<?echo "&nbsp;TO&nbsp;&nbsp;"; ?>
+<input type=text maxlength=2 size=3 name=tday> / 
+<input type=text maxlength=2 size=3 name=tmonth> / 
+<input type=text maxlength=4 size=5 name=tyear> 
+</td>
+<td>
+<?
+	$userserial = getuserserial();
+	ora_parse($cursor,"select m_currency from user_details where user_serial='$userserial'");
+	ora_exec($cursor);
+	$defcurr = getdata($cursor,0);
+	echo "&nbsp;&nbsp;&nbsp;"; 
+	ora_parse($cursor,"select * from currency_info");
+	ora_Exec($cursor);
+	echo "<SELECT name=currency>";
+	while (ora_fetch($cursor)):
+		echo "<option value='";
+		echo chop(ora_getColumn($cursor,0));
+		echo "' ";
+		if (chop(ora_getColumn($cursor,0))==$defcurr):
+			echo " Selected ";
+		endif;
+		echo ">";
+		echo chop(ora_getColumn($cursor,0));
+		echo "</option>";
+	endwhile;
+	echo "</select>";
+?>
+</td> 
+</tr>
+<tr><td></td><td colspan=2>
+	&nbsp;&nbsp;&nbsp;Description&nbsp;
+	<input name=pdescrip type=text size=55 maxlength=100>
+</td></tr>
+<tr><td></td><td colspan=2>
+        &nbsp;&nbsp;&nbsp;Copy Prices From&nbsp;
+        <select name=copyfrom>
+	<option value=''>Guess
+<?
+	if (is_array($choices)) {
+	asort($choices,SORT_NUMERIC);
+	reset($choices);
+	while (list($key,$val)=each($choices))
+		echo "<option value='$key'>$val";
+
+	}
+?>
+	</select>
+</td></tr>
+
+</table>
+
+<input type=hidden name=routeserial value='<?echo $serial; ?>'>
+</form>
+
+<form method=post action='modify_route_discounts.phtml'>
+<input type=submit value='Modify Discounts'>
+<input type=hidden name=routeserial value='<?echo $serial;?>'>
+</form>
+
+<?
+if (!isset($subroute))
+		$subroute = false;
+
+
+if (!$subroute) {
+echo "<form method=post action='open_coach_1.phtml'>";
+?>
+<br>
+<input type=submit value="Open Coach">
+<input type=hidden name=prn value="<?echo $routeno;?>">
+</form>
+
+<form method=post action='modify_coach_1.phtml'>
+<input type=submit value="Modify Coach Capacties">
+</form>
+<?
+} // subroute
+//<a href=list_open.phtml?rs=$serial>List Open Coaches</a>
+?>
+<hr>
+
+
+<form method=post action='modify_route.phtml'>
+<input type=submit value="Back To Modify Route Main Page">
+</form>
+</BODY>
+</HTML>
+<?
+if (!isset($dontclose))
+close_oracle();
+?>

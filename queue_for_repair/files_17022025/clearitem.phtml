@@ -171,9 +171,8 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
 	echo "<font color=magenta>$faultdesc</font><br>";
     	?>
     	<form method=post id=clear name=clear>
-    	<input type=hidden id="qfr_line_update" name=stage value=2>
-    	<input type=hidden id="qfr_line_id" name=qfr_id value=0>
-		<input type=hidden name=jcno value=<?=$jcno?>
+    	<input type=hidden name=stage value=2>
+	<input type=hidden name=jcno value=<?=$jcno?>
     	<input type=hidden name=first value="<?=$tfirst?>">
     	<input type=hidden name=itemserial value="<?=$itemserial?>">
     	<table width=100%>
@@ -464,10 +463,7 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
     		<?
     	}
 	}
-	elseif( $stage==2 ) 
-	{
-		print_r($_POST);
-		die();
+	elseif( $stage==2 ) {
 		if (!is_numeric($itemserial)) {
 			echo "ERROR 1!";
 			exit;
@@ -488,10 +484,10 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
                         exit;
 
 		}
-		if (!is_numeric($mechanic)) {
-				echo "<font color=red>SORRY, you did not select a mechanic!</font> <p>Please go back and fix it (press your back button)";
-				exit;
-		}
+                if (!is_numeric($mechanic)) {
+                        echo "<font color=red>SORRY, you did not select a mechanic!</font> <p>Please go back and fix it (press your back button)";
+                        exit;
+                }
 
 		ora_parse( $cursor, "SELECT completedwho, statusengineer, deferred_to , nvl(minutes,0) FROM move_jobcarditems WHERE itemserial=$itemserial");
 		ora_exeC( $cursor);
@@ -513,8 +509,8 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
 			ora_parse($cursor,"update move_jobcarditems set statusengineer='$status' where itemserial=$itemserial");
 			ora_Exec($cursor);
 		}
-		//		THIS DIDNT WORK PROPERLY...
-		//		if( empty( $first ) ) $first="Y";
+//		THIS DIDNT WORK PROPERLY...
+//		if( empty( $first ) ) $first="Y";
 
 		$logfile=fopen("/tmp/jobgeneral.log","a+");
 		$logline="ITEM: $itemserial: ";
@@ -525,144 +521,148 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
 		fputs($logfile,$logline);
 		fclose($logfile);
 
-		// do checkboxes...
-		$queue_redo=array();
-		$queue_repair=array();
-		$kcur=$cursor;
-
-		ora_parse($kcur,"select A.serial,B.done from move_jobcarditems C, move_jobgeneral_items A left join move_jobgeneral_done B on A.serial=B.serial and B.jobcarditem='$itemserial' and B.mechanic=$mechanic where A.general_serial=C.jobcardgeneral and C.itemserial='$itemserial' and A.in_use='Y' order by A.display_order,A.serial");
-		ora_exec($kcur);
-		$cbfound=0;
-		while (ora_fetch($kcur))
-		{
-			$cbsrl=getdata($kcur,0);
-			$done=getdata($kcur,1);
+	// do checkboxes...
+			$queue_redo=array();
+			$queue_repair=array();
+			$kcur=$cursor;
+                        ora_parse($kcur,"select A.serial,B.done from move_jobcarditems C, move_jobgeneral_items A left join move_jobgeneral_done B on A.serial=B.serial and B.jobcarditem='$itemserial' and B.mechanic=$mechanic where A.general_serial=C.jobcardgeneral and C.itemserial='$itemserial' and A.in_use='Y' order by A.display_order,A.serial");
+                        ora_exec($kcur);
+                        $cbfound=0;
+                        while (ora_fetch($kcur))
+                        {
+                                $cbsrl=getdata($kcur,0);
+                                $done=getdata($kcur,1);
 		
-			//				echo "$cbsrl is currently $done<bR>";	
-			$rnotes=$_POST["rnotes$cbsrl"];
-			$rnotes=str_replace("'","",$rnotes);
-			$rnotes=substr($rnotes,0,30);
-			if ($_POST["cb$cbsrl"]=="R") {
-				$queue_repair[$cbsrl]=true;
+//				echo "$cbsrl is currently $done<bR>";	
+				$rnotes=$_POST["rnotes$cbsrl"];
+				$rnotes=str_replace("'","",$rnotes);
+				$rnotes=substr($rnotes,0,30);
+				if ($_POST["cb$cbsrl"]=="R") {
+                                        $queue_repair[$cbsrl]=true;
 				//	$_POST["cb$cbsrl"]="Y"; //mark item as done
-			}  // Queue for repair
 
-			if ($done=="" && strlen($_POST["cb$cbsrl"])==1) {
-				$qry="insert into move_jobgeneral_done values ('$itemserial','$cbsrl','". $_POST["cb$cbsrl"]."',$mechanic,'$rnotes')";
-				// echo "$qry<Br>";
-				ora_parse($cursor,$qry);
-				ora_exec($cursor);
+                                }  // Queue for repair
+				if ($done=="" && strlen($_POST["cb$cbsrl"])==1) {
+					$qry="insert into move_jobgeneral_done values ('$itemserial','$cbsrl','". $_POST["cb$cbsrl"]."',$mechanic,'$rnotes')";
+//					echo "$qry<Br>";
+                                        ora_parse($cursor,$qry);
+                                        ora_exec($cursor);
 
-			} elseif ($done!="" &&  strlen($_POST["cb$cbsrl"])==1 ) {  //update
-				$qry="update move_jobgeneral_done set done='".$_POST["cb$cbsrl"]."', mechanic=$mechanic where jobcarditem='$itemserial' and serial=$cbsrl";
-			//					echo "$qry<Br>";
-				ora_parse($cursor,$qry);
-				ora_exec($cursor);
-				if ($rnotes!="")  {
-					$qry="update move_jobgeneral_done set notes='$rnotes' where jobcarditem='$itemserial' and serial=$cbsrl";
-					// echo "$qry<Br>";
+				} elseif ($done!="" &&  strlen($_POST["cb$cbsrl"])==1 ) {  //update
+					$qry="update move_jobgeneral_done set done='".$_POST["cb$cbsrl"]."', mechanic=$mechanic where jobcarditem='$itemserial' and serial=$cbsrl";
+//					echo "$qry<Br>";
 					ora_parse($cursor,$qry);
 					ora_exec($cursor);
+					if ($rnotes!="")  {
+						$qry="update move_jobgeneral_done set notes='$rnotes' where jobcarditem='$itemserial' and serial=$cbsrl";
+//	                                        echo "$qry<Br>";
+ 	                                        ora_parse($cursor,$qry);
+       		                                ora_exec($cursor);
+					}
+
 				}
+				if ($_POST["cb$cbsrl"]=="N") {
+					$queue_redo[$cbsrl]=true;
 
-			}
-			if ($_POST["cb$cbsrl"]=="N") {
-				$queue_redo[$cbsrl]=true;
-
-			}  // No answer
+				}  // No answer
 				
-		}
+                        }
 
-		//cb$cbsrl	
+//cb$cbsrl	
 
-		if (!empty($queue_redo)) {
-			// is it a service?
+	if (!empty($queue_redo)) {
+		// is it a service?
 
-			ora_parse($kcur,"select jobcard from move_servicelog where jobcard='$jcno'");
-			ora_exec($kcur);
-			if (ora_fetch($kcur)) {
+	  ora_parse($kcur,"select jobcard from move_servicelog where jobcard='$jcno'");
+	  ora_exec($kcur);
+	  if (ora_fetch($kcur)) {
 
-				//  Add Ad-Hoc fault	
-				reset($queue_redo);
-				while (list($cbsrl,$true)=each($queue_redo)) {
-					ora_parse($kcur,"select A.instructions from move_jobgeneral_items A where A.serial=$cbsrl");
-								ora_exec($kcur);
-					ora_fetch($kcur);
-					$instruction=getdata($kcur,0);
-			
-					$qry="insert into move_jobcarditems (itemserial, jobcardserial, faultclass, faultvalid, faultdesc, statusengineer, reporteddate, reportedwho, reportedonbehalf, reportcomments, unitserial, type, fromitem) select move_items.nextval, 0, faultclass, 'N', 'NOT DONE SERVICE item: $instruction - carried over from previous jobcard (Originally from '||trim(faultdesc)||')','Z', reporteddate, reportedwho, reportedonbehalf, reportcomments, unitserial, type, $itemserial from move_jobcarditems where itemserial=$itemserial"; // jobcardgeneral removed as per Stephan 28 Sep 2020 - as it creates full checklists on the new jobcard
-					echo "$qry<br>";
-					ora_parse($cursor,$qry);
-					ora_exec($cursor);
-				} // while
-			} // service
+		//  Add Ad-Hoc fault	
+		reset($queue_redo);
+		while (list($cbsrl,$true)=each($queue_redo)) {
+			ora_parse($kcur,"select A.instructions from move_jobgeneral_items A where A.serial=$cbsrl");
+                        ora_exec($kcur);
+			ora_fetch($kcur);
+			$instruction=getdata($kcur,0);
+	
+			$qry="insert into move_jobcarditems (itemserial, jobcardserial, faultclass, faultvalid, faultdesc, statusengineer, reporteddate, reportedwho, reportedonbehalf, reportcomments, unitserial, type, fromitem) select move_items.nextval, 0, faultclass, 'N', 'NOT DONE SERVICE item: $instruction - carried over from previous jobcard (Originally from '||trim(faultdesc)||')','Z', reporteddate, reportedwho, reportedonbehalf, reportcomments, unitserial, type, $itemserial from move_jobcarditems where itemserial=$itemserial"; // jobcardgeneral removed as per Stephan 28 Sep 2020 - as it creates full checklists on the new jobcard
+			echo "$qry<br>";
+			ora_parse($cursor,$qry);
+			ora_exec($cursor);
+		} // while
+	  } // service
 
-		} // redo checkbox items
+	} // redo checkbox items
 
-		if (!empty($queue_repair)) {
-			ora_parse($cursor,"select username from user_Details where user_serial=$mechanic");
-			ora_Exec($cursor);
-			if (ora_fetch($cursor))
-				$username = getdata($cursor,0);
-			else
-				$username =getenv("REMOTE_USER");
+        if (!empty($queue_repair)) {
 
-			//  Add Ad-Hoc fault
-			reset($queue_repair);
-			while (list($cbsrl,$true)=each($queue_repair)) {
-					ora_parse($kcur,"select A.instructions from move_jobgeneral_items A where A.serial=$cbsrl");
-					ora_exec($kcur);
-					ora_fetch($kcur);
-					$instruction=getdata($kcur,0);
 
-					$qry="insert into move_jobcarditems (itemserial, jobcardserial, faultclass, faultvalid, faultdesc, statusengineer, reporteddate, reportedwho, reportedonbehalf, reportcomments, unitserial, type, fromitem, fault_category) select move_items.nextval, jobcardserial, faultclass, 'N', 'REPAIR REQUESTED Resulting from item: $instruction. Mech notes: $rnotes','Z', CURRENT_TIMESTAMP, '$username', '$username', null, unitserial, type, itemserial, fault_category from move_jobcarditems where itemserial=$itemserial"; 
-					ora_parse($cursor,$qry);
-					ora_exec($cursor);
-			} // while
+		ora_parse($cursor,"select username from user_Details where user_serial=$mechanic");
+		ora_Exec($cursor);
+		if (ora_fetch($cursor))
+			$username = getdata($cursor,0);
+		else
+			$username =getenv("REMOTE_USER");
 
-		} // queue for repair  checkbox items
-		
-		$olditemserial = $itemserial;
-		if (!is_numeric($hours))
-			$hours=0;
-		if (!is_numeric($minutes))
-		$minutes=0;
-		$minutes = $hours*60+$minutes;
-		$readd = false;
-		$completetime = date( "dmY His" );
-		$notes = str_replace( "'", "", $notes );
+                //  Add Ad-Hoc fault
+                reset($queue_repair);
+                while (list($cbsrl,$true)=each($queue_repair)) {
+                        ora_parse($kcur,"select A.instructions from move_jobgeneral_items A where A.serial=$cbsrl");
+                        ora_exec($kcur);
+                        ora_fetch($kcur);
+                        $instruction=getdata($kcur,0);
+
+                        $qry="insert into move_jobcarditems (itemserial, jobcardserial, faultclass, faultvalid, faultdesc, statusengineer, reporteddate, reportedwho, reportedonbehalf, reportcomments, unitserial, type, fromitem, fault_category) select move_items.nextval, jobcardserial, faultclass, 'N', 'REPAIR REQUESTED Resulting from item: $instruction. Mech notes: $rnotes','Z', CURRENT_TIMESTAMP, '$username', '$username', null, unitserial, type, itemserial, fault_category from move_jobcarditems where itemserial=$itemserial"; 
+                        ora_parse($cursor,$qry);
+                        ora_exec($cursor);
+                } // while
+
+
+        } // queue for repair  checkbox items
 
 	
+		
+    	$olditemserial = $itemserial;
+	if (!is_numeric($hours))
+		$hours=0;
+	if (!is_numeric($minutes))
+		$minutes=0;
+    	$minutes = $hours*60+$minutes;
+    	$readd = false;
+    	$completetime = date( "dmY His" );
+    	$notes = str_replace( "'", "", $notes );
+	
+    	
 		if( $first=="Y" ) {
-			switch( $status ) {
-				case "X": 
-							$statement = "UPDATE MOVE_JOBCARDITEMS SET completedate=to_date( '$completetime', 'DDMMYYYY HH24MISS' ), faultvalid='Y', statusengineer='C', mechanicnotes='$notes', completedwho='$mechanic', minutes=$minutes, mechanic_date=CURRENT_TIMESTAMP  WHERE itemserial=$itemserial";
-							break;
-				case "C":
-							$statement = "UPDATE MOVE_JOBCARDITEMS SET completedate=to_date( '$completetime', 'DDMMYYYY HH24MISS' ), statusengineer='C', mechanicnotes='$notes', completedwho='$mechanic', minutes=$minutes, mechanic_date=CURRENT_TIMESTAMP  WHERE itemserial=$itemserial";
-							break;
-				case "I":
-				case "P":
-				case "D":
-							$readd = true;
-							$statement = "UPDATE MOVE_JOBCARDITEMS SET completedate=to_date( '$completetime', 'DDMMYYYY HH24MISS' ), statusengineer='$status', mechanicnotes='$notes', completedwho='$mechanic', minutes=$minutes, mechanic_date=CURRENT_TIMESTAMP   WHERE itemserial=$itemserial";
-							break;
+	    	switch( $status ) {
+	    		case "X": 
+	    					$statement = "UPDATE MOVE_JOBCARDITEMS SET completedate=to_date( '$completetime', 'DDMMYYYY HH24MISS' ), faultvalid='Y', statusengineer='C', mechanicnotes='$notes', completedwho='$mechanic', minutes=$minutes, mechanic_date=CURRENT_TIMESTAMP  WHERE itemserial=$itemserial";
+	    					break;
+	    		case "C":
+	    					$statement = "UPDATE MOVE_JOBCARDITEMS SET completedate=to_date( '$completetime', 'DDMMYYYY HH24MISS' ), statusengineer='C', mechanicnotes='$notes', completedwho='$mechanic', minutes=$minutes, mechanic_date=CURRENT_TIMESTAMP  WHERE itemserial=$itemserial";
+	    					break;
+	    		case "I":
+	    		case "P":
+	    		case "D":
+	    					$readd = true;
+	    					$statement = "UPDATE MOVE_JOBCARDITEMS SET completedate=to_date( '$completetime', 'DDMMYYYY HH24MISS' ), statusengineer='$status', mechanicnotes='$notes', completedwho='$mechanic', minutes=$minutes, mechanic_date=CURRENT_TIMESTAMP   WHERE itemserial=$itemserial";
+	    					break;
 			case "S":		
-						$statement = "UPDATE MOVE_JOBCARDITEMS SET statusengineer='C', mechanicnotes='$notes', completedwho='$mechanic', minutes=$minutes, mechanic_date=CURRENT_TIMESTAMP  WHERE itemserial=$itemserial";
-												break;
+					  $statement = "UPDATE MOVE_JOBCARDITEMS SET statusengineer='C', mechanicnotes='$notes', completedwho='$mechanic', minutes=$minutes, mechanic_date=CURRENT_TIMESTAMP  WHERE itemserial=$itemserial";
+                                                break;
 
-							
-				default :	$statement = "Really, this shouldn't be possible ($status)"; break;
-			}
-			
-			ora_parse( $cursor, $statement );
-			if( !ora_exec( $cursor ) )
-				showError( __FILE__, __LINE__, "$stage", "$statement" );
-		} elseif( $first=="N" ) {
+	    					
+	    		default :	$statement = "Really, this shouldn't be possible ($status)"; break;
+	    	}
+	    	
+	        ora_parse( $cursor, $statement );
+	        if( !ora_exec( $cursor ) )
+	        	showError( __FILE__, __LINE__, "$stage", "$statement" );
+	    } elseif( $first=="N" ) {
 			$statement = "INSERT INTO MOVE_ITEMEXTRA ( mechanic, itemserial, minutes, mechanicnotes, mechanic_date ) VALUES ( $mechanic, $itemserial, $minutes, '$notes', CURRENT_TIMESTAMP )";
 			ora_parse( $cursor, $statement );
 			ora_exec( $cursor );
-		}
+	    }
 		
 		//event( $itemserial, 4 );
 		
@@ -713,10 +713,10 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
 		}
 
 		?>
-		<script>
-		try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) microtime() * 1000000);
-		$rnd=mt_rand(); echo "$jcno&random=$rnd"; ?> '; window.close();  } catch (error) {}
-		</script>
+<script>
+try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) microtime() * 1000000);
+  $rnd=mt_rand(); echo "$jcno&random=$rnd"; ?> '; window.close();  } catch (error) {}
+</script>
 
 		<form name="temp" method="post">
 			<input type="hidden" name="tfirst" value="<?=$first?>">
@@ -728,40 +728,10 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
 		<script language="JavaScript"> temp.submit() </script>
 		<?
 	}
-	elseif( $stage==3 )
-	{
-		$get_line_id = $_POST['qfr_id'];
-		$bits = explode("qfrbtn", $get_line_id);
-		$serial = $bits[1];
-
-		$jobcard = $_POST['jcno'];
-		$mechanic = $_POST['mechanic'];
-		$itemserial = $_POST['itemserial'];
-		$qfr_notes = $_POST['rnotes' . $serial];
-		$done = 'R';
-		
-		// echo "XXX: " . $bits[1] . " > " . $jobcard . " > " . $mechanic . " > " . $itemserial . " > " . $qfr_notes . " > " . $done;
-		
-		$qry="insert into move_jobgeneral_done (done, jobcarditem, mechanic, notes, serial ) values ('$done','$jobcard','$mechanic','$qfr_notes','$serial')";
-		// echo "$qry<Br>";
-		ora_parse($cursor,$qry);
-		ora_exec($cursor);
-		?>
-		<script>
-		try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) microtime() * 1000000);
-		$rnd=mt_rand(); echo "$jcno&random=$rnd"; ?> '; window.close();  } catch (error) {}
-		</script>
-		<?
-	} 
-?>
+	?>
 	<script>
 	function saveQfr(id)
 	{
-		// Get stage
-		document.getElementById('qfr_line_id').value = id;
-		const form_stage = document.getElementById('qfr_line_update').value;
-		document.getElementById('qfr_line_update').value = 3;
-		// Get the id
 		const bits = id.split("qfrbtn");
 		const cbsrl = bits[1];
 		const mechlist = document.getElementById('mechanic');
@@ -782,7 +752,7 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
 		}
 
 		// alert('Gonna process this now: ' + cbsrl + " > " +  notes + " > " + mechlist.options[mechlist.selectedIndex].value);
-		console.log("Gonna process this now: " + cbsrl + " > " +  notes + " > " + mechlist.options[mechlist.selectedIndex].value + " >>> " + document.getElementById('qfr_line_update').value + " >>> " + document.getElementById('qfr_line_id').value);
+		console.log("Gonna process this now: " + cbsrl + " > " +  notes + " > " + mechlist.options[mechlist.selectedIndex].value);
 		document.getElementById('clear').submit();
 	}
 	</script>

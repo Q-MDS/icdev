@@ -8,13 +8,14 @@ require_once("class.html.mime.mail.inc");
 if (!open_oracle()) { Exit; };
 if (!AllowedAccess("")) { Exit; };
 
-function get_budget_serials()
+function get_budget_serials($month)
 {
 	global $conn, $range_budget;
 
+
 	$data = array();
 	
-	$get_range = $range_budget;
+	$get_range = $range_budget[$month];
 	$range = json_encode($get_range);
 	$range = str_replace('[', '', $range);
 	$range = str_replace(']', '', $range);
@@ -34,16 +35,19 @@ function get_budget_serials()
 	// Free the statement resource
 	oci_free_statement($cursor);
 	
+	oci_close($conn);
+
 	return $data;
 }
 
-function get_budget_amounts($serial)
+function get_budget_amounts($month, $serial)
 {
 	global $conn, $range_budget;
 
+
 	$data = array();
 	
-	$range = $range_budget;
+	$range = $range_budget[$month];
 
 	// $range = array('062024','072024','082024','092024','102024','112024','122024','012025');
 
@@ -75,13 +79,14 @@ function get_budget_amounts($serial)
 	return $data;
 }
 
-function get_budget_spend($serial)
+function get_budget_spend($month, $serial)
 {
 	global $conn, $range_spend;
 
+
 	$data = array();
 
-	$range = $range_spend;
+	$range = $range_spend[$month];
 	// $range = array('202406','202407','202408','202409','202410','202411','202412','202501');
 
 	foreach ($range as $budget_month)
@@ -99,13 +104,7 @@ function get_budget_spend($serial)
 	
 		oci_execute($cursor);
 	
-		while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
-		{
-			if ($row['TOTAL'] < 0)
-			{
-				$row['TOTAL'] = 0;
-			}
-			
+		while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) {
 			$data[$row['BUDGET_MONTH']] = $row['TOTAL'];
 		}
 	
@@ -196,10 +195,7 @@ function add_pbl_entry($from_budget_serial, $to_budget_serial, $amount, $transfe
 {
 	global $conn;
 
-	$now = strtotime("now");
-	$transfer_date = date('d/M/y H:i:s', $now);
-
-	$sql = "INSERT INTO purchase_budget_log (log_id, from_budget_serial, to_budget_serial, amount, TRANFER_DATE, company, BUDGET_TO_YM, BUDGET_FROM_YM, reason, username) VALUES (PURCHASE_BUDGET_LOG_ID.nextval, :from_bud_serial, :to_bud_serial, :amount, TO_DATE(:transfer_date, 'YYYY-MM-DD HH24:MI:SS'), :company, :bud_to_ym, :bud_from_ym, :reason, :user_name)";
+	$sql = "INSERT INTO purchase_budget_log (log_id, from_budget_serial, to_budget_serial, amount, TRANFER_DATE, company, BUDGET_TO_YM, BUDGET_FROM_YM, reason, username) VALUES (PURCHASE_BUDGET_LOG_ID.nextval, :from_bud_serial, :to_bud_serial, :amount, :transfer_date, :company, :bud_to_ym, :bud_from_ym, :reason, :user_name)";
 		
 	$cursor = oci_parse($conn, $sql);
 
@@ -229,7 +225,7 @@ function clearLogFile()
 	log_event("| |   / _ \ / _` |");
 	log_event("| |__| (_) | (_| |");
 	log_event("|_____\___/ \__, |");
-	log_event("v1.2.14     |___/ " . "\n");
+	log_event("            |___/ " . "\n");
 }
 
 function log_event($message) 
@@ -259,9 +255,8 @@ function clearEmailLog()
 
 	$email_html = "";
 
-	log_email("<html><head><title>Budget Update Report</title></head><body><h1>Budget Amounts Shifted Report</h1>");
-	log_email("<p>Report generated on: " . date('Y-m-d H:i:s') . "\nv1.2.14</p>");
-	log_email("<div style='font-size: 10px; padding-bottom: 10px;'>v1.2.14</div>");
+	log_email("<html><head><title>Budget Update Report</title></head><body><h1>Budget Update Report</h1>");
+	log_email("<p>Report generated on: " . date('Y-m-d H:i:s') . "</p>");
 	log_email("<table border='1'><tr><th align='left'>Budget Name</th><th align='right'>YTD Budget</th><th align='right'>YTD Spend</th><th align='right'>$this_month Adjustment</th><th align='right'>$this_month Budget</th></tr>");
 }
 
@@ -288,9 +283,9 @@ function send_email()
 	global $noreply_email;
 
 	// $email_list = ["keith@intercape.co.za", "quintin@moderndaystrategy.com"];
-	$email_list = ["keith@intercape.co.za", "quintin@pxo.co.za"];
+	$email_list = ["quintin@moderndaystrategy.com", "quintin@pxo.co.za"];
 	$from = $noreply_email;
-	$subject = "Budget Amounts Shifted";
+	$subject = "Budget Update Report - " . date("Y-m-d H:i:s");
 	$text_message = str_replace("<br>", "\n", $html_message);
 
 	// Read the contents of the email.html file
@@ -311,7 +306,7 @@ function send_email()
 
 		foreach ($email_list as $email_address) 
 		{
-			$result = $mail->smtp_send($from, $subject, $email_address);
+			$result = $mail->smtp_send($from, $email_address);
 			if (!$result) {
                 echo "Failed to send email to $email_address";
             }
@@ -324,60 +319,39 @@ function send_email()
 	}
 }
 
-function generate_range_budget() 
-{
-    $ret = array();
-	$budget_range = array();
-	$spend_range = array();
-	$work_month_budget = '';
-	$work_month_spend = '';
-	$next_month_budget = '';
-	$next_month_spend = '';
-    $current_year = date("Y");
-    $current_month = date("m");
-	$range_counter = 0;
-
-	if ($current_month > 0 && $current_month < 6) 
-	{
-		$range_counter = $current_month + 7;
-	}
-	if ($current_month > 6 && $current_month < 13) 
-	{
-		$range_counter = $current_month - 5;
-	}
-
-	$start_date = '06' . date("Y");
-	$date = DateTime::createFromFormat('mY', $start_date);
-	$date->modify('-1 year');
-
-	for ($i = 0; $i < $range_counter; $i++)
-	{
-		$budget_range[] = $date->format('mY');
-		$spend_range[] = $date->format('Ym');
-		$date->modify('+1 month');
-	}
-
-	// Work dates
-	$today_work_month = date("mY");
-	$date = DateTime::createFromFormat('mY', $today_work_month);
-	$date->modify('-1 month');
-	$work_month_budget = $date->format('mY');
-	$work_month_spend = $date->format('Ym');
-
-	// Next dates
-	$next_month_budget = date("mY");
-	$next_month_spend = date("Ym");
-
-	$ret['budget'] = $budget_range;
-	$ret['spend'] = $spend_range;
-	$ret['work_month_budget'] = $work_month_budget;
-	$ret['work_month_spend'] = $work_month_spend;
-	$ret['next_month_budget'] = $next_month_budget;
-	$ret['next_month_spend'] = $next_month_spend;
-
-    return $ret;
-} 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------
+$range_budget = array(
+	"7" => array('062024','072024'),
+	"8" => array('062024','072024','082024'),
+	"9" => array('062024','072024','082024','092024'),
+	"10" => array('062024','072024','082024','092024','102024'),
+	"11" => array('062024','072024','082024','092024','102024','112024'),
+	"12" => array('062024','072024','082024','092024','102024','112024','122024'),
+	"1" => array('062024','072024','082024','092024','102024','112024','122024','012025'),
+	"2" => array('062024','072024','082024','092024','102024','112024','122024','012025','022025'),
+	"3" => array('062024','072024','082024','092024','102024','112024','122024','012025','022025','032025'),
+	"4" => array('062024','072024','082024','092024','102024','112024','122024','012025','022025','032025','042025'),
+	"5" => array('062024','072024','082024','092024','102024','112024','122024','012025','022025','032025','042025','052025')
+);
+
+$range_spend = array (
+	"7" => array('202406','202407'),
+	"8" => array('202406','202407','202408'),
+	"9" => array('202406','202407','202408','202409'),
+	"10" => array('202406','202407','202408','202409','202410'),
+	"11" => array('202406','202407','202408','202409','202410','202411'),
+	"12" => array('202406','202407','202408','202409','202410','202411','202412'),
+	"1" => array('202406','202407','202408','202409','202410','202411','202412','202501'),
+	"2" => array('202406','202407','202408','202409','202410','202411','202412','202501','202502'),
+	"3" => array('202406','202407','202408','202409','202410','202411','202412','202501','202502','202503'),
+	"4" => array('202406','202407','202408','202409','202410','202411','202412','202501','202502','202503','202504'),
+	"5" => array('202406','202407','202408','202409','202410','202411','202412','202501','202502','202503','202504','202505')
+);
+
+$month_budget = array("7" => '062024',"8" => '072024',"9" => '082024',"10" => '092024',"11" => '102024',"12" => '112024',"1" => '122024',"2" => '012025',"3" => '022025',"4" => '032025',"5" => '042025');
+$month_spend = array("7" => '202406',"8" => '202407',"9" => '202408',"10" => '202409',"11" => '202410',"12" => '202411',"1" => '202412',"2" => '202501',"3" => '202502',"4" => '202503',"5" => '202504');
+$month_next = array("7" => '072024',"8" => '082024',"9" => '092024',"10" => '102024',"11" => '112024',"12" => '122024',"1" => '012025',"2" => '022025',"3" => '032025',"4" => '042025',"5" => '052025');
+$month_next_spend = array("7" => '202407',"8" => '202408',"9" => '202409',"10" => '202410',"11" => '202411',"12" => '202412',"1" => '202501',"2" => '202502',"3" => '202503',"4" => '202504',"5" => '202505');
 
 $the_month = date('n');
 
@@ -390,17 +364,15 @@ if ($the_month == 6)
 	die("Cannot run in June");
 }
 
-$get_ranges = generate_range_budget();
-$range_budget = $get_ranges['budget'];
-$range_spend = $get_ranges['spend'];
-$work_month_budget = $get_ranges['work_month_budget'];
-$work_month_spend = $get_ranges['work_month_spend'];
-$next_month_budget = $get_ranges['next_month_budget'];
-$next_month_spend = $get_ranges['next_month_spend'];
+// Get month for calcs
+$work_month_budget = $month_budget[$the_month];
+$work_month_spend = $month_spend[$the_month];
+$next_month_budget = $month_next[$the_month];
+$next_month_spend = $month_next_spend[$the_month];
 
-log_event("Selected date range: " . json_encode($range_budget) . "\n");
+log_event("Selected date range: " . json_encode($range_budget[$the_month]) . "\n");
 
 // Get data arrays
-$budget_serials = get_budget_serials($range_budget);
+$budget_serials = get_budget_serials($the_month);
 $budget_names = get_budget_names();
 ?>

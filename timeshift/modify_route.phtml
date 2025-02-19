@@ -1,0 +1,244 @@
+<HTML>
+<body oncontextmenu="showMenu(); return false"; bgcolor="#FFFFFF" text="#000000"
+ link="#000000" vlink="#000000" alink="#000000">
+<? require_once ("../php3/context.inc"); ?>
+<H2>Modify Routes</H2>
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/sec.inc");
+require_once ("../php3/colors.inc");
+
+if (!open_oracle()) { Exit; }
+if (!AllowedAccess("MODIFY_ROUTE")) { Exit; };
+
+        $returnto_2fa = $_SERVER["REQUEST_URI"];
+        require_once("../booking/2fa.phtml");
+
+$tmpuser = getenv("REMOTE_USER");
+get_colors($tmpuser);
+
+$tcursor=ora_open($conn);
+
+echo "<table border=0 bgcolor='#$table_bg'>";
+echo "<tr>";
+echo "<Form method=post action='modify_route_1.phtml'>";
+echo "<td bgcolor='#$table_title'>Route no</td>";
+echo "<td bgcolor='#$table_cell'>";
+ora_parse($cursor,"Select route_serial, route_no, carrier_code, shortdesc from route_details where carrier_code='IM' or carrier_code='IB' or carrier_code='IS' or carrier_code='GC' or carrier_code='GD' or carrier_code='IP' or carrier_code='BI' or carrier_code='IC' order by route_no");
+ora_exec($cursor);
+
+echo "<Select name=routeno>";
+while(ora_fetch($cursor))
+{
+	echo "<option value='";
+	echo chop(ora_getColumn($cursor,1));
+	echo "'>";
+	echo chop(ora_getColumn($cursor,1));
+	echo " ", chop(ora_getColumn($cursor,2)), " ";
+	echo " (";
+	$rs = chop(ora_getColumn($cursor,0));
+	ora_parse($tcursor,"select short_name from route_stops where route_serial='$rs' order by stop_order");
+	ora_exec($tcursor);
+	if (ora_fetch($tcursor)) {
+	echo chop(ora_getcolumn($tcursor,0));
+	while (ora_fetch($tcursor))  $lastone=ora_getColumn($tcursor,0);
+	echo "->";
+	echo chop($lastone);
+	echo ")";
+	}
+	else
+		echo chop(ora_getcolumn($cursor,3)).")";
+	echo "</option>";
+}
+echo "</select></td>";
+
+//ora_close($tcursor);
+?>
+<td bgcolor='#<?echo $table_cell?>'></td>
+<td bgcolor='#<?echo $table_cell?>'></td>
+<td bgcolor='#<?echo $table_cell?>'>
+<input type=submit value="Edit Route"></td></tr>
+</form>
+<?
+
+if ($showall=="Y"):
+
+echo "<tr>";
+echo "<Form method=post action='modify_route_1.phtml'>";
+echo "<td bgcolor='#$table_title'>Route no</td>";
+echo "<td bgcolor='#$table_cell'>";
+ora_parse($cursor,"Select route_serial, route_no, carrier_code from route_details where carrier_code!='IM' and carrier_code!='IB' and carrier_code!='IS' and carrier_code!='GC'  and carrier_code!='GD'  and carrier_code!='IP' and carrier_code!='BI' and carrier_code!='IC' order by route_no");
+ora_exec($cursor);
+
+echo "<Select name=routeno>";
+while(ora_fetch($cursor))
+{
+        echo "<option value='";
+        echo chop(ora_getColumn($cursor,1));
+        echo "'>";
+        echo chop(ora_getColumn($cursor,1));
+        echo " ", chop(ora_getColumn($cursor,2)), " ";
+        echo " (";
+        $rs = chop(ora_getColumn($cursor,0));
+        ora_parse($tcursor,"select short_name from route_stops where route_serial='$rs' order by stop_order");
+        ora_exec($tcursor);
+        if (ora_fetch($tcursor)) {
+        echo chop(ora_getcolumn($tcursor,0));
+        while (ora_fetch($tcursor)) $lastone=ora_getColumn($tcursor,0);
+        echo "->";
+        echo chop($lastone);
+        echo ")";
+	}
+        echo "</option>";
+}
+echo "</select></td>";
+
+ora_close($tcursor);
+?>
+<td bgcolor='#<?echo $table_cell?>'></td>
+<td bgcolor='#<?echo $table_cell?>'></td>
+<td bgcolor='#<?echo $table_cell?>'>
+<input type=submit value="Edit Route"></td></tr>
+</form>
+<?
+echo "<tr>";
+echo "<Form method=post action='copy_route_1.phtml'>";
+echo "<td bgcolor='#$table_title'>";
+echo "Copy:</td><td bgcolor='#$table_cell'>"; 
+$tcursor=ora_open($conn);
+
+ora_parse($cursor,"Select route_serial, route_no, carrier_code from route_details order by route_no");
+ora_exec($cursor);
+
+echo "<Select name=copyno>";
+while(ora_fetch($cursor))
+{
+	echo "<option value='";
+	echo chop(ora_getColumn($cursor,1));
+	echo "'>";
+	echo chop(ora_getColumn($cursor,1));
+	echo " ", chop(ora_getColumn($cursor,2)), " ";
+	echo " (";
+	$rs = chop(ora_getColumn($cursor,0));
+	ora_parse($tcursor,"select short_name from route_stops where route_serial='$rs' order by stop_order");
+	ora_exec($tcursor);
+	if (ora_fetch($tcursor)) {
+	echo chop(ora_getcolumn($tcursor,0));
+	while (ora_fetch($tcursor)) $lastone=ora_getcolumn($tcursor,0);
+	echo "->";
+	echo chop($lastone);
+	echo ")";
+	}
+	echo "</option>";
+}
+echo "</select></td>";
+?>
+<td bgcolor='#<?echo $table_cell?>'>
+TO
+</td>
+<td bgcolor='#<?echo $table_cell?>'>
+<input type=text name=copyto size=5></td>
+<td bgcolor='#<?echo $table_cell?>'>
+<input type=submit value="Copy Route"></td></tr>
+</form>
+<?
+
+else:
+	echo "<a href=modify_route.phtml?showall=Y>Show advanced options</a><br>";
+endif;
+?>
+</table>
+
+<br>
+<table><tr><td>
+<form action="management.phtml" method=post>
+<input type=submit value="Back to management page">
+</form>
+</td><td width=50>&nbsp;</td><td>
+<form action="short_prices.phtml" method=post>
+<input type=submit value="Edit OBS-Only prices">
+</form>
+</td></tr></table>
+<table><tr><td><b><center>LINKS</center></b></td><td><b><center>Reports</center></b></td>
+</tr>
+<tr>
+<Td valign=top>
+<ul>
+<li> <a href='sweep_settings.phtml'>Auto Sweep Settings</a>
+<li> <a href='shuttle_levy.phtml'>Shuttle Levy</a>
+<li> <a href='agent_levy.phtml'>Agent Levy</a>
+<li> <a href='agent_levy_report.phtml'>Agent Levy Report</a>
+<li> <a href='global_pricing.phtml'>Global prices</a>
+<li> <a href='global_minimum.phtml'>Global Minimum Price</a>
+<li> <a href=route_notes.phtml>Route Notes (for manifest)</a>
+ <li> <a href=open_report.phtml>Open Coaches summary report</a> 
+<li> <a href=delete_empty_closed_coaches.phtml>Delete Empty Closed Coaches</a>
+ <li> <A HREF='price_classes.phtml'>Price classes</A>
+ <li> <a href='sweep_prices.phtml'>Price Sweep</a>
+ <li> <a href='combined.phtml'>Combined route discount</a>
+ <li> <a href='shop_basket_disc_settings.phtml'>Shop Basket Discount Max</a>
+ <li> <a href='waste_escalate.phtml'>Wasted seat price escalation levels</a>
+
+ <li> <a href=change_sms.phtml>SMS All future pax to/from a stop</a>
+ <li> <a href=fuel_levy.phtml>Fuel Levies</a>
+ <li> <a href=missing_prices.phtml>Missing Prices</a>
+ <li> <a href=computicket_price_manage.phtml>Computicket Master Level</a>
+ <li> <a href=/ops/ops_km.phtml>Manage Ops Route KM</a>
+ <li> <a href=blocked_stops.phtml>Blocked Stops</a>
+ <li> <a href=/ops/onhold_range.phtml>Blocked Seats</a>
+ <li> <a href=add_route_1.phtml>Create NEW route</a>
+ <li> <a href=modify_route_discounts.phtml?routeserial=GLOBAL>Global Discount Defaults</a>
+ <li> <a href=toproutesmgr.phtml>Manage top routes</a>
+ <li> <a href=seat_blackouts.phtml>Seat reservation Blackout dates</a>
+ <li> <a href=budget_replicate.phtml>Replicate budget to forecast system</a><br>(Click once and wait 5-10 mins)
+ <li> <a href=cancel_reasons.phtml>Manage Cancellation Reasons</a>
+
+<li> <a href='https://secure.intercape.co.za/ignite/index.php?c=task&m=vmy_tasks&page_id=543'>IT Tasks</a></li>
+<li> <a href='add_announcement.phtml'>Add a Global Announcement</a></li>
+<li> <a href='create_voucher.phtml'>Create Voucher</a></li>
+<li> <a href='general.phtml'>General Setup</a></li>
+<li> <a href='coach_gen.phtml'>Coach Maintenance</a></li>
+<li> <a href='baggage_issue.phtml'>Issue Baggage Tix</a></li>
+<li> <a href='badpax1.phtml'>Pax on closed buses</a></li>
+<li> <a href='default_xs_stop.phtml'>Default stop for Extra Space seats</a></li>
+<li> <a href='empty_seat_rates.phtml'>Master rates for Extra Space seats</a></li>
+<li> <a href='extra_seat_strategy.phtml'>Settings for auto increase of capacity</a></li>
+<li> <a target='_blank' href='stop_rename.phtml'>Rename Stop</a></li>
+<li> <a href='split_all.phtml'>Split out price packets (all routes)</a></li>
+<li> <a href='ss_all.phtml'>Open up all SS to 100%</a></li>
+<li> <a href='ss_check.phtml'>Open up some SS on slow movers</a> <font color=red>* new</font></li>
+<li> <a href='shuttle_ranges.phtml'>Shuttle seat setup</a></li>
+<li> <a href='ctk_info_setup.phtml'>Setup computicket crawler</a></li>
+<li> <a href='movestop.phtml'>Move pax from old stop to new stop</a></li>
+<li> <a href='pp_copy.phtml'>Copy lowest price packet in bulk</a></li>
+<li> <a href='min_max_price.phtml'>System Min/Max price</a></li>
+</ul>
+</td><td valign=top>
+<ul>
+<li> <a href='shuttle_levy_report.phtml'>Shuttle Levy Report</a></li>
+<li> <a href='possible_dupes.phtml'>Possible Duplicates</a></li>
+<li> <a href='report_routedetails_1.phtml'>Route Details Report</a></li>
+<li> <a href='report_stopuse_1.phtml'>Stop Usage Report</a></li>
+<li> <a href='report_capacity_1.phtml'>Route Capacity Report</a></li>
+<li> <a href='route_cap_report.phtml'>NEW Route Capacity Report</a></li>
+<li> <a href='stop_info.phtml'>Stops in use</a></li>
+<li> <a href='burst_report.phtml'>Booking burst report</a></li>
+<li> <a href='shop_basket_discount.phtml'>Shopping Basket Discounts</a></li>
+<li> <a href='graph_month.phtml'>Monthly/Daily sales graph & stats (Sale Date)</a></li>
+<li> <a href='open_bus.phtml'>Open bus report for computicket</a></li>
+<li> <a href='ctk_info.phtml'>Computicket Price Comparison</a></li>
+<li> <A href='e_display.phtml'>LED Board</a></li>
+<li> <a href='bargains.phtml'>Bargain Browser</a></li>
+<li> <a href='stop_usage.phtml'>Stop Capacity Report</a></li>
+<li> <a href=extra_seat_review.phtml>Global view of empty seat settings</a></li>
+<li> <a href='route_history.phtml'>Route History (First/Last Departure)</a></li>
+<li> <a target='_blank' href='connecting_stats.phtml'>Connecting Routes Stats</a> (click once and wait)</li>
+<li> <a href='affilate_report.phtml'>Affiliate Report</a></li>
+<li> <a target='_blank' href='https://secure.intercape.co.za/testsys/booking/icape_index.phtml'>Test System</a></li>
+</ul>
+</td></tr></table>
+<p>
+<a href=modify_route_old.phtml>Show old/deleted options</a>
+</BODY>
+</HTML>
+<? close_oracle()?>

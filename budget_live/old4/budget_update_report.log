@@ -1,0 +1,1110 @@
+_                
+| |    ___   __ _ 
+| |   / _ \ / _` |
+| |__| (_) | (_| |
+|_____\___/ \__, |
+            |___/ 
+
+Budget update started: 2025-02-13 10:02:44
+
+- Budget name: RSA Office Maintenance - Budget serial: 14896- Total budget: 478000 - Total spend: 0 - Difference: 478000 - Adjustment: 478000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":530000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA OHS - Compliance & Equipment - Budget serial: 15258- Total budget: 161100 - Total spend: 0 - Difference: 161100 - Adjustment: 161100
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":175475}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed Assets - Leasehold Improvements PE and PE Station - Budget serial: 15720- Total budget: 160000 - Total spend: 0 - Difference: 160000 - Adjustment: 160000
+- New budget amounts: {"062024":0,"072024":0,"082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":160000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Payroll - Outsourced Labour (OPS) - Budget serial: 15780- Total budget: 57000 - Total spend: 0 - Difference: 57000 - Adjustment: 57000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":0,"122024":0,"012025":0,"022025":57000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Water and Electricity Related - Budget serial: 11597- Total budget: 1600 - Total spend: 0 - Difference: 1600 - Adjustment: 1600
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1600}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed Assets - Furniture & Fittings Sales - Budget serial: 11877- Total budget: 390000 - Total spend: 0 - Difference: 390000 - Adjustment: 390000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":410000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Refreshments - Breakdown - Budget serial: 11888- Total budget: 240000 - Total spend: 0 - Difference: 240000 - Adjustment: 240000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":270000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Operations - Toolboxes - Budget serial: 11912- Total budget: 60000 - Total spend: 0 - Difference: 60000 - Adjustment: 60000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":67500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Licenses & COFS - Budget serial: 11932- Total budget: 10389989 - Total spend: 0 - Difference: 10389989 - Adjustment: 10389989
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":11522845}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Permits - Budget serial: 11935- Total budget: 121500 - Total spend: 0 - Difference: 121500 - Adjustment: 121500
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":126250}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Refreshments - Resale on Coaches - Budget serial: 11938- Total budget: 104000 - Total spend: 0 - Difference: 104000 - Adjustment: 104000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":117000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Staff functions - Budget serial: 12026- Total budget: 1000 - Total spend: 0 - Difference: 1000 - Adjustment: 1000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":"0","122024":0,"012025":0,"022025":1000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - PrDPs Renewal - Budget serial: 12054- Total budget: 36000 - Total spend: 0 - Difference: 36000 - Adjustment: 36000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":40500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Telecommunication - Budget serial: 12098- Total budget: 44000 - Total spend: 0 - Difference: 44000 - Adjustment: 44000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":49500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM IR - Legal Fees - Budget serial: 12180- Total budget: 40000 - Total spend: 0 - Difference: 40000 - Adjustment: 40000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":45000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Fleet Maintenance - Non Revenue Vehicles - Budget serial: 12360- Total budget: 8000 - Total spend: 0 - Difference: 8000 - Adjustment: 8000
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":8000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Marketing - Charter Accommodation and Travel - Budget serial: 14056- Total budget: 83000 - Total spend: 0 - Difference: 83000 - Adjustment: 83000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":91500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Finance - Entertainment - Budget serial: 14176- Total budget: 12000 - Total spend: 0 - Difference: 12000 - Adjustment: 12000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":13000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Cleaning Offices - Material & Consumables - Budget serial: 11990- Total budget: 10000 - Total spend: 0 - Difference: 10000 - Adjustment: 10000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":11250}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance - Breakdown Orders (Estimates) - Budget serial: 12735- Total budget: 2150000 - Total spend: 0 - Difference: 2150000 - Adjustment: 2150000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2400000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Agency Fees - Budget serial: 12915- Total budget: 3208538.28 - Total spend: 0 - Difference: 3208538.28 - Adjustment: 3208538.28
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":3208538.2800000003}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Travel - Driver Accomodation - Budget serial: 12942- Total budget: 230260 - Total spend: 0 - Difference: 230260 - Adjustment: 230260
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":259700}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM HR - Drivers Licenses - Budget serial: 12979- Total budget: 1000 - Total spend: 0 - Difference: 1000 - Adjustment: 1000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT HR - Passport Renewal - Budget serial: 13760- Total budget: 1000 - Total spend: 0 - Difference: 1000 - Adjustment: 1000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT HR - Medical (Assessments) - Budget serial: 13761- Total budget: 1000 - Total spend: 0 - Difference: 1000 - Adjustment: 1000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ HR - PrDPs Renewal - Budget serial: 13768- Total budget: 1000 - Total spend: 0 - Difference: 1000 - Adjustment: 1000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA On Board Entertainment - Budget serial: 15104- Total budget: 76000 - Total spend: 0 - Difference: 76000 - Adjustment: 76000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":85500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM  R&M - Workshop Equipment - Budget serial: 15598- Total budget: 80000 - Total spend: 0 - Difference: 80000 - Adjustment: 80000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":80000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Permits - Budget serial: 16039- Total budget: 84090 - Total spend: 0 - Difference: 84090 - Adjustment: 84090
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":84090}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA - Computer Cloud Services - Budget serial: 16068- Total budget: 600000 - Total spend: 0 - Difference: 600000 - Adjustment: 600000
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":600000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fleet Maintenance - Lubricants - Budget serial: 16119- Total budget: 346574.36 - Total spend: 0 - Difference: 346574.36 - Adjustment: 346574.36
+- New budget amounts: {"062024":2.1827872842550278e-11,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":378431.88}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM WCA - Budget serial: 11598- Total budget: 1000 - Total spend: 0 - Difference: 1000 - Adjustment: 1000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":"0","122024":"0","012025":0,"022025":2000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance - Refurbishment - Budget serial: 11875- Total budget: 3920000 - Total spend: 0 - Difference: 3920000 - Adjustment: 3920000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4540000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fleet Maintenance - Tyres - Budget serial: 11923- Total budget: 975882.57 - Total spend: 0 - Difference: 975882.57 - Adjustment: 975882.57
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1066895.23}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fleet Maintenance - Small Accidents - Budget serial: 11928- Total budget: 169523.6 - Total spend: 0 - Difference: 169523.6 - Adjustment: 169523.6
+- New budget amounts: {"062024":1.8189894035458565e-11,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":185174.36999999997}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Cross Border Fees - Budget serial: 11942- Total budget: 385925.55 - Total spend: 0 - Difference: 385925.55 - Adjustment: 385925.55
+- New budget amounts: {"062024":7.2759576141834259e-12,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":424215.80999999994}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Fuel On-Road - Budget serial: 11949- Total budget: 1001545.71 - Total spend: 0 - Difference: 1001545.71 - Adjustment: 1001545.71
+- New budget amounts: {"062024":1.4551915228366852e-11,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1114219.5999999999}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Consulting Secretarial - Budget serial: 12003- Total budget: 9500 - Total spend: 0 - Difference: 9500 - Adjustment: 9500
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":9500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Consulting Secretarial - Budget serial: 12005- Total budget: 16000 - Total spend: 0 - Difference: 16000 - Adjustment: 16000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":18000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Entertainment - General - Budget serial: 12018- Total budget: 180000 - Total spend: 0 - Difference: 180000 - Adjustment: 180000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":204000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Rental Premises Related - Budget serial: 12070- Total budget: 10061296.76 - Total spend: 0 - Difference: 10061296.76 - Adjustment: 10061296.76
+- New budget amounts: {"062024":1.3969838619232178e-9,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":11353390.949999997}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Security - Cash Collections - Budget serial: 12088- Total budget: 57600 - Total spend: 0 - Difference: 57600 - Adjustment: 57600
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":64800}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Telecommunication - Budget serial: 12101- Total budget: 80000 - Total spend: 0 - Difference: 80000 - Adjustment: 80000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":90000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - HR - Budget serial: 12112- Total budget: 56000 - Total spend: 0 - Difference: 56000 - Adjustment: 56000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":63000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fuel Bulk (Depots) - Budget serial: 12138- Total budget: 9973339.53 - Total spend: 0 - Difference: 9973339.53 - Adjustment: 9973339.53
+- New budget amounts: {"062024":4.6566128730773926e-10,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":10960951.739999998}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance Large Trailers - Tyres - Budget serial: 13876- Total budget: 22120 - Total spend: 0 - Difference: 22120 - Adjustment: 22120
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":24885}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR OHS - Compliance - Budget serial: 13998- Total budget: 12000 - Total spend: 0 - Difference: 12000 - Adjustment: 12000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":13500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed Assets - Leasehold Improvements New Offices - Budget serial: 14316- Total budget: 220000 - Total spend: 0 - Difference: 220000 - Adjustment: 220000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":220000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Auditors Remuneration - Budget serial: 11981- Total budget: 733336 - Total spend: 0 - Difference: 733336 - Adjustment: 733336
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":825003}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Auditors Remuneration - Budget serial: 11984- Total budget: 133333.36 - Total spend: 0 - Difference: 133333.36 - Adjustment: 133333.36
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":150000.02999999997}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Cleaning Offices - Oyama - Budget serial: 11995- Total budget: 2812128 - Total spend: 0 - Difference: 2812128 - Adjustment: 2812128
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":3163644}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: IT Projects - Mozam - Budget serial: 16318- Total budget: 370000 - Total spend: 0 - Difference: 370000 - Adjustment: 370000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":370000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Cleaning Coaches - Outsourcing - Budget serial: 12856- Total budget: 49854.83 - Total spend: 0 - Difference: 49854.83 - Adjustment: 49854.83
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":54801.270000000004}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Inspectorate Cost - IR - Budget serial: 12921- Total budget: 12800 - Total spend: 0 - Difference: 12800 - Adjustment: 12800
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":14400}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Stationery - IR - Budget serial: 12923- Total budget: 2400 - Total spend: 0 - Difference: 2400 - Adjustment: 2400
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2700}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Computer Expenses - Budget serial: 12927- Total budget: 48000 - Total spend: 0 - Difference: 48000 - Adjustment: 48000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":54000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM HR - Travel - Budget serial: 12932- Total budget: 90000 - Total spend: 0 - Difference: 90000 - Adjustment: 90000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":100000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ IR - Legal Fees - Budget serial: 12986- Total budget: 4000 - Total spend: 0 - Difference: 4000 - Adjustment: 4000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Maintenance - Budget serial: 13736- Total budget: 52500 - Total spend: 0 - Difference: 52500 - Adjustment: 52500
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":60000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ HR - Travel - Budget serial: 13774- Total budget: 10000 - Total spend: 0 - Difference: 10000 - Adjustment: 10000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":10000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fumigation Coaches - Outsourcing - Budget serial: 13356- Total budget: 76016.94 - Total spend: 0 - Difference: 76016.94 - Adjustment: 76016.94
+- New budget amounts: {"062024":1.8189894035458565e-12,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":83559.100000000006}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Salaries Admin - SNT (Inspectorate) - Budget serial: 13616- Total budget: 14400 - Total spend: 0 - Difference: 14400 - Adjustment: 14400
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":16200}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA IT - Consulting - Budget serial: 15278- Total budget: 960000 - Total spend: 0 - Difference: 960000 - Adjustment: 960000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1080000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Cleaning Coaches Express - Oyama - Budget serial: 15619- Total budget: 1083986 - Total spend: 0 - Difference: 1083986 - Adjustment: 1083986
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1210031}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Inspectorate - Budget serial: 16062- Total budget: 112000 - Total spend: 0 - Difference: 112000 - Adjustment: 112000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":126000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed assets - Workshop Equipment - Budget serial: 11876- Total budget: 600000 - Total spend: 0 - Difference: 600000 - Adjustment: 600000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":700000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Insurance - Assets and Public Liability - Budget serial: 11903- Total budget: 14800000 - Total spend: 0 - Difference: 14800000 - Adjustment: 14800000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":16650000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Operations - Tracking - Budget serial: 11910- Total budget: 3999878 - Total spend: 0 - Difference: 3999878 - Adjustment: 3999878
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4497745}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Repairs Workshop Equipment - Budget serial: 11913- Total budget: 1475248.32 - Total spend: 0 - Difference: 1475248.32 - Adjustment: 1475248.32
+- New budget amounts: {"062024":1.7462298274040222e-10,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1659654.3600000001}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance - Small Accidents - Budget serial: 11926- Total budget: 3436920.05 - Total spend: 0 - Difference: 3436920.05 - Adjustment: 3436920.05
+- New budget amounts: {"062024":4.0745362639427185e-10,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":3765268.8499999996}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Cross Border Fees - Budget serial: 11941- Total budget: 398000 - Total spend: 0 - Difference: 398000 - Adjustment: 398000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":443500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fuel - Bulk (Depots) - Budget serial: 11944- Total budget: 186958248.47 - Total spend: 0 - Difference: 186958248.47 - Adjustment: 186958248.47
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":205543660.84}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fuel On-Road - Budget serial: 11947- Total budget: 3688769.41 - Total spend: 0 - Difference: 3688769.41 - Adjustment: 3688769.41
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4054050.6400000001}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Toll Fees - Budget serial: 11954- Total budget: 19257850.47 - Total spend: 0 - Difference: 19257850.47 - Adjustment: 19257850.47
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":21064546.829999998}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Entertainment - Management Meetings - Budget serial: 12021- Total budget: 153300 - Total spend: 0 - Difference: 153300 - Adjustment: 153300
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":154600}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Staff functions - Budget serial: 12022- Total budget: 139400 - Total spend: 0 - Difference: 139400 - Adjustment: 139400
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":"0","122024":0,"012025":0,"022025":139400}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA IR - Legal Fees - Budget serial: 12036- Total budget: 342790 - Total spend: 0 - Difference: 342790 - Adjustment: 342790
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":381170}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Legal - Litigation - Budget serial: 12038- Total budget: 668000 - Total spend: 0 - Difference: 668000 - Adjustment: 668000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":751500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Marketing - Charters - Budget serial: 12044- Total budget: 311000 - Total spend: 0 - Difference: 311000 - Adjustment: 311000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":366000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance - Non Revenue Vehicles - Budget serial: 12071- Total budget: 1317399.65 - Total spend: 0 - Difference: 1317399.65 - Adjustment: 1317399.65
+- New budget amounts: {"062024":2.9103830456733704e-11,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1440634.1099999999}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Security - Cash Collections - Budget serial: 12086- Total budget: 750000 - Total spend: 0 - Difference: 750000 - Adjustment: 750000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":800000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA IFoundation - Budget serial: 12093- Total budget: 600000 - Total spend: 0 - Difference: 600000 - Adjustment: 600000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":600000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Toll Fees - Budget serial: 12177- Total budget: 590776.51 - Total spend: 0 - Difference: 590776.51 - Adjustment: 590776.51
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":658849.53000000003}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Medicals (Assessments) - Budget serial: 12399- Total budget: 20000 - Total spend: 0 - Difference: 20000 - Adjustment: 20000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":22500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Legal - Subscriptions - Budget serial: 13784- Total budget: 40000 - Total spend: 0 - Difference: 40000 - Adjustment: 40000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":45000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Water and Electricity Related - Budget serial: 13816- Total budget: 15600 - Total spend: 0 - Difference: 15600 - Adjustment: 15600
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":15600}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance Small Trailers - Parts - Budget serial: 13878- Total budget: 1613902.65 - Total spend: 0 - Difference: 1613902.65 - Adjustment: 1613902.65
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1763355.2900000005}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Funeral - Budget serial: 13976- Total budget: 8000 - Total spend: 0 - Difference: 8000 - Adjustment: 8000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":9000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Finance - Staff Welfare - Budget serial: 14116- Total budget: 27200 - Total spend: 0 - Difference: 27200 - Adjustment: 27200
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":30600}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Assessment - Budget serial: 14416- Total budget: 25000 - Total spend: 0 - Difference: 25000 - Adjustment: 25000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":25000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Training - Consulting - Budget serial: 14516- Total budget: 150000 - Total spend: 0 - Difference: 150000 - Adjustment: 150000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":150000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: IT Projects - PE - Budget serial: 16320- Total budget: 100000 - Total spend: 0 - Difference: 100000 - Adjustment: 100000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":100000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Cleaning Offices - Outsourcing - Budget serial: 12537- Total budget: 407974.46 - Total spend: 0 - Difference: 407974.46 - Adjustment: 407974.46
+- New budget amounts: {"062024":4.3655745685100555e-11,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":456982.08999999997}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fumigation Coaches - Outsourcing - Budget serial: 12637- Total budget: 1462000 - Total spend: 0 - Difference: 1462000 - Adjustment: 1462000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1634000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - IR - Budget serial: 12938- Total budget: 80000 - Total spend: 0 - Difference: 80000 - Adjustment: 80000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":90000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Training - Budget serial: 12939- Total budget: 44000 - Total spend: 0 - Difference: 44000 - Adjustment: 44000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":49500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Development - Procurement - Budget serial: 12959- Total budget: 2500 - Total spend: 0 - Difference: 2500 - Adjustment: 2500
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":"0","122024":0,"012025":0,"022025":5000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Functions - Budget serial: 12974- Total budget: 120000 - Total spend: 0 - Difference: 120000 - Adjustment: 120000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":135000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA IR - Training - Budget serial: 13719- Total budget: 4880 - Total spend: 0 - Difference: 4880 - Adjustment: 4880
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4880}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Fixed Assets - Furniture & Fittings Sales - Budget serial: 13256- Total budget: 20000 - Total spend: 0 - Difference: 20000 - Adjustment: 20000
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":20000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Salaries Admin - SNT (HR) - Budget serial: 13558- Total budget: 6000 - Total spend: 0 - Difference: 6000 - Adjustment: 6000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":6750}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: IT Projects - WHK - Budget serial: 16458- Total budget: 200000 - Total spend: 0 - Difference: 200000 - Adjustment: 200000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":200000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed Assets - Non Fleet Vehicles - Budget serial: 14958- Total budget: 5340000 - Total spend: 0 - Difference: 5340000 - Adjustment: 5340000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":5340000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Stationery - Finance - Budget serial: 15318- Total budget: 8000 - Total spend: 0 - Difference: 8000 - Adjustment: 8000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":9000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: Nam Office Maintenance - Budget serial: 15438- Total budget: 40000 - Total spend: 0 - Difference: 40000 - Adjustment: 40000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":90000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed asset F&F Depot/Tech/OPS - Budget serial: 15440- Total budget: 220000 - Total spend: 0 - Difference: 220000 - Adjustment: 220000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":247500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - OHS - Budget serial: 15738- Total budget: 40000 - Total spend: 0 - Difference: 40000 - Adjustment: 40000
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":45100}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Rental - Workshop Equipment - Budget serial: 16063- Total budget: 40000 - Total spend: 0 - Difference: 40000 - Adjustment: 40000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":45000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Cleaning Coaches - Oyama (Logistics) - Budget serial: 11898- Total budget: 11866792 - Total spend: 0 - Difference: 11866792 - Adjustment: 11866792
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":13287641}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Insurance - Assets and Public Liability - Budget serial: 11905- Total budget: 50000 - Total spend: 0 - Difference: 50000 - Adjustment: 50000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":50000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Protective Clothing - Technical - Budget serial: 11915- Total budget: 196227.25 - Total spend: 0 - Difference: 196227.25 - Adjustment: 196227.25
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":638550.14000000013}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Park Station Parking fees - Budget serial: 11940- Total budget: 9571706.32 - Total spend: 0 - Difference: 9571706.32 - Adjustment: 9571706.32
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":10478325.76}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Consulting Secretarial - Budget serial: 12004- Total budget: 3000 - Total spend: 0 - Difference: 3000 - Adjustment: 3000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":3000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Inspectorate Cost - Budget serial: 12034- Total budget: 8000 - Total spend: 0 - Difference: 8000 - Adjustment: 8000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":8000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Marketing - Signage - Budget serial: 12048- Total budget: 205000 - Total spend: 0 - Difference: 205000 - Adjustment: 205000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":240000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Printing - Third Party - Budget serial: 12049- Total budget: 410000 - Total spend: 0 - Difference: 410000 - Adjustment: 410000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":490000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Security - Premises (Alarms/Patrol/Guards) - Budget serial: 12090- Total budget: 10760 - Total spend: 0 - Difference: 10760 - Adjustment: 10760
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":12105}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Security - Premises (Alarms/Patrol/Guards) - Budget serial: 12091- Total budget: 5928000 - Total spend: 0 - Difference: 5928000 - Adjustment: 5928000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":6669000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Stationery - Budget serial: 12094- Total budget: 599123.4 - Total spend: 0 - Difference: 599123.4 - Adjustment: 599123.4
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":672968.40000000002}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Exco - Budget serial: 12110- Total budget: 1570000 - Total spend: 0 - Difference: 1570000 - Adjustment: 1570000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1620000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Technical - Budget serial: 12117- Total budget: 480000 - Total spend: 0 - Difference: 480000 - Adjustment: 480000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":540000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Travel - Technical - Budget serial: 12126- Total budget: 80000 - Total spend: 0 - Difference: 80000 - Adjustment: 80000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":90000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Rental Coaches - Charters - Budget serial: 12130- Total budget: 465000 - Total spend: 0 - Difference: 465000 - Adjustment: 465000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":525000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Security - Premises (Alarms/Patrol/Guards) - Budget serial: 12276- Total budget: 28934.32 - Total spend: 0 - Difference: 28934.32 - Adjustment: 28934.32
+- New budget amounts: {"062024":9.0949470177292824e-13,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":32551.110000000004}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM HR - PrDPs Renewal - Budget serial: 12355- Total budget: 6800 - Total spend: 0 - Difference: 6800 - Adjustment: 6800
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":7650}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Licenses - Budget serial: 12395- Total budget: 112000 - Total spend: 0 - Difference: 112000 - Adjustment: 112000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":126000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Development - HR - Budget serial: 12412- Total budget: 15000 - Total spend: 0 - Difference: 15000 - Adjustment: 15000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":15000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Development - Training - Budget serial: 12413- Total budget: 100000 - Total spend: 0 - Difference: 100000 - Adjustment: 100000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":150000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Intern Administration Fees - Budget serial: 13956- Total budget: 40000 - Total spend: 0 - Difference: 40000 - Adjustment: 40000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":45000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA CPT - Canteen - Budget serial: 14436- Total budget: 160000 - Total spend: 0 - Difference: 160000 - Adjustment: 160000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":260000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Marketing - Advertising - Budget serial: 12795- Total budget: 88000 - Total spend: 0 - Difference: 88000 - Adjustment: 88000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":94000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Stationery - Budget serial: 12922- Total budget: 52000 - Total spend: 0 - Difference: 52000 - Adjustment: 52000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":58500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Stationery - Training - Budget serial: 12924- Total budget: 8000 - Total spend: 0 - Difference: 8000 - Adjustment: 8000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":9000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Computer Expenses - Budget serial: 12929- Total budget: 80000 - Total spend: 0 - Difference: 80000 - Adjustment: 80000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":90000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - IT - Budget serial: 12937- Total budget: 176000 - Total spend: 0 - Difference: 176000 - Adjustment: 176000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":198000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Driver Accomodation - Budget serial: 12941- Total budget: 961965 - Total spend: 0 - Difference: 961965 - Adjustment: 961965
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1072663}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Training - Evaluations - Budget serial: 12951- Total budget: 1000 - Total spend: 0 - Difference: 1000 - Adjustment: 1000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM HR - Advertising - Budget serial: 12968- Total budget: 4500 - Total spend: 0 - Difference: 4500 - Adjustment: 4500
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":9000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Work Permits - Budget serial: 12970- Total budget: 20000 - Total spend: 0 - Difference: 20000 - Adjustment: 20000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":22500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Passport Renewals - Budget serial: 12971- Total budget: 3600 - Total spend: 0 - Difference: 3600 - Adjustment: 3600
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4050}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Driver Licenses - Budget serial: 12972- Total budget: 10000 - Total spend: 0 - Difference: 10000 - Adjustment: 10000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":15000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ HR - Passport Renewal - Budget serial: 13770- Total budget: 5000 - Total spend: 0 - Difference: 5000 - Adjustment: 5000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":5000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Travel - Operational - Budget serial: 12995- Total budget: 8000 - Total spend: 0 - Difference: 8000 - Adjustment: 8000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":0,"122024":0,"012025":0,"022025":8000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Inspectorate Cost - Budget serial: 13476- Total budget: 12000 - Total spend: 0 - Difference: 12000 - Adjustment: 12000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":13500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Marketing - Travel - Budget serial: 15018- Total budget: 12000 - Total spend: 0 - Difference: 12000 - Adjustment: 12000
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":12000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Technical Entertainment - Budget serial: 15239- Total budget: 28000 - Total spend: 0 - Difference: 28000 - Adjustment: 28000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":31500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Payroll - Outsourced Labour (Logistics) - Budget serial: 15779- Total budget: 448347.65 - Total spend: 0 - Difference: 448347.65 - Adjustment: 448347.65
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":502244.08000000002}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Depot Maintenance - Generator Service and Repairs - Budget serial: 16058- Total budget: 150000 - Total spend: 0 - Difference: 150000 - Adjustment: 150000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":153750}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA  R&M - Forklifts & Tractors - Budget serial: 16059- Total budget: 260000 - Total spend: 0 - Difference: 260000 - Adjustment: 260000
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":310000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Operations - Alcohol & Drug Tests - Budget serial: 16064- Total budget: 57500 - Total spend: 0 - Difference: 57500 - Adjustment: 57500
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":69000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Development - Inspectorate - Budget serial: 16065- Total budget: 6400 - Total spend: 0 - Difference: 6400 - Adjustment: 6400
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":7200}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Operations Entertainment - Budget serial: 16138- Total budget: 28000 - Total spend: 0 - Difference: 28000 - Adjustment: 28000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":31500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Water and Electricity Related - Budget serial: 11583- Total budget: 60000 - Total spend: 0 - Difference: 60000 - Adjustment: 60000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":60000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Cleaning - Waste Removal - Budget serial: 11899- Total budget: 793546.05 - Total spend: 0 - Difference: 793546.05 - Adjustment: 793546.05
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":866552.71000000008}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance - Parts - Budget serial: 11916- Total budget: 95111574.63 - Total spend: 0 - Difference: 95111574.63 - Adjustment: 95111574.63
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":101228218.89999999}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance - Units - Budget serial: 11921- Total budget: 4470009.67 - Total spend: 0 - Difference: 4470009.67 - Adjustment: 4470009.67
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4834589.7199999997}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance - Windows - Budget serial: 11924- Total budget: 8098656.98 - Total spend: 0 - Difference: 8098656.98 - Adjustment: 8098656.98
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":8871675.3300000001}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Licenses & COFS - Budget serial: 11934- Total budget: 695412 - Total spend: 0 - Difference: 695412 - Adjustment: 695412
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":697739}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Refunds - Budget serial: 11937- Total budget: 3260033 - Total spend: 0 - Difference: 3260033 - Adjustment: 3260033
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":3591675}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fuel - On-Road - Budget serial: 11943- Total budget: 80578045.69 - Total spend: 0 - Difference: 80578045.69 - Adjustment: 80578045.69
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":88988700.370000005}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Depot Maintenance - Budget serial: 12041- Total budget: 2672000 - Total spend: 0 - Difference: 2672000 - Adjustment: 2672000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":3006000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Telecommunication - Budget serial: 12099- Total budget: 4400000 - Total spend: 0 - Difference: 4400000 - Adjustment: 4400000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4950000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Travel - Operational - Budget serial: 12175- Total budget: 4800 - Total spend: 0 - Difference: 4800 - Adjustment: 4800
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":5400}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Logistics - Advertising - Budget serial: 12178- Total budget: 52000 - Total spend: 0 - Difference: 52000 - Adjustment: 52000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":58500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance Small Trailers - Tyres - Budget serial: 13879- Total budget: 7746732.82 - Total spend: 0 - Difference: 7746732.82 - Adjustment: 7746732.82
+- New budget amounts: {"062024":6.9849193096160889e-10,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":8464105.4700000007}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA OHS - Training - Budget serial: 13996- Total budget: 176130 - Total spend: 0 - Difference: 176130 - Adjustment: 176130
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":235320}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Salaries - Oyama (parcel) - Budget serial: 11977- Total budget: 2480600 - Total spend: 0 - Difference: 2480600 - Adjustment: 2480600
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2790675}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Uniforms - Budget serial: 11978- Total budget: 1700336.12 - Total spend: 0 - Difference: 1700336.12 - Adjustment: 1700336.12
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1845900.6000000001}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Cleaning Offices - Material & Consumables - Budget serial: 11988- Total budget: 449279.04 - Total spend: 0 - Difference: 449279.04 - Adjustment: 449279.04
+- New budget amounts: {"062024":4.3655745685100555e-11,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":504313.91999999998}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Computer Expenses - Budget serial: 11997- Total budget: 1280000 - Total spend: 0 - Difference: 1280000 - Adjustment: 1280000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1440000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: IT Projects - PE Depot - Budget serial: 16438- Total budget: 230000 - Total spend: 0 - Difference: 230000 - Adjustment: 230000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":230000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Computer Expenses - Budget serial: 12515- Total budget: 96000 - Total spend: 0 - Difference: 96000 - Adjustment: 96000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":108000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Travel - IR - Budget serial: 12940- Total budget: 5000 - Total spend: 0 - Difference: 5000 - Adjustment: 5000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":10000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT HR - Travel - Budget serial: 13763- Total budget: 3000 - Total spend: 0 - Difference: 3000 - Adjustment: 3000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":3000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Procurement - Budget serial: 13096- Total budget: 157000 - Total spend: 0 - Difference: 157000 - Adjustment: 157000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":175500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Payroll - Outsourced Labour (Procurement) - Budget serial: 15778- Total budget: 175750 - Total spend: 0 - Difference: 175750 - Adjustment: 175750
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":194250}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Permits - Budget serial: 16038- Total budget: 18100 - Total spend: 0 - Difference: 18100 - Adjustment: 18100
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":19850}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed Assets - WIP Refurbishment (Body) - Budget serial: 16066- Total budget: 24400000 - Total spend: 0 - Difference: 24400000 - Adjustment: 24400000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":25400000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fuel Levy - Surplus - Budget serial: 16178- Total budget: 12570313.55 - Total spend: 0 - Difference: 12570313.55 - Adjustment: 12570313.55
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":0,"112024":0,"122024":0,"012025":0,"022025":12684225.100000001}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed Assets - Computer Equipment - Budget serial: 11878- Total budget: 1600000 - Total spend: 0 - Difference: 1600000 - Adjustment: 1600000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1800000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Cleaning Coaches - Material & Consumables - Budget serial: 11890- Total budget: 5067829.04 - Total spend: 0 - Difference: 5067829.04 - Adjustment: 5067829.04
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":5534900.0200000014}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Cleaning Coaches - Outsourcing - Budget serial: 11897- Total budget: 472660.7 - Total spend: 0 - Difference: 472660.7 - Adjustment: 472660.7
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":515927.21999999997}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Rental Workshop Equipment - Budget serial: 11931- Total budget: 643273.92 - Total spend: 0 - Difference: 643273.92 - Adjustment: 643273.92
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":723683.16000000003}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fines - Other - Budget serial: 11961- Total budget: 70000 - Total spend: 0 - Difference: 70000 - Adjustment: 70000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":76500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Staff functions - Budget serial: 12025- Total budget: 5000 - Total spend: 0 - Difference: 5000 - Adjustment: 5000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":"0","122024":0,"012025":0,"022025":5000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA General Expenses - MD - Budget serial: 12033- Total budget: 1200000 - Total spend: 0 - Difference: 1200000 - Adjustment: 1200000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1350000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Marketing - Travel - Budget serial: 12050- Total budget: 435000 - Total spend: 0 - Difference: 435000 - Adjustment: 435000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":465000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Staff welfare - Budget serial: 12057- Total budget: 22200 - Total spend: 0 - Difference: 22200 - Adjustment: 22200
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":23700}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Finance - Budget serial: 12111- Total budget: 20000 - Total spend: 0 - Difference: 20000 - Adjustment: 20000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":22500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Office Maintenance - Budget serial: 12135- Total budget: 20000 - Total spend: 0 - Difference: 20000 - Adjustment: 20000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":24000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Cleaning - Waste Removal - Budget serial: 12167- Total budget: 6800 - Total spend: 0 - Difference: 6800 - Adjustment: 6800
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":7650}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fleet Maintenance - Non Revenue Vehicles - Budget serial: 12315- Total budget: 18433.05 - Total spend: 0 - Difference: 18433.05 - Adjustment: 18433.05
+- New budget amounts: {"062024":2.7284841053187847e-12,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":18433.049999999999}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT HR - Advertising - Budget serial: 12335- Total budget: 700 - Total spend: 0 - Difference: 700 - Adjustment: 700
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":700}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Agency - Budget serial: 12397- Total budget: 150000 - Total spend: 0 - Difference: 150000 - Adjustment: 150000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":150000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Relocation - Budget serial: 12398- Total budget: 60000 - Total spend: 0 - Difference: 60000 - Adjustment: 60000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":67500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Development - Operational - Budget serial: 12405- Total budget: 14500 - Total spend: 0 - Difference: 14500 - Adjustment: 14500
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":14500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Fixed Assets - Leasehold Improvement (Depot) - Budget serial: 14157- Total budget: 675000 - Total spend: 0 - Difference: 675000 - Adjustment: 675000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":675000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Cleaning Offices - Material & Consumables - Budget serial: 11993- Total budget: 4000 - Total spend: 0 - Difference: 4000 - Adjustment: 4000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Computer Rental Equipment - Budget serial: 11996- Total budget: 176000 - Total spend: 0 - Difference: 176000 - Adjustment: 176000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":198000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Consulting - Budget serial: 11998- Total budget: 2000000 - Total spend: 0 - Difference: 2000000 - Adjustment: 2000000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2200000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Marketing - Advertising - Budget serial: 12635- Total budget: 97042 - Total spend: 0 - Difference: 97042 - Adjustment: 97042
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":97042}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Water Dispensers - Budget serial: 12815- Total budget: 173040 - Total spend: 0 - Difference: 173040 - Adjustment: 173040
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":195720}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Training - Driver - Budget serial: 12954- Total budget: 264000 - Total spend: 0 - Difference: 264000 - Adjustment: 264000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":297000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Medicals - Budget serial: 12964- Total budget: 8000 - Total spend: 0 - Difference: 8000 - Adjustment: 8000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":9000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ HR - Medical (Assessments) - Budget serial: 13772- Total budget: 1500 - Total spend: 0 - Difference: 1500 - Adjustment: 1500
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Legal - Commercial - Budget serial: 13778- Total budget: 30000 - Total spend: 0 - Difference: 30000 - Adjustment: 30000
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":30000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Refurbs Busses Sold - Budget serial: 13696- Total budget: 400000 - Total spend: 0 - Difference: 400000 - Adjustment: 400000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":450000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Marketing - Charters  - Budget serial: 15378- Total budget: 27000 - Total spend: 0 - Difference: 27000 - Adjustment: 27000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":27000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: S&T Charters (RSA, NAM, BIGSKY) - Budget serial: 15398- Total budget: 368000 - Total spend: 0 - Difference: 368000 - Adjustment: 368000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":513000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA R&M - Spray booth - Budget serial: 16060- Total budget: 140000 - Total spend: 0 - Difference: 140000 - Adjustment: 140000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":140000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Procurement Entertainment - Budget serial: 16067- Total budget: 22500 - Total spend: 0 - Difference: 22500 - Adjustment: 22500
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":0,"112024":0,"122024":0,"012025":0,"022025":24000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fleet Maintenance - Units - Budget serial: 16118- Total budget: 305779.63 - Total spend: 0 - Difference: 305779.63 - Adjustment: 305779.63
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":332761.54999999999}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fleet Maintenance - Parts - Budget serial: 11918- Total budget: 4201991.67 - Total spend: 0 - Difference: 4201991.67 - Adjustment: 4201991.67
+- New budget amounts: {"062024":2.3283064365386963e-10,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4565371.1799999997}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance - Lubricants - Budget serial: 11920- Total budget: 7054596.94 - Total spend: 0 - Difference: 7054596.94 - Adjustment: 7054596.94
+- New budget amounts: {"062024":5.8207660913467407e-10,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":7728030.1499999994}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Consulting Secretarial - Budget serial: 12000- Total budget: 5000 - Total spend: 0 - Difference: 5000 - Adjustment: 5000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":0,"122024":0,"012025":0,"022025":5000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Directors Fees - Budget serial: 12015- Total budget: 251306.08 - Total spend: 0 - Difference: 251306.08 - Adjustment: 251306.08
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":251306.08000000002}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA ICafe - Expenses - Budget serial: 12032- Total budget: 1000000 - Total spend: 0 - Difference: 1000000 - Adjustment: 1000000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1100000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Telecommunication - Budget serial: 12102- Total budget: 176000 - Total spend: 0 - Difference: 176000 - Adjustment: 176000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":198000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Management Meetings - Budget serial: 12105- Total budget: 177500 - Total spend: 0 - Difference: 177500 - Adjustment: 177500
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":0,"112024":0,"122024":0,"012025":0,"022025":177500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Operational (Core) - Budget serial: 12115- Total budget: 104136 - Total spend: 0 - Difference: 104136 - Adjustment: 104136
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":118403}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed Assets - Leasehold Improvements - Budget serial: 12169- Total budget: 460000 - Total spend: 0 - Difference: 460000 - Adjustment: 460000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":960000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Fuel On-Road - Budget serial: 12275- Total budget: 52605.91 - Total spend: 0 - Difference: 52605.91 - Adjustment: 52605.91
+- New budget amounts: {"062024":5.4569682106375694e-12,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":58667.5}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Advertising - Budget serial: 12396- Total budget: 9600 - Total spend: 0 - Difference: 9600 - Adjustment: 9600
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":10800}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Training - Equipment - Budget serial: 12409- Total budget: 47200 - Total spend: 0 - Difference: 47200 - Adjustment: 47200
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":53100}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Development - Technical - Budget serial: 12410- Total budget: 112000 - Total spend: 0 - Difference: 112000 - Adjustment: 112000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":0,"112024":0,"122024":0,"012025":0,"022025":142000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA OHS - Consulting - Budget serial: 13997- Total budget: 46690 - Total spend: 0 - Difference: 46690 - Adjustment: 46690
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":46690}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Bulk Fuel Equipment - Repairs & Maintenance - Budget serial: 14276- Total budget: 163936.56 - Total spend: 0 - Difference: 163936.56 - Adjustment: 163936.56
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":210453.63000000003}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Cleaning Offices - Material & Consumables - Budget serial: 11994- Total budget: 2000 - Total spend: 0 - Difference: 2000 - Adjustment: 2000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2250}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: IT Projects - CPT - Budget serial: 16338- Total budget: 150000 - Total spend: 0 - Difference: 150000 - Adjustment: 150000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":150000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Legal - Commercial - Budget serial: 12896- Total budget: 50000 - Total spend: 0 - Difference: 50000 - Adjustment: 50000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":75000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Finance - Subscriptions - Budget serial: 12919- Total budget: 27057 - Total spend: 0 - Difference: 27057 - Adjustment: 27057
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":27216}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Computer Expenses - IR (Lexis & Mantis) - Budget serial: 12931- Total budget: 4200 - Total spend: 0 - Difference: 4200 - Adjustment: 4200
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":4200}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Training - Refreshers - Budget serial: 12952- Total budget: 20000 - Total spend: 0 - Difference: 20000 - Adjustment: 20000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":25000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM HR - Passport Renewals - Budget serial: 12978- Total budget: 2800 - Total spend: 0 - Difference: 2800 - Adjustment: 2800
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":3150}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Subscriptions - Budget serial: 13720- Total budget: 3200 - Total spend: 0 - Difference: 3200 - Adjustment: 3200
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":3600}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT HR - PrDPs Renewal - Budget serial: 13758- Total budget: 600 - Total spend: 0 - Difference: 600 - Adjustment: 600
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":600}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ HR - Drivers Licenses - Budget serial: 13769- Total budget: 2000 - Total spend: 0 - Difference: 2000 - Adjustment: 2000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Computer - License Subscription - Budget serial: 13077- Total budget: 2250000 - Total spend: 0 - Difference: 2250000 - Adjustment: 2250000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2500000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Technical Contribution - Year-end - Budget serial: 13656- Total budget: 100000 - Total spend: 0 - Difference: 100000 - Adjustment: 100000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":"0","122024":0,"012025":0,"022025":100000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fixed Assets - WIP Refurbishment (Chassis) - Budget serial: 14938- Total budget: 49500000 - Total spend: 0 - Difference: 49500000 - Adjustment: 49500000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":51750000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Marketing Project Big Sky Intercity - Budget serial: 15758- Total budget: 60000 - Total spend: 0 - Difference: 60000 - Adjustment: 60000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":75000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA R&M - Testing Station - Budget serial: 16061- Total budget: 315000 - Total spend: 0 - Difference: 315000 - Adjustment: 315000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":340000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Monthly Ops & TECH Meeting - Budget serial: 16139- Total budget: 16000 - Total spend: 0 - Difference: 16000 - Adjustment: 16000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":16000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Rental Coaches - Breakdowns - Budget serial: 11887- Total budget: 80000 - Total spend: 0 - Difference: 80000 - Adjustment: 80000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":90000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Cleaning Coaches - Material & Consumables - Budget serial: 11893- Total budget: 10000 - Total spend: 0 - Difference: 10000 - Adjustment: 10000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":11250}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance - Tyres - Budget serial: 11922- Total budget: 18314597.21 - Total spend: 0 - Difference: 18314597.21 - Adjustment: 18314597.21
+- New budget amounts: {"062024":9.3132257461547852e-10,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":20073590.449999999}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fleet Maintenance - Windows - Budget serial: 11925- Total budget: 397655.32 - Total spend: 0 - Difference: 397655.32 - Adjustment: 397655.32
+- New budget amounts: {"062024":2.1827872842550278e-11,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":434187.05999999994}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA LOGISTIC Luggage/Parcel Packaging - Budget serial: 11939- Total budget: 1208000 - Total spend: 0 - Difference: 1208000 - Adjustment: 1208000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1344000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Fixed Assets - Leasehold Improvements Windhoek - Budget serial: 15725- Total budget: 160000 - Total spend: 0 - Difference: 160000 - Adjustment: 160000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":160000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Water and Electricity Related - Budget serial: 12017- Total budget: 7020188.43 - Total spend: 0 - Difference: 7020188.43 - Adjustment: 7020188.43
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":7020188.4299999997}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Staff functions - Budget serial: 12027- Total budget: 3800 - Total spend: 0 - Difference: 3800 - Adjustment: 3800
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":"0","102024":"0","112024":"0","122024":0,"012025":0,"022025":3800}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Legal - Commercial - Budget serial: 12035- Total budget: 417256 - Total spend: 0 - Difference: 417256 - Adjustment: 417256
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":417256}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Marketing - Advertising - Budget serial: 12043- Total budget: 1232000 - Total spend: 0 - Difference: 1232000 - Adjustment: 1232000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1393500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Marketing - Contracts - Budget serial: 12045- Total budget: 2264080 - Total spend: 0 - Difference: 2264080 - Adjustment: 2264080
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2534590}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Marketing - Events - Budget serial: 12047- Total budget: 122000 - Total spend: 0 - Difference: 122000 - Adjustment: 122000
+- New budget amounts: {"062024":"0","072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":122000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Driver Training Trips - Budget serial: 12051- Total budget: 36000 - Total spend: 0 - Difference: 36000 - Adjustment: 36000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":40500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA WCA - Budget serial: 12061- Total budget: 5115139.12 - Total spend: 0 - Difference: 5115139.12 - Adjustment: 5115139.12
+- New budget amounts: {"062024":2.3283064365386963e-10,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":5754531.5099999998}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Rental Premises Non-Related - Budget serial: 12064- Total budget: 19411191.85 - Total spend: 0 - Difference: 19411191.85 - Adjustment: 19411191.85
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":22106509}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA CEO - Subscriptions - Budget serial: 12097- Total budget: 105000 - Total spend: 0 - Difference: 105000 - Adjustment: 105000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":105000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Internal Audit - Budget serial: 12113- Total budget: 77800 - Total spend: 0 - Difference: 77800 - Adjustment: 77800
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":77800}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Travel - Logistics - Budget serial: 12116- Total budget: 14000 - Total spend: 0 - Difference: 14000 - Adjustment: 14000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":21000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Travel - Operational - Budget serial: 12122- Total budget: 24000 - Total spend: 0 - Difference: 24000 - Adjustment: 24000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":36000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Depot Maintenance - Budget serial: 12132- Total budget: 84000 - Total spend: 0 - Difference: 84000 - Adjustment: 84000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":94500}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: MOZ Office Maintenance - Budget serial: 12136- Total budget: 40000 - Total spend: 0 - Difference: 40000 - Adjustment: 40000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":45000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Marketing - Travel - Budget serial: 12357- Total budget: 12000 - Total spend: 0 - Difference: 12000 - Adjustment: 12000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":15000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Refreshments - Budget serial: 12414- Total budget: 6000 - Total spend: 0 - Difference: 6000 - Adjustment: 6000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":6750}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Marketing - Advertising - Budget serial: 12418- Total budget: 47831 - Total spend: 0 - Difference: 47831 - Adjustment: 47831
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":47831}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Fleet Maintenance Large Trailers - Parts - Budget serial: 13877- Total budget: 12320 - Total spend: 0 - Difference: 12320 - Adjustment: 12320
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":13860}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: IT Projects - Namibia - Budget serial: 16319- Total budget: 150000 - Total spend: 0 - Difference: 150000 - Adjustment: 150000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":150000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: BOT Cleaning Offices - Outsourcing - Budget serial: 12536- Total budget: 2000 - Total spend: 0 - Difference: 2000 - Adjustment: 2000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2250}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM Refreshments - Breakdown - Budget serial: 12595- Total budget: 40000 - Total spend: 0 - Difference: 40000 - Adjustment: 40000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":45000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Headrest Covers - Budget serial: 12875- Total budget: 720000 - Total spend: 0 - Difference: 720000 - Adjustment: 720000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":810000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA HR - Consulting - Budget serial: 12916- Total budget: 1720000 - Total spend: 0 - Difference: 1720000 - Adjustment: 1720000
+- New budget amounts: {"062024":0,"072024":0,"082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":1935000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: RSA Development - Payroll - Budget serial: 12963- Total budget: 6000 - Total spend: 0 - Difference: 6000 - Adjustment: 6000
+- New budget amounts: {"062024":"0","072024":"0","082024":0,"092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":9000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+- Budget name: NAM HR - Functions - Budget serial: 12967- Total budget: 2000 - Total spend: 0 - Difference: 2000 - Adjustment: 2000
+- New budget amounts: {"062024":"0","072024":"0","082024":"0","092024":0,"102024":0,"112024":0,"122024":0,"012025":0,"022025":2000}
+- Update result: {"status":"success","message":"Transaction committed successfully."}
+
+Budget update ended: 2025-02-13 10:03:02

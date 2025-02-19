@@ -1,0 +1,681 @@
+<?
+
+$ipf_locked = false; /// IPF Blocked from Intercape  bookings  true / false
+$ip = getenv("REMOTE_ADDR");
+$ipdots = explode(".",$ip);
+$i = 0;
+$call_centre = false;
+if ($ipdots[0] == "192" && $ipdots[1] == "168") {
+	if ($ipdots[2] == 36 || $ipdots[2] == 236 || ($ipdots[2] >= 208 && $ipdots[2] <= 213))
+		$call_centre = true;
+}
+
+if (getenv("REMOTE_USER") == "Keith")
+	$call_centre = true;
+
+$expires = "Expires: \".date(\"D, d M Y H:i:s\", time()+8600).\" GMT"; 
+header($expires); 
+
+?><html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Intercape Booking System</title>
+    <link rel="stylesheet" type="text/css" href="css/main.css">
+</head>
+<body id="main-body" oncontextmenu="showMenu(); return false;">
+    <? 
+        require_once ("../php3/context.inc");
+        require_once ("../php3/oracle.inc");
+        require_once ("../php3/misc.inc");
+        require_once ("../php3/colors.inc");
+        require_once ("../php3/sec.inc");
+        require_once ("../php3/opstimes.inc");
+
+        if (!open_oracle()) { 
+            exit;
+        }
+
+/*        if (!AllowedFlag("NEW_SYS")) {
+            echo "<script> window.location='oldmain.phtml'; </script>";
+            exit;
+        }
+*/
+
+        $us = getuserserial(); //required for Momentum and for the OBS/currency drop down
+ 	if ($my_staff_no=="0101")
+		$call_centre = true;
+
+        /*
+        $tusr = getuserserial();
+        ora_parse($cursor, "select * from on_hold_tickets where user_serial='$tusr'");
+        ora_exec($cursor);
+        if (ora_fetch($cursor)):
+            echo "<form name='autoform' method='post' action='icape7.phtml'></form>";
+            echo "<script type='text/javascript'>document.autoform.submit();</script>";
+            exit;
+        endif;
+        */
+        $tmpuser = getenv("REMOTE_USER");
+        get_colors($tmpuser);
+
+        function print_date_string($c_date) 
+        {
+            echo Date("l",$c_date)." "
+                .Date("d",$c_date)." "
+                .Date("F",$c_date)." "
+                .Date("Y",$c_date);
+        }
+        
+        function num_day($y, $m, $d)
+        {
+            $numeric = sprintf(strlen($m) < 2 ? "%s0%s" : "%s%s", $y, $m);
+            $numeric = sprintf(strlen($d) < 2 ? "%s0%s" : "%s%s", $numeric, $d);
+            return $numeric;
+        }
+
+        /*function create_day_select($direction)
+        {
+            global $cursor, $using_a_tablet;
+            $d = Date("d");
+            $m = Date("m");
+            $y = Date("Y");
+            $dc = days_in_month($m, $y);
+            $i = $d;
+            $dc++;
+
+            echo "<select tabindex=100 name=day";
+            if ($direction == 2)
+                echo "ret";
+            jstatus("Choose a specific day to travel on.");
+            echo ">";
+            $today = date("Ymd");
+            ora_parse($cursor,"select run_date from open_coach where is_open='Y' and run_date>$today order by run_date desc"); 
+            ora_exec($cursor);
+            ora_fetch($cursor); 
+            $lastdate = getdata($cursor, 0);
+            
+            if ($direction == 1)
+                echo "<option value='ASAP'>As Soon As Possible</option>";
+            else
+                echo "<option value='NONE'>No Return Trip</option>";
+            $thedate = $today;
+            while ($thedate <= $lastdate):
+                echo "<option ";
+                echo "value=$thedate";
+                echo ">";
+                print_date_string(vgetdate($thedate));
+                echo "</option>";
+                $thedate = nextdate($thedate);
+            endwhile;
+            echo "</select>&nbsp;";
+        }*/
+
+        function makelink($what, $sname, $short, $last = false) 
+        {
+            global $stopnos;
+            $pos = $stopnos[$sname]+1;
+            echo "<a onclick=\"document.myform.$what"."[$pos].checked = true; document.myform.$what.selectedIndex = $pos;\">$short</a>";
+            if (!$last) {
+                echo "<span> | </span>";
+            }
+        }
+
+        /*function url() {
+            if(isset($_SERVER['HTTPS'])) {
+                $protocol = ($_SERVER['HTTPS'] && $_SERVER['HTTPS'] != "off") ? "https" : "http";
+            }
+            else {
+                $protocol = 'http';
+            }
+            return $protocol . "://" . $_SERVER['HTTP_HOST'];
+        }*/
+    ?>
+
+    <div class="main-content">
+        <form method="post" name="myform" id="myform" action="search_1.phtml">
+            <div>
+                <div class="search-stop-pane">
+                    <a href="javascript:void(0);" onclick="toggle_search_stop();"><u>Find my nearest stop</u><i class="icofont-location-pin"></i></a>                
+                </div>
+                <div class="search-stop-wrap" id="search-stop" style="display: none;">
+                    <a class="search-stop-close" href="javascript:void(0);" onclick="toggle_search_stop();"><i class="icofont-close"></i></a>
+                    <div class="search-stop">
+                        <? /*<iframe src="<?= url()."/ignite/index.php?c=rest&m=xget_stop_view";?>" scrolling="auto" frameborder="0"></iframe>*/ ?>
+                        <iframe src="../ignite/index.php?c=rest&m=xget_stop_view" scrolling="auto" frameborder="0"></iframe>
+                    </div>
+                </div>
+                <div class="section-box orange">
+                    <div class="box-heading">
+                        <h5>Travelling From:</h5>
+                    </div>
+                    <div class="box-body">
+                        <div>
+                            <div class="select-wrap">
+                                <select class="large" tabindex="1" name="from" autofocus <? jstatus("Choose a stop to travel from."); ?>>
+                                    <option value="CAPE TOWN">** Click on a shortcut below for the most popular towns or click on this bar for a full list of stops **</option>
+                                    <?
+                                        if ($my_staff_no[0] == "4" && $ipf_locked)
+                                            ora_parse($cursor,"select * from stop_details where active='Y' and hide='N' and (depot_code='BUL' or depot_code='IPF')  order by short_name");
+                                        else
+                                            ora_parse($cursor,"select * from stop_details where active='Y' and hide='N'  order by short_name");
+                                        ora_exec($cursor);
+                                        $stopno = 0;
+                                        while (ora_fetch($cursor)):
+                                            $sname = chop(ora_getColumn($cursor, 0));
+                                            $stopnos[$sname] = $stopno;
+                                            $saddress = chop(ora_getColumn($cursor, 1));
+                                            echo "<option value='{$sname}'>{$sname} - {$saddress}</option>";
+                                            $stopno++;
+                                            $i++;
+                                        endwhile;
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div>                            
+                            <div id="travelling-from-shortcuts">
+                                <?
+                                    if ($my_staff_no[0] != "4" || !$ipf_locked) {
+                                        makelink("from","BELLVILLE","Blv");
+                                        makelink("from","BLOEMFONTEIN","Bfn");
+                                        makelink("from","CAPE TOWN","CT");
+                                        makelink("from","DURBAN","D/S");
+                                        makelink("from","DURBAN BEACH","D/B");
+                                        makelink("from","EAST LONDON","EL");
+                                        makelink("from","GABORONE","Gab");
+                                        makelink("from","GEORGE","Grg");
+                                        makelink("from","JOHANNESBURG","Jhb");
+                                        makelink("from","MAPUTO","Map");
+                                        makelink("from","MOSSEL BAY","Msb");
+                                        makelink("from","PORT ELIZABETH","PE");
+                                        makelink("from","PORT ELIZABETH (PER)","PER");
+                                        makelink("from","PRETORIA","Pta");
+                                        makelink("from","UPINGTON","Upt");
+                                        makelink("from","WINDHOEK","Whk");
+                                    }
+                                ?>
+                                <input type="submit" name="fromstop" tabindex="101" value="Stop Map &amp; Info" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="section-box purple">
+                    <div class="box-heading">
+                        <h5>Travelling To:</h5>
+                    </div>
+                    <div class="box-body">
+                        <div>
+                            <div class="select-wrap">
+                                <select class="large" tabindex="2" name="xto" <? jstatus("Choose a stop to travel to."); ?>>
+                                    <option value="PORT ELIZABETH">** Click on a shortcut below for the most popular towns or click on this bar for a full list of stops **</option>
+                                    <?
+                                        if ($my_staff_no[0]=="4" && $ipf_locked)
+                                            ora_parse($cursor,"select * from stop_details where active='Y' and hide='N' and (depot_code='BUL' or depot_code='IPF')  order by short_name");
+                                        else
+                                            ora_parse($cursor,"select * from stop_details where active='Y' and hide='N'  order by short_name");
+                                        ora_exec($cursor);
+                                        while (ora_fetch($cursor)):
+                                            $sname = chop(ora_getColumn($cursor, 0));
+                                            $saddress = chop(ora_getColumn($cursor, 1));
+                                            echo "<option value='{$sname}'>{$sname} - {$saddress}</option>";
+                                            $i++;
+                                        endwhile;
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div>                            
+                            <div id="travelling-to-shortcuts">
+                                <?
+                                    if ($my_staff_no[0] != "4" || !$ipf_locked) {
+                                        makelink("xto","BELLVILLE","Blv");
+                                        makelink("xto","BLOEMFONTEIN","Bfn");
+                                        makelink("xto","CAPE TOWN","CT");
+                                        makelink("xto","DURBAN","D/S");
+                                        makelink("xto","DURBAN BEACH","D/B");
+                                        makelink("xto","EAST LONDON","EL");
+                                        makelink("xto","GABORONE","Gab");
+                                        makelink("xto","GEORGE","Grg");
+                                        makelink("xto","JOHANNESBURG","Jhb");
+                                        makelink("xto","MAPUTO","Map");
+                                        makelink("xto","MOSSEL BAY","Msb");
+                                        makelink("xto","PORT ELIZABETH","PE");
+                                        makelink("xto","PORT ELIZABETH (PER)","PER");
+                                        makelink("xto","PRETORIA","Pta");
+                                        makelink("xto","UPINGTON","Upt");
+                                        makelink("xto","WINDHOEK","Whk");
+                                    }
+                                ?>
+                                <input type="submit" tabindex="102" name="tostop" value="Stop Map &amp; Info" />
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>                             
+                
+                <div class="depart-return-wrap">
+                    <div class="section-box depart-box">
+                        <div class="box-body">
+                            <h5>
+                                <i class="icofont-ui-calendar"></i>
+                                <span><span>Leaving</span><span>When?</span></span>
+                            </h5>
+                            <div>
+                                <div class="field-row">
+                                    <div class="checkbox-wrap">
+                                        <input type="checkbox" id="depart-asap" value="ASAP" />
+                                        <label for="depart-asap">As soon as possible</label>
+                                    </div>
+                                </div>
+                                <div class="datepicker-wrap large" id="depart-picker">
+                                    <input type="text" tabindex="100" data-input />
+                                    <button type="button" title="toggle" data-toggle><i class="icofont-calendar"></i></button>
+                                    <button type="button" title="clear" data-clear><i class="icofont-close-line"></i></button>
+                                </div>
+                                <input type="hidden" name="day" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-box return-box">
+                        <div class="box-body">
+                            <h5>
+                                <i class="icofont-ui-calendar"></i>
+                                <span><span>Returning</span><span>When?</span></span>
+                            </h5>
+                            <div>
+                                <div class="field-row">
+                                    <div class="checkbox-wrap">
+                                        <input type="checkbox" id="return-none" value="NONE" />
+                                        <label for="return-none">No return trip</label>
+                                    </div>
+                                </div>
+                                <div class="datepicker-wrap large" id="return-picker">
+                                    <input type="text" tabindex="100" data-input />
+                                    <button type="button" title="toggle" data-toggle><i class="icofont-calendar"></i></button>
+                                    <button type="button" title="clear" data-clear><i class="icofont-close-line"></i></button>
+                                </div>
+                                <input type="hidden" name="dayret" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-box agent-box aqua">
+                        <div class="box-body">
+                            <input type="hidden" name="forward" value="Y" />
+                            <?
+                                //obs and currency
+                                if ($call_centre) {
+                                    echo "<div class='field-row'>"
+                                        ."<div class='checkbox-wrap'>"
+                                        ."<input type='checkbox' id='obs-check' name='obs' value='Y' />"
+                                        ."<label for='obs-check'>OBS</label>"
+                                        ."</div>"
+                                        ."</div>"
+                                        ."<div class='field-row horizontal'>"
+                                        ."<label>Currency</label>"
+                                        ."<div class='select-wrap'>"
+                                        ."<select name='xcurr'>";
+                                    ora_parse($cursor,"select name from currency_info where in_use='Y' order by name");
+                                    ora_exec($cursor);
+                                    while (ora_fetch($cursor)) {
+                                        $cuname = getdata($cursor,0);
+                                        $cushort = substr($cuname,0,14);
+                                        if ($cuname == $my_curr_name)
+                                            echo "<option selected value='{$cuname}'>{$cushort}</option>";
+                                        else
+                                            echo "<option value='{$cuname}'>{$cushort}</option>";
+                                    }
+                                    echo "</select>"
+                                        ."</div>"
+                                        ."</div>";
+                                }
+                                else {
+                                    echo "<input type='hidden' name='xcurr' value='DEFAULT' />";
+                                }
+
+                                //momentum or randgo discout
+                                if ($my_staff_no == "1799" || $my_staff_no == "1844") {
+                                    echo "<div class='field-row horizontal'>"
+                                        ."<label>Discount</label>"
+                                        ."<div class='select-wrap'>"
+                                        ."<select name='mdisc'>";
+                                    //momentum
+                                    if ($my_staff_no == "1799") {
+                                        echo "<option value='10'>10%</option>"
+                                            ."<option value='15'>15%</option>"
+                                            ."<option value='20'>20%</option>"
+                                            ."<option value='25'>25%</option>"
+                                            ."<option value='30'>30%</option>"
+                                            ."<option value='40'>40%</option>";
+                                    }
+                                    //randgo
+                                    else if ($my_staff_no == "1844") {
+                                        echo "<option value='10'>10% Randgo</option>"
+                                            ."<option value='15'>15% Nedlife</option>";
+                                    }
+                                    echo "</select>"
+                                        ."</div>"
+                                        ."</div>";
+                                }
+
+                                //agent number
+                                require_once ("agent_extra.phtml"); 
+                            ?>
+                            <div class="text-right">
+                                <input tabindex="3" name="submitbtn" type="submit" value="Find me a coach!" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>            
+
+            <input type="hidden" name="time" value="ANY" />
+            <input type="hidden" name="carrier" value="ANY" />
+            <input type="hidden" name="via" value="NON" />
+            <?
+                /*
+                <div>
+                    <label>Preferred Carrier</label>
+                    <div class="select-wrap">
+                        <select name="carrier" <?jstatus("Choose a specific coach carrier to travel on."); ?>>
+                            <option value="ANY">Default</option>
+                            <?
+                                ora_parse($cursor, "select * from carrier_info order by code");
+                                ora_exec($cursor);
+                                while (Ora_fetch($cursor)):
+                                    echo "<option value='";
+                                    echo chop(ora_getColumn($cursor, 0));
+                                    echo "'>";
+                                    echo chop(ora_getColumn($cursor, 0));
+                                    echo " - ";
+                                    echo chop(ora_getColumn($cursor, 1));
+                                    echo "</option>";
+                                endwhile;
+                            ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label>Travel via</label>
+                    <div class="select-wrap">
+                        <select name="via" <?jstatus("Choose a stop to travel through."); ?>>
+                            <option value="NON">Default</option>
+                            <option value="DIRECT">MUST JUST BE DIRECT</option>
+                            <?
+                                ora_parse($cursor,"select * from stop_details where active='Y' and hide='N'  order by short_name");
+                                ora_exec($cursor);
+                                while (ora_fetch($cursor)):
+                                    echo "<option value='";
+                                    echo chop(ora_getColumn($cursor, 0));
+                                    echo "'>";
+                                    echo chop(ora_getColumn($cursor, 0));
+                                    echo " - ";
+                                    echo chop(ora_getColumn($cursor, 1));
+                                    echo "</option>";
+                                    endwhile;
+                            ?>
+                        </select>
+                    </div>
+                </div>
+                */
+            ?>            
+        </form>
+        <hr />
+        <div class="section-box pickup-box">
+            <form id="pickup" name="pickup" method="post" action="pickup.phtml">
+                <div class="field-row horizontal">
+                    <label for="searchfor">Pick up tickets</label>
+                    <div class="pickup-search">
+                        <input type="text" id="searchfor" name="searchfor" />
+                        <button type="submit"><i class="icofont-search"></i></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="section-box">            
+            <div class="box-body">
+                <div id="main-actions" class="main-actions">
+                    <div><a href="dbsearch.phtml"><i class="icofont-ticket"></i>Cancel/Reprint Ticket</a></div>
+                    <div><a href="set_stop.phtml"><i class="icofont-direction-sign"></i>Set my stop</a></div>
+                    <? /*<div> href="special.phtml"><i class="icofont-microphone"></i>Concerts</a></div>*/ ?>
+                    <div><a href="shopbasket.phtml"><i class="icofont-cart-alt"></i>Shopping Basket</a></div>
+                    <div><a href="print_ticket_2.phtml?ts=A00000005071940&numrecs=1&tn_0=1909019999BC556&check_0=Y"><i class="icofont-print"></i>Test Print</a></div>
+                    <? 
+                        if (strstr(getenv("REMOTE_ADDR"),"192.168")) {
+                            echo "<div><a href='http://192.168.10.10/'><i class='icofont-globe'></i>Jump site</a></div>"; 
+                        }
+                    ?>
+                </div>
+            </div>
+        </div>
+        <hr />
+        <? require_once ("specials.phtml"); ?>
+        <? if ($is_staff_flag=="Y"): ?>
+            <div class="section-box">
+                <div class="box-heading">
+                    <h5>Popular Routes</h5>
+                </div>
+                <div class="box-body">
+                    <? 
+                        $toproutespartial = "Y";
+                        require_once ("toproutes.phtml"); 
+                    ?>
+                </div>
+            </div>
+        <? endif; ?>
+        <? /*if ($is_staff_flag=="Y"): ?>
+            <iframe src="toproutes.phtml" scrolling="no" frameborder="0" style="height: 600px;"></iframe>
+        <? endif;*/ ?>
+    </div>
+    <script type="text/javascript" src="js/flatpickr.js"></script>
+    <script type="text/javascript">
+        //prevent double submit
+        var submitted = false;
+        document.myform.onsubmit = function(event) {
+            if (submitted) {
+                event.preventDefault();
+                return false;
+            }
+            submitted = true;
+            document.myform.submitbtn.disabled = true;
+        };
+
+        //get browser cookie
+        function getCookie(name) {
+            var dc = document.cookie;
+            var prefix = name + "=";
+            var begin = dc.indexOf("; " + prefix);
+            if (begin == -1) {
+                begin = dc.indexOf(prefix);
+                if (begin != 0)
+                    return null;
+            } 
+            else {
+                begin += 2;
+            }
+            var end = document.cookie.indexOf(";", begin);
+            if (end == -1)
+                end = dc.length;
+            return unescape(dc.substring(begin + prefix.length, end));
+        }
+
+        //open and close find nearest stop popup
+        function toggle_search_stop() {
+            var searchstop = document.getElementById('search-stop');
+            searchstop.style.display = searchstop.style.display == 'none' ? 'block' : 'none';
+        }
+
+        //from and to        
+        try {
+            document.myform.from.focus();
+        }
+        catch(error)
+        {
+        }
+
+        //get mystop cookie
+        mystop = getCookie('mystop');
+        if (mystop == null)
+            mystop = 'AAA';
+        mystop = mystop.replace('+',' ');
+        mystop = mystop.replace('+',' ');
+        mystop = mystop.replace('+',' ');
+        //now convert mystop to a number
+        ctr = 0;
+        while (document.myform.from[ctr]) {
+            if (document.myform.from[ctr].value == mystop) {
+                mystop = ctr;
+                ctr = 9999; //stop the loop!
+            }
+            ctr++;
+        }
+        if (mystop == null)
+            mystop = 'null';
+        if (!isNaN(mystop)) {
+            //from
+            var fromparent = document.getElementById('travelling-from-shortcuts');
+            var fromspan = document.createElement('span');                                    
+            var fromhere = document.createElement('a');
+            fromspan.innerHTML = ' | ';
+            fromhere.innerHTML = 'Here';
+            fromhere.onclick = function() {
+                document.myform.from[mystop].checked = true; 
+                document.myform.from.selectedIndex = mystop;
+            };
+            fromparent.insertBefore(fromspan, fromparent.childNodes[0]);
+            fromparent.insertBefore(fromhere, fromspan);
+
+            //to
+            var toparent = document.getElementById('travelling-to-shortcuts');
+            var tospan = document.createElement('span');                                    
+            var tohere = document.createElement('a');
+            tospan.innerHTML = ' | ';
+            tohere.innerHTML = 'Here';
+            tohere.onclick = function() {
+                document.myform.xto[mystop].checked = true; 
+                document.myform.xto.selectedIndex = mystop;
+            };
+            toparent.insertBefore(tospan, toparent.childNodes[0]);
+            toparent.insertBefore(tohere, tospan);
+        }
+        //end from and to
+
+        //depart and return
+        //depart        
+        var departelement = document.getElementById('depart-picker');
+        if (departelement) {
+            var departasap = document.getElementById('depart-asap');            
+            var departpicker = flatpickr(departelement, {
+                wrap: true,
+                minDate: 'today',
+                dateFormat: 'D, J F Y',
+                onChange: function(selectedDates, dateStr, instance) {
+                    updatedepart();
+                }
+            });            
+            var updatedepart = function() {
+                var checkedasap = departasap.checked == true;            
+                var datevalue = departasap.value;
+                if (!checkedasap) {
+                    datevalue = departpicker && departpicker.selectedDates.length > 0 ? flatpickr.formatDate(departpicker.selectedDates[0], 'Ymd') : '';
+                }
+                document.myform.day.value = datevalue;
+                var departinputs = departelement.querySelectorAll('input, button');
+                for (var i = 0; i < departinputs.length; i++) {
+                    departinputs[i].disabled = checkedasap;
+                }
+            };
+            updatedepart();
+            departasap.onchange = updatedepart;
+        }
+        //return
+        var returnelement = document.getElementById('return-picker');
+        if (returnelement) {
+            var returnnone = document.getElementById('return-none');            
+            var returnpicker = flatpickr(returnelement, {
+                wrap: true,
+                minDate: 'today',
+                dateFormat: 'D, J F Y',
+                onChange: function(selectedDates, dateStr, instance) {
+                    updatereturn();
+                }
+            });            
+            var updatereturn = function() {
+                var checkednone = returnnone.checked == true;            
+                var datevalue = returnnone.value;
+                if (!checkednone) {
+                    datevalue = returnpicker && returnpicker.selectedDates.length > 0 ? flatpickr.formatDate(returnpicker.selectedDates[0], 'Ymd') : '';
+                }
+                document.myform.dayret.value = datevalue;
+                var returninputs = returnelement.querySelectorAll('input, button');
+                for (var i = 0; i < returninputs.length; i++) {
+                    returninputs[i].disabled = checkednone;
+                }
+            };
+            updatereturn();
+            returnnone.onchange = updatereturn;
+        }
+        /*var returnnone = document.getElementById('return-none');
+        var returnview = document.getElementById('return-preview');
+        var returnbtn = document.getElementById('return-btn');
+        var returnpicker = new SimplePicker({
+            zIndex: 10,
+            disableTimeSection: true
+        });
+        var returnopen = function(event) {
+            event.preventDefault();
+            var checkednone = returnnone.checked == true;   
+            if (!checkednone)
+                returnpicker.open();
+        };
+        returnbtn.onclick = returnopen;
+        returnview.onclick = returnopen;
+        var updatereturn = function(date) {
+            var checkednone = returnnone.checked == true;            
+            var datevalue = returnnone.value;
+            if (!checkednone) {
+                date = (typeof date !== 'undefined' && typeof date.getMonth === 'function') ? date : returnpicker.selectedDate;
+                datevalue = formatdatevalue(date);
+            }
+            document.myform.day.value = datevalue;
+            returnbtn.disabled = checkednone;
+            returnview.innerHTML = returnpicker.$day.innerHTML + ', ' + returnpicker.$date.innerHTML + ' ' + returnpicker.$monthAndYear.innerHTML;
+        };
+        updatereturn();
+        returnpicker.on('submit', updatereturn);
+        returnnone.onchange = updatereturn;*/
+        //end depart and return
+
+        //pickup
+        document.pickup.onsubmit = function(event) {
+            if (!document.pickup.searchfor.value) { 
+                event.preventDefault();
+                document.pickup.searchfor.focus();
+            }
+        };
+        //end pickup
+
+        //actions
+        var shoprite = getCookie('shoprite_icape_ip');
+        if (shoprite == null) {
+            var mainactions = document.getElementById('main-actions');
+            //change password
+            var changepassword = document.createElement('div');
+            changepassword.innerHTML = '<a href="/booking/change_pass_1.phtml"><i class="icofont-ui-password"></i>Change Password</a>';
+            mainactions.insertBefore(changepassword, mainactions.childNodes[0]);
+            //calculator 1
+            var calculator1 = document.createElement('div');
+            calculator1.innerHTML = '<a href="javascript:void(0);" onclick="window.open(\'calc4.htm\', \'new1\', \'toolbar=no,directories=no menubar=no,status=no,resizable=no,scrollbars=no,width=200,height=225\')"><i class="icofont-calculator"></i>Calculator 1</a>';
+            mainactions.appendChild(calculator1);
+            //calculator 2
+            var calculator2 = document.createElement('div');
+            calculator2.innerHTML = '<a href="javascript:void(0);" onclick="window.open(\'calc3.htm\', \'new2\', \'toolbar=no,directories=no menubar=no,status=no,resizable=no,scrollbars=no,width=320,height=200\')"><i class="icofont-calculator"></i>Calculator 2</a>';
+            mainactions.appendChild(calculator2);
+        }
+        //end actions
+    </script>
+<?php echo $testkeith; ?>
+</body>
+</html>

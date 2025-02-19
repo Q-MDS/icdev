@@ -1,0 +1,378 @@
+<?
+require_once ("../php3/oracle.inc");
+require_once ("../php3/sec.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/colors.inc");
+
+if (!open_oracle()) { 
+    exit;
+}
+
+/*if (!Allowedflag("NEW_SYS")) {
+	include("oldsys/management.phtml");
+	exit;
+}
+*/
+
+?>
+<html>
+<head>
+    <title>Management Functions</title>
+    <link rel="stylesheet" type="text/css" href="css/management.css">
+</head>
+<body oncontextmenu="showMenu(); return false;">    
+    <? 
+        require_once ("../php3/context.inc");
+
+        unset($targets);
+        unset($fdone);
+        unset($info);
+
+        $serial = getuserserial();
+        get_colors(getenv("REMOTE_USER"));
+
+        function checkflag($flag, $href, $descrip, $cat, $target="") {
+            global $counter, $color, $table_cell, $table_title, $table_alt, $fdone, $info, $targets;
+
+            if ($flag != "TRUE"):
+                if (!AllowedFlag($flag, false)):
+                    return false;
+                endif;
+            endif;
+
+            $info[$cat][$href] = $descrip;
+            if ($target != "")
+                $targets[$cat][$href] = $target;
+            return true;
+        }
+        function categoryheading($key) {
+            switch ($key) {
+                case "B": return "Bookings";
+                case "U": return "Users/Agents";
+                case "S": return "Supervisor";
+                case "O": return "Ops";
+                case "M": return "Manager";
+                case "I": return "I.T.";
+                case "F": return "Finance";
+                default:  return "Other";
+            }
+        }
+        function categoryicon($key) {
+            switch ($key) {
+                case "B": return "ticket";
+                case "U": return "user-alt-1";
+                case "S": return "tie";
+                case "O": return "spanner";
+                case "M": return "automation";
+                case "I": return "code";
+                case "F": return "money-bag";
+                default:  return "listing-box";
+            }
+        }
+    ?>
+
+    <div class="main-content">
+        <div class="management-actions">
+            <?
+                checkflag("MODIFY_USER","./usermanage/userindex.phtml","User Management","U");
+		checkflag("HC_CONTACTS_ONLY","./usermanage/userindex.phtml","User Management","U");
+		checkflag("HC_READ_ONLY","./usermanage/userindex.phtml","User Management","U");
+
+
+                checkflag("LED_BOARD","e_display.phtml","LED Board","I");
+                checkflag("DEVELOPERS","test_report.phtml","Test Report","I");
+		checkflag("TRUE","small-print.phtml?hticket=test","Test Boarding Printer","I");
+		checkflag("TRUE","test_scale.phtml","Test Boarding Scale","I");
+                checkflag("MODIFY_AGENTS","shoprite_pcs.phtml","Shoprite PCs","U");
+                //if (!$_SHOPRITE)
+                checkflag("TRUE","cashup_1.phtml","Cash Up","B","_blank");
+                checkflag("TRUE","list_stops.phtml","Stop List","B");
+                //checkflag("TRUE","distance.html","Distances","B");
+                if (!$_SHOPRITE) {
+                    checkflag("BOOKING","dbsearch.phtml","Search / Cancel / Print Tickets","B");
+                }
+
+		checkflag("AGENT_LOYALTY_ISSUE","issue_loyalty_card.phtml","Loyalty Card Issue","B");
+		checkflag("AGENT_LOYALTY_ISSUE","https://secure.intercape.co.za/ignite/index.php?c=passenger_frontend&m=vdash","Loyalty Login/Register","B","_blank");
+
+	
+                if ($is_staff_flag == "Y") {
+		    checkflag("TRUE","setmyip.phtml","IP Address","I");
+                    checkflag("TRUE","staff_hotspot.phtml","Staff WiFi","I");
+                    checkflag("BOOKING","notpaid_report.phtml","Unpaid Tickets","B");
+                    checkflag("BOOKING","issue_loyalty_card.phtml","Loyalty Card Issue","B");
+                    checkflag("BOOKING","https://secure.intercape.co.za/ignite/index.php?c=passenger_frontend&m=vdash","Loyalty Login/Register","B","_blank");
+
+                    checkflag("TRUE","https://secure.intercape.co.za/ignite/index.php?c=task&m=vmy_tasks&page_id=543","IT Tasks","I","_blank");
+                    checkflag("FLAG_AS_PAID","flag_paid.phtml","Flag Transaction PAID","S");
+                    checkflag("TRUE","boarding.phtml","Boarding Gate","U");
+                    checkflag("SUPERVISOR","card_check.phtml","Card Freq Check","S");
+		    checkflag("SUPERVISOR","https://secure.intercape.co.za/ignite/index.php?c=commercial&page_id=1861","Office Sales Dashboard","S","_blank");
+                    checkflag("MODIFY_CAPACITY","modify_coach_1.phtml","Modify Coach Capacities","O");
+                    checkflag("BOOKING","../ops/prdp_override.phtml","PRDP","O");
+                    checkflag("BOOKING","edgars_scans.phtml","Edgars Scans","B");
+                    checkflag("ADD_ROUTE","add_route_1.phtml","Add New Route","M");
+                    checkflag("MODIFY_ROUTE","modify_route.phtml","Modify Route","M");
+                    checkflag("TERMS_CONDITIONS","manage_terms.phtml","Edit T&C","M");
+                    checkflag("MODIFY_ROUTE","sto_specials.phtml","STO Specials","M"); 
+                    checkflag("MODIFY_ROUTE","do-main.phtml","Regenerate Main Page","M");
+                    checkflag("GUEST_WIFI","giest_wifi.php","Guest Internet (WiFi)","I");
+                    checkflag("MODIFY_ROUTE","./tel/numbers.phtml?stage=10","Regenerate Phone Extensions","M");
+                    //checkflag("DRILL_DOWN","drilldown.phtml?tindex=-1","Drilldown Database","M");
+                } else {
+                    checkflag("AGENT_CHECKIN","boarding.phtml","Boarding","B");
+			checkflag("TRUE","invoices.phtml","Your Invoices","F");
+		}
+                checkflag("PRINT_MANIFEST","xprint_manifest_1.phtml","Print Passenger Manifest","O","_blank");
+                checkflag("REPORT_DISEMBARK","report_disembark_1.phtml","Disembark Report","O");
+                checkflag("GENERAL_SETUP","general.phtml","General Setup","M");
+                checkflag("MODIFY_COACH","coach_gen.phtml","Coach Maintainance","O");
+                checkflag("ADD_NOTE","add_note.phtml","Add Manifest Note","O");
+                checkflag("VOUCHER_CREATE","create_voucher.phtml","Create Voucher","M");
+                checkflag("ACTIVATE_PROMO","validate_voucher.phtml","Promo Vouchers","M"); 
+                checkflag("DEVELOPERS","whatphone.phtml","Change SMS Notifications","I");
+                //checkflag("MODIFY_ROUTE","top_messages.phtml","Top Messages","I");
+                if (!$_SHOPRITE) {
+                    checkflag("PRINT_TICKET","autoprint.phtml","Automatic Printing","I");
+                }
+
+                if (!checkflag("REPORT","reports.phtml","Reports","F")) {
+                    if (checkflag("SUPERVISOR","graph_4week.phtml","Growth: 4 Weeks","S"))
+                        checkflag("TRUE","graph_month.phtml","Growth: Month","S");
+                    checkflag("BANK_RECOND","banks.phtml","ABSA & Others","F");
+                }
+		checkflag("ICAFE_BANK_VIEW","intercafe_statement.phtml","Intercafe Statement","F");
+                checkflag("OPS_ROOM","opsroom.phtml","Ops Room","O");
+                checkflag("OPS_VIEW","/ops/","Ops Menu","O");
+                checkflag("SHOW_CANCELLED","show_cancel_1.phtml","Show Cancelled Tickets","S");
+                //checkflag("TRACKING","tracking/","Tracking Module","B");
+                checkflag("ISSUE_OLT","olt_issue.phtml","Issue / View OLTs","U");
+                checkflag("ISSUE_ATT_OLT","olt_issue.phtml","Issue / View Attendant OLTs","O");
+                checkflag("CREDITCARD_BLACKLIST","cc_black.phtml","Manage Credit Card Blacklist","F");
+                checkflag("HISTORIC_OBS","obs_olt_issue.phtml","Issue OBS OLT Tickets","O");
+                checkflag("BAGGAGE_ISSUE","baggage_issue.phtml","Issue Baggage Ticket","O");
+                checkflag("AUTH_REFUNDS","newrefunds.phtml","Manage Refunds","F");
+                checkflag("SUPERVISOR","supervisor_pw.phtml","Set / Change Supervisor Password","S");
+		checkflag("CC_SUPERVISOR","possible_dupes.phtml","Possible Duplicates","S");
+		checkflag("MODIFY_ROUTE","possible_dupes.phtml","Possible Duplicates","S");
+
+                checkflag("FLAG_AS_PAID","listpop.phtml","Proof of Payment","S");
+                if (!$_SHOPRITE && !AllowedFlag("BLOCK_AGENT_S_REPORT")) {
+		   
+                    checkflag("BOOKING","agent_sales.phtml","Agent Sales Report","U");
+                }
+                //checkflag("SURVEY","q_capture.phtml","Prices","B");
+                checkflag("BOOKING","busbook2.phtml","Bus Route Times","B");
+
+                if ($is_staff_flag == "Y") {
+                    checkflag("STRIKE_CASH","strike_cash.phtml","Strike Allowance","F");
+                    checkflag("NEW_COMM","commission_user.phtml","Last Month's Commission","U");
+                    checkflag(TRUE,"trip_expenses.phtml","Trip Expenses","F");
+                    checkflag("SUPERVISER_COMM","commission_user.phtml","Last Month's Commission","U");
+                    checkflag("CASHUP_SAME_BRANCH","commission_user.phtml","Last Month's Commission","U");
+                    checkflag("REPORT","commission.phtml","Generate Commission","F");
+                    checkflag("INTERNET_CHECK","internet_check.phtml","Check Internet Bookings","S");
+                    checkflag("INTERNET_CHECK","internet_support.phtml","Support Internet Bookings","S");
+                    checkflag("SUPERVISOR","doubles2.phtml","Double Booking Check","S");
+                    checkflag("SUPERVISOR","badpax1.phtml","Pax on Closed Busses","S");
+                    checkflag("SUPERVISOR","super_links.phtml","Supervisor Links","S");
+                    checkflag("MODIFY_ROUTE","doubles2.phtml","Double Booking Check","S");
+                    checkflag("SUSPEND_USER","./usermanage/managebranch.phtml","Suspend an Agent","U");
+                    if (!$_SHOPRITE) {
+                        checkflag("BOOKING","show_hopper.phtml","View Voucher","B");
+                    }
+                    //checkflag("NOPENALTY_CANCEL","manual_credit.phtml","Manual Meglakor Credit","F");
+                    //checkflag("NOPENALTY_CANCEL","manual_decline.phtml","Manual Meglakor Decline","F");
+                    checkflag("CASHUP_SAME_BRANCH","yesterday_flagged.phtml","Yesterday's Flags","F");
+                    checkflag("CASHUP_SAME_BRANCH","deposits.phtml","Deposit Form","F","_blank");
+                } // staff
+                if (!$_SHOPRITE) {
+                    checkflag("TRUE","setprinter.phtml","Change Your Printer Type","I");
+                    checkflag("ORDERS","https://secure.intercape.co.za/move/requestorder.phtml","Purchase Order System","F");
+                    checkflag("TRUE","/SETUP.EXE","Download Agent Driver","I");
+                }
+                checkflag("TRUE","all_announcements.phtml","Read Important Announcements","B");
+                $uname = getenv("REMOTE_USER");
+                ora_parse($cursor,"select staff_member, branch from user_details where is_current='Y' and username='$uname'");
+                ora_exec($cursor);
+                ora_fetch($cursor);
+                $remember = getdata($cursor, 0);
+		$mybranch = getdata($cursor, 1);
+
+                if (getdata($cursor, 0) == "Y"):
+                    $staffmember = true;
+
+		    if ($mybranch == "Head Office") {
+				checkflag("BOOKING","set_cc_exten.phtml","Call Centre Ext","I");
+			}
+
+                    checkflag("BOOKING","sms_inbox.phtml","SMS Inbox","M");
+                    //checkflag("TRUE","prize_winner.phtml","Claim Prize","M");
+                    checkflag("TRUE","organic.phtml","ORGANIC","M");
+                    //checkflag("TRUE","todosys.phtml","Staff Tasks","M");
+                    checkflag("CASHUP_OTHER_BRANCH","new_obs_report.phtml","OBS Sales Report","F");
+                    checkflag("VOUCHER_LOGVIEW","vn_search.phtml","Voucher Phone Search","M");
+                    checkflag("TRUE","https://axiopay.payus.co.za/","Leave Application","U");
+                    checkflag("TRUE","snt.phtml","S&T Application","U");
+                    checkflag("TRUE","currency.phtml","Currencies","F");
+                    checkflag("TRUE","change_request.phtml","Change Request","I");
+                    if (strstr(getenv("REMOTE_ADDR"),"192.168.10.")) {
+                        checkflag("TRUE","set_phone.phtml","Phone Ext","I");
+                    }
+                    checkflag("TRUE","/status1.phtml","System / Network Status","I");
+                    checkflag("TRUE","block_report.phtml","Blocked Stops","O");
+                    checkflag("SUPERVISOR","sales_compare.phtml","Sales Comparison","F");
+                    checkflag("TRUE","terms.phtml","Email / Print T&C","B");
+//                    checkflag("DEBTORS","debtors.phtml","Debtors System","F");
+                    //checkflag("TRUE","sms_commission.phtml","SMS Agent Comm","U");
+                    //checkflag("DEVELOPERS","tape_backups.phtml","Tape Backups","I");
+                    //checkflag("TRUE","q_capture.phtml","Survey","B");
+                    checkflag("MODIFY_AGENTS","view_medaid.phtml","Clubs","U");
+                    //checkflag("TRUE","webbackup/index.phtml","My Backups","I"); 
+                    checkflag("PHONE_EXTENSIONS","extensions.phtml","Extensions on Autodial","I");
+                    //checkflag("MODIFY_USER","edit_popular.phtml","Fast Booking Edit","U");
+                    checkflag("TEN_OR_MORE","free_tickets.phtml?action=list","Free Vouchers","U");
+                    checkflag("TRUE","shift/index.phtml?stage=0","Shift Roster","S"); 
+                    //if (!strstr(getenv("REMOTE_ADDR"),"192.168")) 
+                    //	checkflag("TRUE","/fax/fax.phtml","Fax Status","B");
+                    //else
+                    //	checkflag("TRUE","http://192.168.10.201/fax/fax.phtml","Fax Status","B");
+                    checkflag("TRUE","cclog.phtml","Credit Card Log","B");
+                    if (!$_SHOPRITE) {
+                        checkflag("TRUE","cc_status.phtml","Credit Card Transaction Errors","B");
+                    }
+                    checkflag("BANK_MAIN","main_statement.phtml","Main ABSA A/C","F");
+                    checkflag("MODIFY_AGENTS","medaid-db.phtml","Medical Aid Members","U"); 
+                    checkflag("NEW_COMM","extra_pay.phtml","Additional Commission","U");
+		    checkflag("TRUE","https://outlook.office.com/","Outlook Email","U");
+                    checkflag("OFFICE_HEAD","extra_pay.phtml","Additional Commission","U");
+                    checkflag("AFRICA_COMM","extra_pay.phtml","Additional Commission","U");
+                    checkflag("CASHUP_SAME_BRANCH","extra_pay.phtml","Additional Commission","U"); 
+                    checkflag("VOUCHER_MANAGEMENT","vouchers.phtml","Voucher Management","M");
+                    //checkflag("SURVEY","/booking/questionaire/surveys.phtml","Survey","M");
+                    checkflag("FLAG_AS_PAID","authorise.phtml","Authorise Requests","S");
+                    checkflag("SUPERVISOR","authorise.phtml","Authorise Requests","S");
+                    checkflag("TOUR_EDIT","view-tours.phtml?settruckmodeoff=Y","Charters","B");
+		    checkflag("TRUE","charter_quote.phtml","Charters: Quote Request","B");
+		    checkflag("TOUR_EDIT","view-tours.phtml?settruckmodeon=Y","Freightliner","B");
+			
+                    checkflag("TOURS_FINANCE","view-tours.phtml?settruckmodeoff=Y","Charters","B");
+//                    checkflag("FLAG_AS_PAID","listfaxes.phtml","New Faxes","S"); 
+                    checkflag("BOOKING","/kiosk/late_coach.phtml","Late Coaches","O");
+                    //checkflag("BOOKING","lost_prop.phtml","Lost Property","O");
+                    checkflag("TRUE","depot.phtml", "Log Busses Leaving", "O");
+                    checkflag("CASHUP_SAME_BRANCH","onboard_report.phtml","Onboard Sales Report","F");
+                    checkflag("TRUE","newboardroom.phtml","Meeting Room Bookings","M");
+                    checkflag("AGENT_MANAGE","isic_report.phtml","ISIC Sales Report","U");
+                    //checkflag("VOTE","voting.phtml","Voting","M");
+                    if (!strstr(getenv("REMOTE_ADDR"), "192.168")) {
+                        checkflag("TEST_SYSTEM","https://secure.intercape.co.za/testsys/","Test System","B","testsys");
+                    }
+                    else {
+                        checkflag("TEST_SYSTEM","http://192.168.10.239/","Test System","B","testsys");
+                    }
+                    //checkflag("FLAG_AS_PAID","auto_expire.phtml?action=go&warning=N&testrun=Y","Tickets Expiring Soon","B");
+                    // this is the wrong URL !!!
+                    //checkflag("FLAG_AS_PAID","authorise.phtml","Auth Last Min Bankdep Flags","S"); 
+                    checkflag("FLAG_AS_PAID","annoucement_status.phtml","Who Has Not Read Announcements","S");
+                    checkflag("OVERTIME","overtime.phtml","Capture Overtime","S");
+                    checkflag("OFFICE_HEAD","overtime.phtml","Capture Overtime","S");
+                    checkflag("MODIFY_USER","add_announcement.phtml","Add a Global Announcement","M");
+                    checkflag("CREDITORS_ADMIN","petty_ledger.phtml","Petty Cash Report","F");
+                    checkflag("PETTY_VIEWALL","petty_ledger.phtml","Petty Cash Report","F");
+		    checkflag("PETTY_CASH_MANAGER","strike_payments.phtml","Strike Payments","F");
+                    checkflag("MOZ_SALES_REPORT","moz.phtml","Moz. Sales Report","F");
+                    checkflag("MODIFY_AGENTS","add_announcement.phtml","Add a Global Announcement","M");
+                    checkflag("DEVELOPERS","getip.phtml","Lookup IP / Ext","I");
+                    checkflag("SUPERVISOR","getip.phtml","Lookup IP / Ext","I");
+                    //checkflag("DEVELOPERS","http://192.168.25.8/mail.php","Check Email","I");
+                    checkflag("TRUE","notfaxed.phtml","Credit Card Outstanding","S");
+                    checkflag("AGENT_MANAGE", "./usermanage/agentindex.phtml", "Agent CRM","U" ); 
+                    checkflag("TRUE","testgoback.phtml","Test Your GO BACK","I"); 
+                    checkflag("PETTY_CASH_MANAGER","petty_cash.phtml","Petty Cash","F","_blank");
+                    checkflag("PETTY_CASH","petty_cash.phtml","Petty Cash","F");
+                    checkflag("PETTY_VIEWALL","petty_cash.phtml","Petty Cash","F");
+                    //checkflag("BOOKING", "maputoparcel.phtml", "IC Parcel System","B" );
+                    checkflag("TODO_ACCESS", "./todo/index.phtml", "To Do List", "I" );
+                    
+                endif;
+
+                checkflag("TRUE","drawroute2.phtml?time=none","Route Map","O");
+
+                //<a href="/stops/Beaufort%2520West.htm">.</a>
+
+                //DO NOT REMOVE THE FOLLOWING until you have read the comments...
+
+                if (time() > 2084519640): // Monday!
+
+                    //  DO NOT REMOVE THIS WARNING until you have checked that there is no longer a 'date freeze'
+                    //	at 2147483647 which is 2^31 - 19 Jan 2038 - you have two years to fix this if it is a 
+                    //	problem!  (At the date of writing Unix/PHP recognises all numbers over 2^31 as 19 Jan 2038
+                    //	the other issue to check is that Oracle can handle numbers that big - keitha@waters.co.za
+
+                    echo "<div>"
+                        ."<span class='text-red'>Please inform the IT Manager of the impending unix date change.</span> "
+                        ."More details can be found in the source code of this page.<br />"; // DO NOT REMOVE THIS LINE Until you have read and understood the warning above.
+
+                    // DEMONSTRATION OF THE PROBLEM:
+                    echo "Date Test: "
+                        .date("Y", 2179019647)." should be 2039 and "
+                        .date("Y", mktime(0, 0, 0, 1, 1, 2039)). " should be 2039"
+                        ."</div>";
+
+                    // NOT TESTED:  Oracle (storage of the numbers)
+                    // PHP and Unix should sort out the issue, but the storage issue (on Oracle) could still be an issue
+
+                endif;
+
+                ksort($info);
+                reset($info);
+                while (list($key, $val) = each($info)):
+                    echo "<div class='section-box'>"
+                        ."<div class='box-heading'>"
+                        ."<h5><i class='icofont-".categoryicon($key)."'></i>".categoryheading($key)."</h5>"
+                        ."</div>"
+                        ."<div class='box-body'>";
+
+                    asort($val);
+                    reset($val);
+                    while (list($key2, $val2) = each($val)) :                    
+                        echo "<div class='management-link'><a";
+                        if (isset($targets[$key][$key2]))
+                            echo " target=".$targets[$key][$key2];
+                        if (strstr($key2, "/move"))
+                            echo " target=parent ";                    
+                        echo " href=$key2>$val2</a></div>";
+                    endwhile; //links
+
+                    echo "</div>"
+                        ."</div>";
+                endwhile; //category
+
+                //echo getenv("REMOTE_ADDR")." $remember";
+                /*
+                if ($staffmember == "Y") {
+                    $included = "Y";
+                    require_once("fixmail.phtml");
+                }
+                */
+                //<a target=_new href=grabip.phtml>.</a>
+            ?>
+        </div>
+    </div>
+    <script type="text/javascript">
+        var managelinks = document.querySelectorAll('.management-link a');
+        for (var i = 0; i < managelinks.length; i++) {
+            managelinks[i].addEventListener('click', function (event) {
+                if (event.currentTarget) {
+                    var windowtarget = event.currentTarget.target || 'Main'
+                    try {
+                        parent.initloading(windowtarget);
+                    }
+                    catch(err) { }
+                }
+            }, false);
+        }
+    </script>
+</body>
+</html>

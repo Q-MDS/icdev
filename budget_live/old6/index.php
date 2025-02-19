@@ -99,13 +99,7 @@ function get_budget_spend($serial)
 	
 		oci_execute($cursor);
 	
-		while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
-		{
-			if ($row['TOTAL'] < 0)
-			{
-				$row['TOTAL'] = 0;
-			}
-			
+		while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) {
 			$data[$row['BUDGET_MONTH']] = $row['TOTAL'];
 		}
 	

@@ -75,7 +75,7 @@
 				<div style="padding-right: 5px;"><input type="button" id="qfrbtn700" value="submit" style="display: none" onclick="saveQfr(this.id)" /></div>
 			</div>
 		</td>
-		<td></td>
+		<td>Donex</td>
 	</tr><input type=hidden name=cbneed700 value=Y>
 	<script>
 		function saveQfr(id)
@@ -97,8 +97,10 @@
 				}
 			}
 
-			alert('Gonna process this now: ' + cbsrl + " > " +  notes + " > " + mechlist.options[mechlist.selectedIndex].value);
+			// alert('Gonna process this now: ' + cbsrl + " > " +  notes + " > " + mechlist.options[mechlist.selectedIndex].value);
 			console.log('ID: ' + cbsrl, " > " +  notes, " > " +  mechlist.options[mechlist.selectedIndex].value);
+
+			document.getElementById('clear').submit();
 		}
 	</script>
 	
