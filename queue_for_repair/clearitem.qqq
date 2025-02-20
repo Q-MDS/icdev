@@ -72,8 +72,7 @@ endif;
    ?>
 <script>
 try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) microtime() * 1000000);
-  $rnd=mt_rand(); echo "$jcno&random=$rnd"; ?> '; window.close(); 
- } catch (error) {}
+  $rnd=mt_rand(); echo "$jcno&random=$rnd"; ?> '; window.close();  } catch (error) {}
 </script>
                 <form name="temp" method="post">
                         <input type="hidden" name="tfirst" value="<?=$first?>">
@@ -467,6 +466,8 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
 	}
 	elseif( $stage==2 ) 
 	{
+		print_r($_POST);
+		die();
 		if (!is_numeric($itemserial)) {
 			echo "ERROR 1!";
 			exit;
@@ -714,8 +715,7 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
 		?>
 		<script>
 		try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) microtime() * 1000000);
-		$rnd=mt_rand(); echo "$jcno&random=$rnd"; ?> '; 
-		window.close();  } catch (error) {}
+		$rnd=mt_rand(); echo "$jcno&random=$rnd"; ?> '; window.close();  } catch (error) {}
 		</script>
 
 		<form name="temp" method="post">
@@ -742,34 +742,14 @@ try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) mic
 		
 		// echo "XXX: " . $bits[1] . " > " . $jobcard . " > " . $mechanic . " > " . $itemserial . " > " . $qfr_notes . " > " . $done;
 		
-		$qry="insert into move_jobgeneral_done (done, jobcarditem, mechanic, notes, serial ) values ('$done','$itemserial','$mechanic','$qfr_notes','$serial')";
-//		 echo "$qry<Br>";
+		$qry="insert into move_jobgeneral_done (done, jobcarditem, mechanic, notes, serial ) values ('$done','$jobcard','$mechanic','$qfr_notes','$serial')";
+		// echo "$qry<Br>";
 		ora_parse($cursor,$qry);
 		ora_exec($cursor);
-                        ora_parse($cursor,"select username from user_Details where user_serial=$mechanic");
-                        ora_Exec($cursor);
-                        if (ora_fetch($cursor))
-                                $username = getdata($cursor,0);
-                        else
-                                $username =getenv("REMOTE_USER");
-
-
-                        //  Add Ad-Hoc fault
-                                        ora_parse($cursor,"select A.instructions from move_jobgeneral_items A where A.serial=$serial");
-                                        ora_exec($cursor);
-                                        ora_fetch($cursor);
-                                        $instruction=getdata($cursor,0);
-
-                                        $qry="insert into move_jobcarditems (itemserial, jobcardserial, faultclass, faultvalid, faultdesc, statusengineer, reporteddate, reportedwho, reportedonbehalf, reportcomments, unitserial, type, fromitem, fault_category) select move_items.nextval, jobcardserial, faultclass, 'N', 'REPAIR REQUESTED Resulting from item: $instruction. Mech notes: $qfr_notes','Z', CURRENT_TIMESTAMP, '$username', '$username', null, unitserial, type, itemserial, fault_category from move_jobcarditems where itemserial=$itemserial";
-//					echo "$qry<bR>";
-                                        ora_parse($cursor,$qry);
-                                        ora_exec($cursor);
-
 		?>
 		<script>
 		try { opener.location='viewjobcard.phtml?jobcardserial=<? mt_srand ((double) microtime() * 1000000);
-		$rnd=mt_rand(); echo "$jcno&random=$rnd"; ?> '; 
-		window.close();  } catch (error) {}
+		$rnd=mt_rand(); echo "$jcno&random=$rnd"; ?> '; window.close();  } catch (error) {}
 		</script>
 		<?
 	} 

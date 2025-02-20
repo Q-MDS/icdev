@@ -1,3 +1,19 @@
+Unicode condes
+Save
+&#128190; <!-- Floppy Disk Emoji -->
+Cancel
+&#10060; <!-- Cross Mark -->
+&#2716; <!-- Heavy Multiplication X -->
+Add
+&#10133; <!-- Heavy Plus Sign -->
+&#43; <!-- Plus Sign -->
+Edit
+&#9998; <!-- Pencil Emoji -->
+&#x270E; <!-- Lower Right Pencil -->
+Delete
+&#10060; <!-- Cross Mark -->
+&#2716; <!-- Heavy Multiplication X -->
+
 Initial Notes
 
 - New task: move/check  

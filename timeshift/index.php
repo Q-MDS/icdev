@@ -28,6 +28,28 @@ function getdata($cursor, $column_index) {
     return $data !== false ? $data : '';
 }
 
+function get_notes()
+{
+	$data = array();
+
+	$conn = oci_conn();
+
+	$sql = "select TRIM(stop_notes) from route_stops group by TRIM(stop_notes) order by TRIM(stop_notes) asc";
+	$cursor = oci_parse($conn, $sql);
+	
+	oci_execute($cursor);
+
+
+	while (ocifetch($cursor))
+	{
+		$data[] = getdata($cursor, 1);
+	}
+
+	return $data;
+}
+
+$notes = get_notes();
+
 $data = array();
 $conn = oci_conn();
 $sql = "select * from route_stops where route_serial='1868577346' order by stop_order asc";
@@ -35,6 +57,23 @@ $cursor = oci_parse($conn, $sql);
 
 oci_execute($cursor);
 ?>
+<style>
+.notes_btn {
+	display: flex; 
+	align-items: center; 
+	justify-content: center; 
+	width: 24px; 
+	height: 24px; 
+	background-color: #efefef; 
+	color: #000; 
+	border-radius: 3px; 
+	cursor: pointer; 
+	font-size: 14px;
+	border: 1px solid #000; 
+	
+} 
+
+</style>
 <div style="display: flex; align-items: 'center'; column-gap: 5px">
 	<div>Enter minutes:</div>
 	<div><input type="text" id="mins" value="10"></div>
@@ -211,7 +250,8 @@ $printable = 'N';
 			echo " onclick='javscript:clearbox(pfee_$i,passport_$i)'>";
 			}
 		echo "</td>";
-		echo "<td><input type=hidden name=pfee_$i value=0>";
+		echo "<td>";
+		echo "<input type=hidden name=pfee_$i value=0>";
 			if ($printable=="Y")
 				echo getdata($cursor,18);
 			else {
@@ -219,6 +259,29 @@ $printable = 'N';
 			echo chop(oci_result($cursor,18));
 			echo "'>";
 			}
+		echo "</td>";
+
+		// Q: New notes column
+		echo "<td>";
+			// Dropdown, a,e,d
+			echo "<div style='display: flex; flex-direction: row; align-items: center; column-gap: 5px'>";
+				echo "<select id='notes_$i' name='notes_$i'>";
+				echo "<option value='NONE'>NONE</option>";
+				foreach ($notes as $note)
+				{
+					echo "<option value='$note'>$note</option>";
+				}
+				echo "</select>";
+				echo "<input type='text' id='note_text_$i' name='note_text_$i' placeholder='Enter note' style='display: none; width: 100%'>";
+				echo "<div id='add_$i' class='notes_btn' title='Add a note'onclick='addNote($i)'><pre>A</pre></div>";
+				echo "<div id='add_save_$i' class='notes_btn' style='display: none; width: 80px' title='Save' onclick='addSave($i)'><pre>Save</pre></div>";
+				echo "<div id='edit_$i' class='notes_btn' title='Edit note' onclick='editNote($i)'><pre>E</pre></div>";
+				echo "<div id='edit_save_$i' class='notes_btn' style='display: none; width: 80px' title='Save' onclick='editSave($i)'><pre>Update</pre></div>";
+				echo "<div id='cancel_$i' class='notes_btn' style='display: none; width: 80px;' title='Cancel' onclick='cancel($i)'><pre>Cancel</pre></div>";
+				echo "<div id='delete_$i' class='notes_btn' title='Delete note' style='margin-right: 5px;' onclick='remove($i)'><pre>D</pre></div>";
+
+
+			echo "</div>";
 		echo "</td>";
 
 		if (!1 == 1) {
@@ -421,58 +484,129 @@ function nextDay()
 
 	for (let i = 0; i < arrElements.length; i++)
 	{
-			let arrTime = arrElements[i].value;
-			let depTime = depElements[i].value;
+		let arrTime = arrElements[i].value;
+		let depTime = depElements[i].value;
 
-			if (arrTime == 'NONE')
-			{
-				arrTime = depTime;
-			}
+		if (arrTime == 'NONE')
+		{
+			arrTime = depTime;
+		}
 
-			if (depTime == 'NONE')
-			{
-				depTime = arrTime;
-			}
+		if (depTime == 'NONE')
+		{
+			depTime = arrTime;
+		}
 
-			// console.log('Is ', arrTime, ' greater than ', lastDep, '?', arrTime > lastDep);
+		// console.log('Is ', arrTime, ' greater than ', lastDep, '?', arrTime > lastDep);
 
-			if (depTime < arrTime)
-			{
-				console.log('Arrive was befoew midnight and depart was after midnight: ', arrTime * 1, depTime * 1);
-				console.log('NEXT DAY = CHECKED');
-				arrElements[i].style.backgroundColor = 'red';
-				depElements[i].style.backgroundColor = 'red';
-				nextElements[i].checked = true;
-			}
-			
-			if (!(arrTime > lastDep))
-			{
-				console.log('Cos arr time > last dep time both are after midnight: ', arrTime * 1, depTime * 1);
-				console.log('NEXT DAY = CHECKED');
-				nextElements[i].checked = true;
-			}
+		if (depTime < arrTime)
+		{
+			console.log('Arrive was befoew midnight and depart was after midnight: ', arrTime * 1, depTime * 1);
+			console.log('NEXT DAY = CHECKED');
+			arrElements[i].style.backgroundColor = 'red';
+			depElements[i].style.backgroundColor = 'red';
+			nextElements[i].checked = true;
+		}
+		
+		if (!(arrTime > lastDep))
+		{
+			console.log('Cos arr time > last dep time both are after midnight: ', arrTime * 1, depTime * 1);
+			console.log('NEXT DAY = CHECKED');
+			nextElements[i].checked = true;
+		}
 
-			console.log('NEXT DAY = ZILCH');
-			lastDep = depTime;
-
-			// console.log('Arrival time: ', arrTime, 'Departure time: ', depTime);
-
-			// var hours = parseInt(arrElements[i].value.substring(0, 2));
-			// var minutes = parseInt(arrElements[i].value.substring(2, 4));
-
-			// // Create a Date object with the extracted time
-			// var date = new Date();
-			// date.setHours(hours);
-			// date.setMinutes(minutes);
-
-			// // Check if the time is past midnight
-			// if (date.getHours() > 23)
-			// {
-			// 	// Set the next day checkbox to true
-			// 	document.getElementsByName('nextday_' + i)[0].checked = true;
-			// }
-	// 	}
+		console.log('NEXT DAY = ZILCH');
+		lastDep = depTime;
 	}
 
 }
+
+function addNote(i)
+{
+	var addBtn = document.getElementById('add_' + i);
+	var addSaveBtn = document.getElementById('add_save_' + i);
+	var cancelBtn = document.getElementById('cancel_' + i);
+	var editBtn = document.getElementById('edit_' + i);
+	var editSaveBtn = document.getElementById('edit_save_' + i);
+	var deleteBtn = document.getElementById('delete_' + i);
+	var noteDropDown = document.getElementById('notes_' + i);
+	var noteInput = document.getElementById('note_text_' + i);
+
+	addBtn.style.display = 'none';
+	addSaveBtn.style.display = 'flex';
+	cancelBtn.style.display = 'flex';
+	cancelBtn.style.marginRight = '5px';
+	editBtn.style.display = 'none';
+	editSaveBtn.style.display = 'none';
+	deleteBtn.style.display = 'none';
+	noteDropDown.style.display = 'none';
+	noteInput.style.display = 'flex';
+}
+
+function addSave(i)
+{
+	console.log('Save dat ting');
+
+	addCancel(i);
+}
+
+function editNote(i)
+{
+	var theNote = document.getElementById('notes_' + i).value;
+	var noteText = document.getElementById('note_text_' + i);
+	var addBtn = document.getElementById('add_' + i);
+	var addSaveBtn = document.getElementById('add_save_' + i);
+	var cancelBtn = document.getElementById('cancel_' + i);
+	var editBtn = document.getElementById('edit_' + i);
+	var editSaveBtn = document.getElementById('edit_save_' + i);
+	var deleteBtn = document.getElementById('delete_' + i);
+	var noteDropDown = document.getElementById('notes_' + i);
+	var noteInput = document.getElementById('note_text_' + i);
+
+	addBtn.style.display = 'none';
+	addSaveBtn.style.display = 'none';
+	cancelBtn.style.display = 'flex';
+	cancelBtn.style.marginRight = '5px';
+	editBtn.style.display = 'none';
+	editSaveBtn.style.display = 'flex';
+	deleteBtn.style.display = 'none';
+	noteDropDown.style.display = 'none';
+	noteInput.style.display = 'flex';
+
+	noteText.value = theNote;
+}
+
+function editSave(i)
+{
+	console.log('Update dat ting');
+
+	cancel(i);
+}
+
+function cancel(i)
+{
+	var addBtn = document.getElementById('add_' + i);
+	var addSaveBtn = document.getElementById('add_save_' + i);
+	var cancelBtn = document.getElementById('cancel_' + i);
+	var editBtn = document.getElementById('edit_' + i);
+	var editSaveBtn = document.getElementById('edit_save_' + i);
+	var deleteBtn = document.getElementById('delete_' + i);
+	var noteDropDown = document.getElementById('notes_' + i);
+	var noteInput = document.getElementById('note_text_' + i);
+
+	addBtn.style.display = 'flex';
+	addSaveBtn.style.display = 'none';
+	cancelBtn.style.display = 'none';
+	editBtn.style.display = 'flex';
+	editSaveBtn.style.display = 'none';
+	deleteBtn.style.display = 'flex';
+	noteDropDown.style.display = 'flex';
+	noteInput.style.display = 'none';
+
+	noteInput.value = '';
+}
+
+
+
+
 </script>
