@@ -34,7 +34,7 @@ function get_notes()
 
 	$conn = oci_conn();
 
-	$sql = "select TRIM(stop_notes) from route_stops group by TRIM(stop_notes) order by TRIM(stop_notes) asc";
+	$sql = "SELECT * FROM ROUTE_STOPS_NOTES_DROPDOWN WHERE active = 'Y' ORDER BY DROPDOWN ASC";
 	$cursor = oci_parse($conn, $sql);
 	
 	oci_execute($cursor);
@@ -42,7 +42,7 @@ function get_notes()
 
 	while (ocifetch($cursor))
 	{
-		$data[] = getdata($cursor, 1);
+		$data[] = array('dropdown_serial' => getdata($cursor, 2), 'dropdown' => getdata($cursor, 1));
 	}
 
 	return $data;
@@ -269,7 +269,10 @@ $printable = 'N';
 				echo "<option value='NONE'>NONE</option>";
 				foreach ($notes as $note)
 				{
-					echo "<option value='$note'>$note</option>";
+					$value = $note['dropdown_serial'];
+					$label = $note['dropdown'];
+					
+					echo "<option value='$value'>$label</option>";
 				}
 				echo "</select>";
 				echo "<input type='text' id='note_text_$i' name='note_text_$i' placeholder='Enter note' style='display: none; width: 100%'>";
@@ -331,6 +334,8 @@ $printable = 'N';
 <br><input type=submit name=doupdate id="upd_button" value="Update"><br><br>
 </table>
 <script>
+baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/timeshift/";
+
 function add()
 {
 	var updButton = document.getElementById('upd_button');
@@ -552,7 +557,7 @@ function addSave(i)
 
 function editNote(i)
 {
-	var theNote = document.getElementById('notes_' + i).value;
+	var theNote = document.getElementById('notes_' + i);
 	var noteText = document.getElementById('note_text_' + i);
 	var addBtn = document.getElementById('add_' + i);
 	var addSaveBtn = document.getElementById('add_save_' + i);
@@ -573,14 +578,63 @@ function editNote(i)
 	noteDropDown.style.display = 'none';
 	noteInput.style.display = 'flex';
 
-	noteText.value = theNote;
+	theNoteLabel = noteDropDown.options[theNote.selectedIndex].text;
+	theNoteValue = noteDropDown.options[theNote.selectedIndex].value;
+
+	console.log('The note: ', theNoteValue, theNoteLabel);
+
+	noteText.value = theNoteLabel;
 }
 
 function editSave(i)
 {
 	console.log('Update dat ting');
+	var dropdownSerial = document.getElementById('notes_' + i).value;
+	var dropDown = document.getElementById('note_text_' + i).value;
 
-	cancel(i);
+	console.log('The note: ', dropdownSerial, dropDown);
+
+	const formData = { "action" : 2, "dropdown_serial": dropdownSerial, "dropdown": dropDown };
+
+	const result = sendData(formData)
+	.then(result => 
+	{
+		// console.log('Result: ', result);
+		const updatedNotes = fetchUpdatedNotes();
+    	updateDropdown(i, updatedNotes);
+		// cancel(i);
+	});
+}
+
+async function fetchUpdatedNotes() 
+{
+	const formData = { "action" : 0 };
+
+	const result = sendData(formData)
+	.then(result => 
+	{
+		// console.log('Result: ', result);
+		
+		return result;
+	});
+}
+
+function updateDropdown(i, notes)
+{
+	var noteDropdown = document.getElementById('notes_' + i);
+    noteDropdown.innerHTML = ''; // Clear existing options
+
+    // Add new options
+    notes.forEach(note => 
+	{
+        var option = document.createElement('option');
+        option.value = note.dropdown_serial;
+        option.text = note.dropdown;
+        noteDropdown.add(option);
+    });
+
+    // Optionally, set the selected value to the updated note
+    noteDropdown.value = document.getElementById('note_text_' + i).value;
 }
 
 function cancel(i)
@@ -606,7 +660,14 @@ function cancel(i)
 	noteInput.value = '';
 }
 
-
-
+async function sendData(formData) 
+{
+	const phpUrl = baseUrl + 'modify_route_stops_model.php';
+	
+	const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
+	const result = await response.text();
+	
+	return result;
+}
 
 </script>
