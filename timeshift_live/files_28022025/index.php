@@ -28,26 +28,27 @@ function getdata($cursor, $column_index) {
     return $data !== false ? $data : '';
 }
 
-function get_phrases()
+function get_notes()
 {
 	$data = array();
 
 	$conn = oci_conn();
 
-	$sql = "SELECT PHRASE_DESC FROM ROUTE_STOPS_NOTES_PHRASES ORDER BY PHRASE_DESC ASC";
+	$sql = "SELECT * FROM ROUTE_STOPS_NOTES_DROPDOWN WHERE active = 'Y' ORDER BY DROPDOWN ASC";
 	$cursor = oci_parse($conn, $sql);
 	
 	oci_execute($cursor);
 
-	while ($row = oci_fetch_assoc($cursor)) 
+
+	while (ocifetch($cursor))
 	{
-		$data[] = $row['PHRASE_DESC'];
+		$data[] = array('dropdown_serial' => getdata($cursor, 2), 'dropdown' => getdata($cursor, 1));
 	}
 
 	return $data;
 }
 
-$phrases = get_phrases();
+$notes = get_notes();
 
 $data = array();
 $conn = oci_conn();
@@ -61,7 +62,7 @@ oci_execute($cursor);
 	display: flex; 
 	align-items: center; 
 	justify-content: center; 
-	width: 100%; 
+	width: 24px; 
 	height: 24px; 
 	background-color: #efefef; 
 	color: #000; 
@@ -69,7 +70,9 @@ oci_execute($cursor);
 	cursor: pointer; 
 	font-size: 14px;
 	border: 1px solid #000; 
+	
 } 
+
 </style>
 <div style="display: flex; align-items: 'center'; column-gap: 5px">
 	<div>Enter minutes:</div>
@@ -247,22 +250,40 @@ $printable = 'N';
 			echo " onclick='javscript:clearbox(pfee_$i,passport_$i)'>";
 			}
 		echo "</td>";
-		// echo "<td>";
-		// echo "<input type=hidden name=pfee_$i value=0>";
-		// 	if ($printable=="Y")
-		// 		echo getdata($cursor,18);
-		// 	else {
-		// 	echo "<input size=30 type=text name=snotes_$i maxlength=80 value=''";
-		// 	echo chop(oci_result($cursor,18));
-		// 	echo "'>";
-		// 	}
-		// echo "</td>";
+		echo "<td>";
+		echo "<input type=hidden name=pfee_$i value=0>";
+			if ($printable=="Y")
+				echo getdata($cursor,18);
+			else {
+			echo "<input size=30 type=text name=snotes_$i maxlength=80 value='";
+			echo chop(oci_result($cursor,18));
+			echo "'>";
+			}
+		echo "</td>";
 
 		// Q: New notes column
 		echo "<td>";
+			// Dropdown, a,e,d
 			echo "<div style='display: flex; flex-direction: row; align-items: center; column-gap: 5px'>";
-				echo "<input id='snotes_$i' size=30 type=text name=snotes_$i maxlength=80 value='" . getdata($cursor, 19) . "'/>";
-				echo "<div id='add_$i' class='notes_btn' title='Add a note' style='width: 24px; height: 18px; margin-right: 5px;' onclick='showSnippets($i)'><pre>&#x25BC;</pre></div>";
+				echo "<select class='dd' id='notes_$i' name='notes_$i'>";
+				echo "<option value='NONE'>NONE</option>";
+				foreach ($notes as $note)
+				{
+					$value = $note['dropdown_serial'];
+					$label = $note['dropdown'];
+					
+					echo "<option value='$value'>$label</option>";
+				}
+				echo "</select>";
+				echo "<input type='text' id='note_text_$i' name='note_text_$i' placeholder='Enter note' style='display: none; width: 100%'>";
+				echo "<div id='add_$i' class='notes_btn' title='Add a note'onclick='addNote($i)'><pre>A</pre></div>";
+				echo "<div id='add_save_$i' class='notes_btn' style='display: none; width: 80px' title='Save' onclick='addSave($i)'><pre>Save</pre></div>";
+				echo "<div id='edit_$i' class='notes_btn' title='Edit note' onclick='editNote($i)'><pre>E</pre></div>";
+				echo "<div id='edit_save_$i' class='notes_btn' style='display: none; width: 80px' title='Save' onclick='editSave($i)'><pre>Update</pre></div>";
+				echo "<div id='cancel_$i' class='notes_btn' style='display: none; width: 80px;' title='Cancel' onclick='cancel($i)'><pre>Cancel</pre></div>";
+				echo "<div id='delete_$i' class='notes_btn' title='Delete note' style='margin-right: 5px;' onclick='remove($i)'><pre>D</pre></div>";
+
+
 			echo "</div>";
 		echo "</td>";
 
@@ -307,46 +328,19 @@ $printable = 'N';
 	$i++;
 	}
 	$reccnt=$i;
+
 ?>
 
 <br><input type=submit name=doupdate id="upd_button" value="Update"><br><br>
 </table>
-<!-- #8 -->
-<div id="notes_container" style="width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; display: none; flex-direction: row; align-items: center; justify-content: center">
-
-	<div style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; background-color: #fff; padding: 30px; border-radius: 15px;box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);">
-		<div style="font-size: 18px; font-weight: bold; margin-bottom: 20px">Select a note</div>
-			<div style="display: grid; grid-template-columns: 1fr 40px 40px; gap: 10px; max-height: 500px; overflow-y: auto; width: 100%; padding-right: 20px;">
-				<?php
-				$j = 0;
-
-				foreach($phrases as $phrase)
-				{
-					echo "<div id='phrase_$j' style='cursor: pointer'>" . $phrase . "</div>";
-					echo "<div class='notes_btn' onclick='addText($j)'>A</div>";
-					echo "<div class='notes_btn' onclick='removeText($j)'>D</div>";
-
-					$j++;
-				}
-				?>
-			</div>
-
-			<div style="display: flex; flex-direction: row;  align-items: center; justify-content: center; width: 100%; border-top: 1px solid #ccc; margin-top: 10px;">
-				<div class="notes_btn" style="width: 75px; margin-top: 15px" onclick="hideSnippets()"><pre>Close Me</pre></div>
-			</div>
-		</div>
-	</div>
-</div>
 <script>
 baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/timeshift/";
-
-let note_id;
 
 function add()
 {
 	var updButton = document.getElementById('upd_button');
+	updButton.disabled = true;
 	updButton.style.backgroundColor = 'orange';
-
 	var minsToAdd = parseInt(document.getElementById('mins').value);
 	var arrElements = document.querySelectorAll('.arr');
 	var depElements = document.querySelectorAll('.dep');
@@ -414,8 +408,6 @@ function add()
 
 function minus()
 {
-	var updButton = document.getElementById('upd_button');
-	updButton.style.backgroundColor = 'orange';
 	var minsToAdd = parseInt(document.getElementById('mins').value);
 	var arrElements = document.querySelectorAll('.arr');
 	var depElements = document.querySelectorAll('.dep');
@@ -534,258 +526,204 @@ function nextDay()
 
 }
 
-// Notes utility
-function showSnippets(id)
+function addNote(i)
 {
-	note_id = id;
-	let note_field = document.getElementById('snotes_' + id);
-	console.log('Note field: ', note_field.value , ' > ', id );
-	var notes_container = document.getElementById('notes_container');
+	var addBtn = document.getElementById('add_' + i);
+	var addSaveBtn = document.getElementById('add_save_' + i);
+	var cancelBtn = document.getElementById('cancel_' + i);
+	var editBtn = document.getElementById('edit_' + i);
+	var editSaveBtn = document.getElementById('edit_save_' + i);
+	var deleteBtn = document.getElementById('delete_' + i);
+	var noteDropDown = document.getElementById('notes_' + i);
+	var noteInput = document.getElementById('note_text_' + i);
 
-	notes_container.style.display = 'flex';
+	addBtn.style.display = 'none';
+	addSaveBtn.style.display = 'flex';
+	cancelBtn.style.display = 'flex';
+	cancelBtn.style.marginRight = '5px';
+	editBtn.style.display = 'none';
+	editSaveBtn.style.display = 'none';
+	deleteBtn.style.display = 'none';
+	noteDropDown.style.display = 'none';
+	noteInput.style.display = 'flex';
+
+	noteInput.focus();
 }
 
-function hideSnippets()
+function addSave(i)
 {
-	var notes_container = document.getElementById('notes_container');
+	console.log('Save dat ting');
+	var dropDown = document.getElementById('note_text_' + i).value;
 
-	notes_container.style.display = 'none';
-}
+	const formData = { "action" : 1, "dropdown": dropDown };
 
-function addText(line_id)
-{
-	let phrase = document.getElementById('phrase_' + line_id).innerText;
-	let note_field = document.getElementById('snotes_' + note_id);
-
-	if (note_field.value.length > 0)
+	const result = sendData(formData)
+	.then(result => 
 	{
-		note_field.value += ', ' + phrase;
+		console.log('Result add save: ', result);
+		fetchUpdatedNotes(result, "add");
+	});
+
+	// addCancel(i);
+}
+
+function editNote(i)
+{
+	var theNote = document.getElementById('notes_' + i);
+	var noteText = document.getElementById('note_text_' + i);
+	var addBtn = document.getElementById('add_' + i);
+	var addSaveBtn = document.getElementById('add_save_' + i);
+	var cancelBtn = document.getElementById('cancel_' + i);
+	var editBtn = document.getElementById('edit_' + i);
+	var editSaveBtn = document.getElementById('edit_save_' + i);
+	var deleteBtn = document.getElementById('delete_' + i);
+	var noteDropDown = document.getElementById('notes_' + i);
+	var noteInput = document.getElementById('note_text_' + i);
+
+	addBtn.style.display = 'none';
+	addSaveBtn.style.display = 'none';
+	cancelBtn.style.display = 'flex';
+	cancelBtn.style.marginRight = '5px';
+	editBtn.style.display = 'none';
+	editSaveBtn.style.display = 'flex';
+	deleteBtn.style.display = 'none';
+	noteDropDown.style.display = 'none';
+	noteInput.style.display = 'flex';
+
+	theNoteLabel = noteDropDown.options[theNote.selectedIndex].text;
+	theNoteValue = noteDropDown.options[theNote.selectedIndex].value;
+
+	console.log('The note: ', theNoteValue, theNoteLabel);
+
+	noteText.value = theNoteLabel;
+
+	noteInput.focus();
+}
+
+function editSave(i)
+{
+	console.log('Update dat ting');
+	var dropdownSerial = document.getElementById('notes_' + i).value;
+	var dropDown = document.getElementById('note_text_' + i).value;
+
+	console.log('The note: ', dropdownSerial, dropDown);
+
+	const formData = { "action" : 2, "dropdown_serial": dropdownSerial, "dropdown": dropDown };
+
+	const result = sendData(formData)
+	.then(result => 
+	{
+		fetchUpdatedNotes(i, "edit");
+	});
+}
+
+function remove(i)
+{
+	const dropdownSerial = document.getElementById('notes_' + i).value;
+	
+	console.log('Remove dat ting', i, " > ", dropdownSerial);
+
+	if (confirm('Are you sure you want to remove this note?')) 
+	{
+		const formData = { "action" : 3, "dropdown_serial": dropdownSerial };
+
+		const result = sendData(formData)
+		.then(result => 
+		{
+			console.log('Result remove: ', result);
+			fetchUpdatedNotes(i, "remove");
+		});
 	}
 	else 
 	{
-		note_field.value += phrase;
-	}
-	console.log('Note field: ', note_field.value , ' > ', line_id, ' > ', note_id);
+        console.log('Remove action cancelled');
+    }
 }
 
-function removeText(line_id)
+async function fetchUpdatedNotes(i, mode) 
 {
-	let phrase = document.getElementById('phrase_' + line_id).innerText;
-	let note_field = document.getElementById('snotes_' + note_id);
+	const formData = { "action" : 0 };
 
-	if (note_field.value.includes(phrase))
+	const result = sendData(formData)
+	.then(result => 
 	{
-		if (note_field.value.includes(', ' + phrase))
-		{
-			note_field.value = note_field.value.replace(', ' + phrase, '');
-		}
-		else 
-		{
-			note_field.value = note_field.value.replace(phrase, '');
-		}
-	}
-	console.log('Note field: ', note_field.value , ' > ', line_id, ' > ', note_id);
+		const notes = JSON.parse(result);
+		updateDropdown(notes, i, mode);
+	});
 }
 
+function updateDropdown(notes, i, mode)
+{
+	console.log('Notes received: ', notes);
+	var noteDropdown = document.getElementById('notes_' + i);
+	const selected = noteDropdown.value;
+	console.log('Note dropdown value: ', noteDropdown.value);
+	var ddElements = document.querySelectorAll('.dd');
 
-// function addNote(i)
-// {
-// 	var addBtn = document.getElementById('add_' + i);
-// 	var addSaveBtn = document.getElementById('add_save_' + i);
-// 	var cancelBtn = document.getElementById('cancel_' + i);
-// 	var editBtn = document.getElementById('edit_' + i);
-// 	var editSaveBtn = document.getElementById('edit_save_' + i);
-// 	var deleteBtn = document.getElementById('delete_' + i);
-// 	var noteDropDown = document.getElementById('notes_' + i);
-// 	var noteInput = document.getElementById('note_text_' + i);
+	ddElements.forEach(function(element) 
+	{
+		element.innerHTML = '';
+		let v = "NONE";
+		let l = "NONE";
+		let initOption = document.createElement('option');
+		initOption.value = v;
+		initOption.text = l;
+		element.add(initOption);
 
-// 	addBtn.style.display = 'none';
-// 	addSaveBtn.style.display = 'flex';
-// 	cancelBtn.style.display = 'flex';
-// 	cancelBtn.style.marginRight = '5px';
-// 	editBtn.style.display = 'none';
-// 	editSaveBtn.style.display = 'none';
-// 	deleteBtn.style.display = 'none';
-// 	noteDropDown.style.display = 'none';
-// 	noteInput.style.display = 'flex';
+		//Add new options
+		notes.forEach(note => 
+		{
+			var option = document.createElement('option');
+			option.value = note.dropdown_serial;
+			option.text = note.dropdown;
+			element.add(option);
+		});
+	});
 
-// 	noteInput.focus();
-// }
+	cancel(i);
+    // Optionally, set the selected value to the updated note
+    // noteDropdown.value = document.getElementById('note_text_' + i).value;
+	if (mode == "remove")
+	{
+		noteDropdown.value = "NONE";
+	}
+	else 
+	{
+		noteDropdown.value = selected;
+	}
+}
 
-// function addSave(i)
-// {
-// 	console.log('Save dat ting');
-// 	var dropDown = document.getElementById('note_text_' + i).value;
+function cancel(i)
+{
+	var addBtn = document.getElementById('add_' + i);
+	var addSaveBtn = document.getElementById('add_save_' + i);
+	var cancelBtn = document.getElementById('cancel_' + i);
+	var editBtn = document.getElementById('edit_' + i);
+	var editSaveBtn = document.getElementById('edit_save_' + i);
+	var deleteBtn = document.getElementById('delete_' + i);
+	var noteDropDown = document.getElementById('notes_' + i);
+	var noteInput = document.getElementById('note_text_' + i);
 
-// 	const formData = { "action" : 1, "dropdown": dropDown };
+	addBtn.style.display = 'flex';
+	addSaveBtn.style.display = 'none';
+	cancelBtn.style.display = 'none';
+	editBtn.style.display = 'flex';
+	editSaveBtn.style.display = 'none';
+	deleteBtn.style.display = 'flex';
+	noteDropDown.style.display = 'flex';
+	noteInput.style.display = 'none';
 
-// 	const result = sendData(formData)
-// 	.then(result => 
-// 	{
-// 		console.log('Result add save: ', result);
-// 		fetchUpdatedNotes(result, "add");
-// 	});
+	noteInput.value = '';
+}
 
-// 	// addCancel(i);
-// }
-
-// function editNote(i)
-// {
-// 	var theNote = document.getElementById('notes_' + i);
-// 	var noteText = document.getElementById('note_text_' + i);
-// 	var addBtn = document.getElementById('add_' + i);
-// 	var addSaveBtn = document.getElementById('add_save_' + i);
-// 	var cancelBtn = document.getElementById('cancel_' + i);
-// 	var editBtn = document.getElementById('edit_' + i);
-// 	var editSaveBtn = document.getElementById('edit_save_' + i);
-// 	var deleteBtn = document.getElementById('delete_' + i);
-// 	var noteDropDown = document.getElementById('notes_' + i);
-// 	var noteInput = document.getElementById('note_text_' + i);
-
-// 	addBtn.style.display = 'none';
-// 	addSaveBtn.style.display = 'none';
-// 	cancelBtn.style.display = 'flex';
-// 	cancelBtn.style.marginRight = '5px';
-// 	editBtn.style.display = 'none';
-// 	editSaveBtn.style.display = 'flex';
-// 	deleteBtn.style.display = 'none';
-// 	noteDropDown.style.display = 'none';
-// 	noteInput.style.display = 'flex';
-
-// 	theNoteLabel = noteDropDown.options[theNote.selectedIndex].text;
-// 	theNoteValue = noteDropDown.options[theNote.selectedIndex].value;
-
-// 	console.log('The note: ', theNoteValue, theNoteLabel);
-
-// 	noteText.value = theNoteLabel;
-
-// 	noteInput.focus();
-// }
-
-// function editSave(i)
-// {
-// 	console.log('Update dat ting');
-// 	var dropdownSerial = document.getElementById('notes_' + i).value;
-// 	var dropDown = document.getElementById('note_text_' + i).value;
-
-// 	console.log('The note: ', dropdownSerial, dropDown);
-
-// 	const formData = { "action" : 2, "dropdown_serial": dropdownSerial, "dropdown": dropDown };
-
-// 	const result = sendData(formData)
-// 	.then(result => 
-// 	{
-// 		fetchUpdatedNotes(i, "edit");
-// 	});
-// }
-
-// function remove(i)
-// {
-// 	const dropdownSerial = document.getElementById('notes_' + i).value;
+async function sendData(formData) 
+{
+	const phpUrl = baseUrl + 'modify_route_stops_model.php';
 	
-// 	console.log('Remove dat ting', i, " > ", dropdownSerial);
-
-// 	if (confirm('Are you sure you want to remove this note?')) 
-// 	{
-// 		const formData = { "action" : 3, "dropdown_serial": dropdownSerial };
-
-// 		const result = sendData(formData)
-// 		.then(result => 
-// 		{
-// 			console.log('Result remove: ', result);
-// 			fetchUpdatedNotes(i, "remove");
-// 		});
-// 	}
-// 	else 
-// 	{
-//         console.log('Remove action cancelled');
-//     }
-// }
-
-// async function fetchUpdatedNotes(i, mode) 
-// {
-// 	const formData = { "action" : 0 };
-
-// 	const result = sendData(formData)
-// 	.then(result => 
-// 	{
-// 		const notes = JSON.parse(result);
-// 		updateDropdown(notes, i, mode);
-// 	});
-// }
-
-// function updateDropdown(notes, i, mode)
-// {
-// 	console.log('Notes received: ', notes);
-// 	var noteDropdown = document.getElementById('notes_' + i);
-// 	const selected = noteDropdown.value;
-// 	console.log('Note dropdown value: ', noteDropdown.value);
-// 	var ddElements = document.querySelectorAll('.dd');
-
-// 	ddElements.forEach(function(element) 
-// 	{
-// 		element.innerHTML = '';
-// 		let v = "NONE";
-// 		let l = "NONE";
-// 		let initOption = document.createElement('option');
-// 		initOption.value = v;
-// 		initOption.text = l;
-// 		element.add(initOption);
-
-// 		//Add new options
-// 		notes.forEach(note => 
-// 		{
-// 			var option = document.createElement('option');
-// 			option.value = note.dropdown_serial;
-// 			option.text = note.dropdown;
-// 			element.add(option);
-// 		});
-// 	});
-
-// 	cancel(i);
-//     // Optionally, set the selected value to the updated note
-//     // noteDropdown.value = document.getElementById('note_text_' + i).value;
-// 	if (mode == "remove")
-// 	{
-// 		noteDropdown.value = "NONE";
-// 	}
-// 	else 
-// 	{
-// 		noteDropdown.value = selected;
-// 	}
-// }
-
-// function cancel(i)
-// {
-// 	var addBtn = document.getElementById('add_' + i);
-// 	var addSaveBtn = document.getElementById('add_save_' + i);
-// 	var cancelBtn = document.getElementById('cancel_' + i);
-// 	var editBtn = document.getElementById('edit_' + i);
-// 	var editSaveBtn = document.getElementById('edit_save_' + i);
-// 	var deleteBtn = document.getElementById('delete_' + i);
-// 	var noteDropDown = document.getElementById('notes_' + i);
-// 	var noteInput = document.getElementById('note_text_' + i);
-
-// 	addBtn.style.display = 'flex';
-// 	addSaveBtn.style.display = 'none';
-// 	cancelBtn.style.display = 'none';
-// 	editBtn.style.display = 'flex';
-// 	editSaveBtn.style.display = 'none';
-// 	deleteBtn.style.display = 'flex';
-// 	noteDropDown.style.display = 'flex';
-// 	noteInput.style.display = 'none';
-
-// 	noteInput.value = '';
-// }
-
-// async function sendData(formData) 
-// {
-// 	const phpUrl = baseUrl + 'modify_route_stops_model.php';
+	const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
+	const result = await response.text();
 	
-// 	const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
-// 	const result = await response.text();
-	
-// 	return result;
-// }
+	return result;
+}
 
 </script>

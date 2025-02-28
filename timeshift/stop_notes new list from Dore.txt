@@ -1,0 +1,33 @@
+1  Driver Swap & Refreshment Stop
+2  Driver Swap
+3  Refreshment Stop
+4  Refuel at Haulgoods Engen Truckstop
+5  Refreshment Stop & Refuel
+6  Refuel / Wash and Stayover
+7  Driver Change / New Drivers
+8  Depart depot for Driver swap
+9  Refuel & Swap Driver
+10 Refuel
+11 shuttle stop
+12 shuttle depart to Britstown at 03:00
+13 Shuttle to PE depart 1700
+14 Driver drive through Bloemhof
+15 Guesthouse thereafter
+16 Driver Swap, Refreshment Stop & Refuel
+17 Shuttle depart 14:40 to Midrand and PTA
+18 Shuttle to EL/Swap driver
+19 Driver drive through to Bloemhof
+20 Depart EL to KWT 1900
+21 SHUTTLE TO UITENHAGE DEPART 0650
+22 shuttle depart to De Aar at 04:40
+23 Shuttle to Richards Bay depart 1030
+24 Shuttle depart 13:15 to Midrand and OR
+25 Cpt Driver
+28 shuttle depart to Britstown at 03:05
+29 Leaving 06:15 from Guesthouse
+30 Depart 12:15 for Midrand and OR
+31 Depart 13:40 for Midrand and PTA
+32 0615 take pax to KWT
+33 Go to OR Shuttle departing at 13h15
+34 Shuttle to Uitenhage depart 0640
+35 Clean Coach

@@ -1,11 +1,11 @@
 <?php
-// ob_start();
-// require_once ("../php3/oracle.inc");
-// require_once ("../php3/misc.inc");
-// require_once ("../php3/sec.inc");
+ob_start();
+require_once ("/usr/local/www/pages/php3/oracle.inc");
+require_once ("/usr/local/www/pages/php3/misc.inc");
+require_once ("/usr/local/www/pages/php3/sec.inc");
 
-// if (!open_oracle()) { Exit; };
-// if (!AllowedAccess("")) { Exit; };
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
 
 $ajax_data = file_get_contents("php://input");
 $json_data = json_decode($ajax_data);
@@ -39,52 +39,26 @@ switch ($action)
 	
 }
 
-// OCI Only
-function oci_conn()
-{
-	$host = 'localhost';
-	$port = '1521';
-	$sid = 'XE';
-	$username = 'SYSTEM';
-	$password = 'dontletmedown4';
-
-	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
-
-	if (!$conn) 
-	{
-		$e = oci_error();
-		// echo "Connection failed: " . $e['message'];
-		exit;
-	} 
-	else 
-	{
-		// echo "Connection succeeded";
-	}
-
-	return $conn;
-}
-
-function getdata($cursor, $column_index) 
-{
-    $data = oci_result($cursor, $column_index);
-    return $data !== false ? $data : '';
-}
+// function getdata($cursor, $column_index) 
+// {
+//     $data = oci_result($cursor, $column_index);
+//     return $data !== false ? $data : '';
+// }
 
 function get_notes()
 {
-	$data = array();
+	global $conn;
 
-	$conn = oci_conn();
+	$data = array();
 
 	$sql = "SELECT * FROM ROUTE_STOPS_NOTES_DROPDOWN WHERE active = 'Y' ORDER BY DROPDOWN ASC";
 	$cursor = oci_parse($conn, $sql);
 	
 	oci_execute($cursor);
 
-
-	while (ocifetch($cursor))
+	while ($row = oci_fetch_assoc($cursor)) 
 	{
-		$data[] = array('dropdown_serial' => getdata($cursor, 2), 'dropdown' => getdata($cursor, 1));
+		$data[] = array('dropdown_serial' => $row['DROPDOWN_SERIAL'], 'dropdown' => $row['DROPDOWN']);
 	}
 
 	echo json_encode($data);
@@ -92,7 +66,7 @@ function get_notes()
 
 function add_note($dropdown)
 {
-	$conn = oci_conn();
+	global $conn;
 
 	$sql = "INSERT INTO ROUTE_STOPS_NOTES_DROPDOWN (DROPDOWN, DROPDOWN_SERIAL, ACTIVE) VALUES (:dropdown, ROUTE_STOPS_NOTES_DROPDOWN_SEQ.nextval, 'Y') RETURNING DROPDOWN_SERIAL INTO :dropdown_serial";
 	
@@ -106,14 +80,13 @@ function add_note($dropdown)
 
 	oci_free_statement($cursor);
 
-	oci_close($conn); // ???
-
 	echo $dropdown_serial;
 }
 
 function edit_note($dropdown_serial, $dropdown)
 {
-	$conn = oci_conn();
+	global $conn;
+
 	try
 	{
 		$sql = "UPDATE ROUTE_STOPS_NOTES_DROPDOWN SET DROPDOWN = :dropdown WHERE DROPDOWN_SERIAL = :dropdown_serial";
@@ -141,19 +114,16 @@ function edit_note($dropdown_serial, $dropdown)
 	{
 		// Close the connection
 	}
-
-
 }
 
 function remove_note($dropdown_serial)
 {
-	$conn = oci_conn();
+	global $conn;
 
 	$sql = "DELETE FROM ROUTE_STOPS_NOTES_DROPDOWN WHERE DROPDOWN_SERIAL = $dropdown_serial";
 	$cursor = oci_parse($conn, $sql);
 	oci_execute($cursor);
 	oci_free_statement($cursor);
-	oci_close($conn);
 
 	echo 1;
 }

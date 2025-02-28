@@ -1,4 +1,4 @@
-Unicode condes
+Unicode codes
 Save
 &#128190; <!-- Floppy Disk Emoji -->
 Cancel
@@ -13,6 +13,16 @@ Edit
 Delete
 &#10060; <!-- Cross Mark -->
 &#2716; <!-- Heavy Multiplication X -->
+Down arrow
+&#x2193; <!-- ↓ -->
+Heavy down arrow
+&#x2798; <!-- ➘ -->
+Downwards Pointing Triangle
+&#x25BC; <!-- ▼ -->
+Downwards Pointing Small Triangle
+&#x25BE; <!-- ▾ -->
+Black Down-Pointing Double Triangle
+&#x23EC; <!-- ⏬ -->
 
 Initial Notes
 
@@ -63,3 +73,17 @@ notes from budget code:
 12755, 11924, 11940
 
 - Tech bull changes
+
+TIMESHIFT HANDOVER: 25-02-2025
+1. Added ACTIVE (CHAR 1, default 'y') to ROUTE_STOPS_NOTES_DROPDOWN table
+2. Created a new sequence: ROUTE_STOPS_NOTES_DROPDOWN_SEQ
+3. New file: modify_route_stops_model.php
+
+TODO 26-02-2025
+Lao: 6421b7187c4e3df973e7c93903631953a11d0528
+√. Dropdown must sort by serial not name  
+√. Check the update enable/disable logic etc
+1. Save process - just need to test
+   - Check that times are updated
+   - Check that notes are updated
+2. Existing notes must show 
