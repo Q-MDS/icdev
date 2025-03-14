@@ -1,0 +1,1 @@
+Entry point: http://192.168.10.239/booking/icape_index.phtml

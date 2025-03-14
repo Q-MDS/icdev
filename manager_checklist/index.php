@@ -101,7 +101,7 @@ function oci_conn()
 	$port = '1521';
 	$sid = 'XE';
 	$username = 'SYSTEM';
-	$password = 'dontletmedown3';
+	$password = 'dontletmedown4';
 
 	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
 
@@ -507,7 +507,7 @@ function noIssues(id)
 		console.log('Result 2: ', result);
 		if (result == 1)
 		{
-			window.location.reload(); 
+			window.location.reload();
 		}
 		else
 		{
@@ -576,7 +576,8 @@ function saveIssue(more)
 			if (more == 0)
 			{
 				console.log('CIMMAA: ', vcId);
-				noIssues('n_' + vcId);
+				// noIssues('n_' + vcId);
+				window.location.reload();
 			} 
 			else 
 			{

@@ -1,0 +1,11 @@
+Booking stops timeshift handover
+
+Files
+1. (Edited) modify_route_stops.phtml
+2. (New) phrases.php
+
+Database
+1. (Table: New) ROUTE_STOPS_NOTES_PHRASES
+   - PHRASE_SERIAL (number)
+   - PHRASE_DESC (varchar2(75)
+2. (Seq: New) ROUTE_STOPS_NOTES_PHRASES_SEQ

@@ -71,9 +71,37 @@ oci_execute($cursor);
 	border: 1px solid #000; 
 } 
 </style>
-<div style="display: flex; align-items: 'center'; column-gap: 5px">
-	<div>Enter minutes:</div>
-	<div><input type="text" id="mins" value="10"></div>
+<?php
+// Get stop list
+$stop_list = array();
+$sql = "SELECT SHORT_NAME FROM ROUTE_STOPS WHERE ROUTE_SERIAL = '1868577346' ORDER BY STOP_ORDER ASC";
+$stops_cursor = oci_parse($conn, $sql);
+
+oci_execute($stops_cursor);
+
+while ($row = oci_fetch_assoc($stops_cursor)) 
+{
+	$stop_list[] = $row['SHORT_NAME'];
+}
+oci_free_statement($stops_cursor);
+?>
+<div style="display: flex; align-items: 'center'; column-gap: 5px; margin-top: 10px; margin-bottom: 10px;">
+	<div style="display: flex; align-items: center;">Enter minutes:</div>
+	<div><input type="text" id="mins" value="10" style="width: 50px; height: 26px"></div>
+	<div style="display: flex; align-items: center;">After which stop ?</div>
+	<div>
+		<select id="after_stop" style="width: 200px; height: 26px;" onchange="resetTimes()">
+			<option value="0">Select a stop</option>
+			<?php
+			$i = 0;
+			foreach($stop_list as $stop)
+			{
+				echo "<option value='" . $i . "'>" . $stop . "</option>";
+				$i++;
+			}
+			?>
+		</select>
+	</div>
 	<div style="padding: 2px 10px; border: 1px solid #000; background-color: #2b2b2b; color: #fff" onclick="add();">+</div>
 	<div style="padding: 2px 10px; border: 1px solid #000; background-color: #2b2b2b; color: #fff" onclick="minus();">-</div>
 </div>
@@ -341,9 +369,80 @@ $printable = 'N';
 baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/timeshift/";
 
 let note_id;
+const tmp_arr = [];
+const tmp_dep = [];
+
+function saveTimes()
+{
+	var arrElements = document.querySelectorAll('.arr');
+	var depElements = document.querySelectorAll('.dep');
+
+	if (tmp_arr.length == 0)
+	{
+		arrElements.forEach(function(element) 
+		{
+			tmp_arr.push(element.value);
+			element.style.backgroundColor = 'white';
+		});
+	}
+
+	if (tmp_dep.length == 0)
+	{
+		depElements.forEach(function(element) 
+		{
+			tmp_dep.push(element.value);
+			element.style.backgroundColor = 'white';
+		});
+	}
+}
+
+function resetTimes()
+{
+	var arrElements = document.querySelectorAll('.arr');
+	var depElements = document.querySelectorAll('.dep');
+
+	if (tmp_arr.length == 0)
+	{
+		arrElements.forEach(function(element) 
+		{
+			tmp_arr.push(element.value);
+			element.style.backgroundColor = 'white';
+		});
+	}
+	else 
+	{
+		arrElements.forEach(function(element, i) 
+		{
+			element.value = tmp_arr[i];
+			element.style.backgroundColor = 'white';
+		});
+	}
+
+	if (tmp_dep.length == 0)
+	{
+		depElements.forEach(function(element) 
+		{
+			tmp_dep.push(element.value);
+			element.style.backgroundColor = 'white';
+		});
+	}
+	else 
+	{
+		depElements.forEach(function(element, i) 
+		{
+			element.value = tmp_dep[i];
+			element.style.backgroundColor = 'white';
+		});
+	}
+
+	console.log('Arr: ', tmp_arr, 'Dep: ', tmp_dep);
+}
 
 function add()
 {
+	saveTimes();
+
+	const afterStop = document.getElementById('after_stop').value;
 	var updButton = document.getElementById('upd_button');
 	updButton.style.backgroundColor = 'orange';
 
@@ -351,11 +450,16 @@ function add()
 	var arrElements = document.querySelectorAll('.arr');
 	var depElements = document.querySelectorAll('.dep');
 
+	const x = parseInt(afterStop, 10);
+
 	arrElements.forEach(function(element) 
 	{
 		let timeStr = element.value;
+		let name = element.name;
+		let bits = name.split('_');
+		let i = bits[1];
 
-		if (timeStr != 'NONE')
+		if (timeStr != 'NONE' && i > x - 1)
 		{
 			var hours = parseInt(timeStr.substring(0, 2));
 			var minutes = parseInt(timeStr.substring(2, 4));
@@ -376,15 +480,18 @@ function add()
 			// console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
 			element.value = newTimeStr;
 
-			element.style.backgroundColor = 'pink';
+			element.style.backgroundColor = 'orange';
 		}
 	});
 
 	depElements.forEach(function(element) 
 	{
 		let timeStr = element.value;
+		let name = element.name;
+		let bits = name.split('_');
+		let i = bits[1];
 
-		if (timeStr != 'NONE')
+		if (timeStr != 'NONE' && i > x - 1)
 		{
 			var hours = parseInt(timeStr.substring(0, 2));
 			var minutes = parseInt(timeStr.substring(2, 4));
@@ -405,7 +512,7 @@ function add()
 			// console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
 			element.value = newTimeStr;
 
-			element.style.backgroundColor = 'pink';
+			element.style.backgroundColor = 'orange';
 		}
 	});
 
@@ -414,17 +521,25 @@ function add()
 
 function minus()
 {
+	saveTimes();
+
+	const afterStop = document.getElementById('after_stop').value;
 	var updButton = document.getElementById('upd_button');
 	updButton.style.backgroundColor = 'orange';
 	var minsToAdd = parseInt(document.getElementById('mins').value);
 	var arrElements = document.querySelectorAll('.arr');
 	var depElements = document.querySelectorAll('.dep');
 
+	const x = parseInt(afterStop, 10);
+
 	arrElements.forEach(function(element) 
 	{
 		let timeStr = element.value;
+		let name = element.name;
+		let bits = name.split('_');
+		let i = bits[1];
 
-		if (timeStr != 'NONE')
+		if (timeStr != 'NONE' && i > x - 1)
 		{
 			var hours = parseInt(timeStr.substring(0, 2));
 			var minutes = parseInt(timeStr.substring(2, 4));
@@ -442,7 +557,7 @@ function minus()
 			var newTimeStr = newHours + newMinutes;
 
 			// Display the new time
-			console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
+			// console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
 			element.value = newTimeStr;
 
 			element.style.backgroundColor = 'lime';
@@ -452,8 +567,11 @@ function minus()
 	depElements.forEach(function(element) 
 	{
 		let timeStr = element.value;
+		let name = element.name;
+		let bits = name.split('_');
+		let i = bits[1];
 
-		if (timeStr != 'NONE')
+		if (timeStr != 'NONE' && i > x - 1)
 		{
 			var hours = parseInt(timeStr.substring(0, 2));
 			var minutes = parseInt(timeStr.substring(2, 4));
@@ -471,7 +589,7 @@ function minus()
 			var newTimeStr = newHours + newMinutes;
 
 			// Display the new time
-			console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
+			// console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
 			element.value = newTimeStr;
 
 			element.style.backgroundColor = 'lime';
@@ -514,24 +632,24 @@ function nextDay()
 
 		if (depTime < arrTime)
 		{
-			console.log('Arrive was befoew midnight and depart was after midnight: ', arrTime * 1, depTime * 1);
-			console.log('NEXT DAY = CHECKED');
+			// console.log('Arrive was befoew midnight and depart was after midnight: ', arrTime * 1, depTime * 1);
+			// console.log('NEXT DAY = CHECKED');
 			arrElements[i].style.backgroundColor = 'red';
 			depElements[i].style.backgroundColor = 'red';
 			nextElements[i].checked = true;
 		}
 		
-		if (!(arrTime > lastDep))
+		console.log('Arrive: ', arrTime, 'Depart: ', depTime);
+		if (!(arrTime >= lastDep))
 		{
-			console.log('Cos arr time > last dep time both are after midnight: ', arrTime * 1, depTime * 1);
-			console.log('NEXT DAY = CHECKED');
+			// console.log('Cos arr time > last dep time both are after midnight: ', arrTime * 1, depTime * 1);
+			// console.log('NEXT DAY = CHECKED');
 			nextElements[i].checked = true;
 		}
 
-		console.log('NEXT DAY = ZILCH');
+		// console.log('NEXT DAY = ZILCH');
 		lastDep = depTime;
 	}
-
 }
 
 // Notes utility
@@ -573,18 +691,20 @@ function removeText(line_id)
 	let phrase = document.getElementById('phrase_' + line_id).innerText;
 	let note_field = document.getElementById('snotes_' + note_id);
 
-	if (note_field.value.includes(phrase))
+	let a = phrase.toLowerCase();
+	let b = note_field.value.toLowerCase();
+	
+	if (b.includes(a))
 	{
-		if (note_field.value.includes(', ' + phrase))
+		if (b.includes(', ' + a))
 		{
-			note_field.value = note_field.value.replace(', ' + phrase, '');
+			note_field.value = b.replace(', ' + a, '');
 		}
 		else 
 		{
-			note_field.value = note_field.value.replace(phrase, '');
+			note_field.value = b.replace(a, '');
 		}
 	}
-	console.log('Note field: ', note_field.value , ' > ', line_id, ' > ', note_id);
 }
 
 

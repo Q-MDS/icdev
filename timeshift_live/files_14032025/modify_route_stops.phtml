@@ -615,82 +615,8 @@ ora_parse($cursor,$qry);
 else
 ora_parse($cursor,"select * from route_stops where route_serial='$serial' order by stop_order asc");
 ora_exec($cursor);
-
-// #1
-// Author: Quintin
-// Date: 2025-02-25
-
-// Get stop list
-$stop_list = array();
-$sql = "SELECT SHORT_NAME FROM ROUTE_STOPS WHERE ROUTE_SERIAL = '$serial' ORDER BY STOP_ORDER ASC";
-$stops_cursor = oci_parse($conn, $sql);
-
-oci_execute($stops_cursor);
-
-while ($row = oci_fetch_assoc($stops_cursor)) 
-{
-	$stop_list[] = $row['SHORT_NAME'];
-}
-oci_free_statement($stops_cursor);
-
-// Get notes from ROUTE_STOPS_NOTES_DROPDOWN
-$phrases = array();
-$sql = "SELECT PHRASE_DESC FROM ROUTE_STOPS_NOTES_PHRASES ORDER BY PHRASE_DESC ASC";
-$ncursor = oci_parse($conn, $sql);
-
-oci_execute($ncursor);
-
-while ($row = oci_fetch_assoc($ncursor)) 
-{
-	$phrases[] = $row['PHRASE_DESC'];
-}
-oci_free_statement($ncursor);
-// END: #1
 ?>
-<!--
-// #2
-// Author: Quintin
-// Date: 2025-02-25
-// Adding buttons to input minutes that can be added or subtracted to arr/dep times
--->
-<style>
-.notes_btn {
-	display: flex; 
-	align-items: center; 
-	justify-content: center; 
-	width: 24px; 
-	height: 24px; 
-	background-color: #efefef; 
-	color: #000; 
-	border-radius: 3px; 
-	cursor: pointer; 
-	font-size: 14px;
-	border: 1px solid #000; 
-} 
-</style>
-<div style="display: flex; align-items: 'center'; column-gap: 5px; margin-top: 10px; margin-bottom: 10px;">
-	<div style="display: flex; align-items: center;">Enter minutes:</div>
-	<div><input type="text" id="mins" value="10" style="width: 50px; height: 26px"></div>
-	<div style="display: flex; align-items: center;">After which stop ?</div>
-	<div>
-		<select id="after_stop" style="width: 200px; height: 26px;" onchange="resetTimes()">
-			<option value="0">Select a stop</option>
-			<?php
-			$i = 0;
-			foreach($stop_list as $stop)
-			{
-				echo "<option value='" . $i . "'>" . $stop . "</option>";
-				$i++;
-			}
-			?>
-		</select>
-	</div>
-	<div style="padding: 2px 10px; border: 1px solid #000; background-color: #2b2b2b; color: #fff" onclick="add();">+</div>
-	<div style="padding: 2px 10px; border: 1px solid #000; background-color: #2b2b2b; color: #fff" onclick="minus();">-</div>
-</div>
-<!--
-// END: #2
--->
+
 <TABLE border=0 bgcolor='#<? echo $table_bg ?>'>
 <tr bgcolor='#<? echo $table_title?>'>
 <td>No</td>
@@ -712,310 +638,232 @@ oci_free_statement($ncursor);
 <td>New<br>Partn</td>
 </tr>
 
-	<?
-	$reccnt=0;
-	$i=0;
-	$stops_so_far=array();
-	$lastnumber="";
-	while (ora_fetch($cursor))
-	{
-		if (getdata($cursor,9)>99)
-			echo "<tr bgcolor='#$table_alt'>";
-		else
-			echo "<tr bgcolor='#$table_cell'>";
-		echo "<td>";
-			if ($printable=="Y")
-				echo getdata($cursor,9);
-			else {
-			echo "<input size=3 type=text name=stp_$i value='";
-			echo chop(ora_getColumn($cursor,9));
-			echo "'>";
-			}
-		if (getdata($cursor,9)==$lastnumber) {
-			echo "<font color=red><b>DUPE!!</b></font>";
+<?
+$reccnt=0;
+$i=0;
+$stops_so_far=array();
+$lastnumber="";
+while (ora_fetch($cursor))
+{
+	if (getdata($cursor,9)>99)
+		echo "<tr bgcolor='#$table_alt'>";
+	else
+		  echo "<tr bgcolor='#$table_cell'>";
+	echo "<td>";
+		if ($printable=="Y")
+			echo getdata($cursor,9);
+		else {
+		echo "<input size=3 type=text name=stp_$i value='";
+		echo chop(ora_getColumn($cursor,9));
+		echo "'>";
 		}
-		$lastnumber=getdata($cursor,9);
-		echo "</td>";
-		echo "<td>";
-			if (isset($delstops[chop(ora_getColumn($cursor,4))]))
-				echo "<font color=red>* ";
-			echo chop(ora_getColumn($cursor,4));
-			if ($printable!="Y") {
-			echo "<input type=hidden name='short_$i' value='";
-			echo chop(ora_getColumn($cursor,4));
-			echo "'>";
-			}
-		echo "</td>";
-		echo "<td>";
-			echo chop(ora_getColumn($cursor,12));
-		echo "</td>";
-
-		// #3
-		// Arrivale Time
-		// =============
-		// Author: Quintin
-		// Date: 2025-02-25
-		// Added class (arr) to field in order to reference with JS
-		// echo "<td>AAA</td>";
-		echo "<td>";
-			if ($printable=="Y")
-				echo getdata($cursor,5);
-			else {
-			echo "<input class='arr' size=5 type=text name=arr_$i value='";
-			echo chop(ora_getColumn($cursor,5));
-			echo "'>";
-			}
-		echo "</td>";
-		// END #3
-
-		// #4
-		// Departure Time
-		// =============
-		// Author: Quintin
-		// Date: 2025-02-25
-		// Added class (dep) to field in order to reference with JS
-		// echo "<td>BBB</td>";
-		echo "<td>";
-			if ($printable=="Y")
-				echo getdata($cursor,6);
-			else {
-			echo "<input class='dep' size=5 type=text name=dep_$i value='";
-			echo chop(ora_getColumn($cursor,6));
-			echo "'>";
-			}
-		echo "</td>";
-		// END #4
-
-		echo "<td>";
-			if ($printable=="Y")
-				echo getdata($cursor,7);
-			else {
-			echo "<input class='next_day' type=checkbox name=nextday_$i value='Y'";
-			if (chop(ora_getColumn($cursor,7))=="Y"):
-				echo " checked ";
-			endif;
-			echo ">";
-			}
-		echo "</td>";
-		echo "<td>";
-			if ($printable=="Y")
-				echo getdata($cursor,8);
-			else {
-			echo "<input type=checkbox name=major_$i value='Y'";
-			if (chop(ora_getColumn($cursor,8))=="Y"):
-				echo " checked ";
-			endif;
-			echo ">";
-			}
-		echo "</td>";
-		echo "<td>";
-			if ($printable=="Y")
-				echo getdata($cursor,13);
-			else {
-			echo "<input type=checkbox name=crossover_$i value='Y'";
-			if (chop(ora_getColumn($cursor,13))=="Y"):
-				echo " checked ";
-			endif;
-			echo ">";
-			}
-		echo "</td>";
-			echo "<td>";
-			if ($printable=="Y")
-				echo getdata($cursor,15);
-			else {
-					echo "<input type=checkbox name=print_m_$i value='Y'";
-					if (chop(ora_getColumn($cursor,15))=="Y"):
-							echo " checked ";
-					endif;
-					echo ">";
-			}
-			echo "</td>";
-			echo "<td>";
-			if ($printable=="Y")
-				echo getdata($cursor,16);
-			else {
-					echo "<input type=checkbox name=shut_$i value='Y'";
-					if (chop(ora_getColumn($cursor,16))=="Y"):
-							echo " checked ";
-					endif;
-					echo ">";
-			}
-			echo "</td>";
-		echo "<td>";
-			if ($printable=="Y")
-				echo getdata($cursor,22);
-			else {
-				if (chop(ora_getColumn($cursor,16))=="Y") {
-				echo "<select name=chng_$i><option value=''>NONE (Shuttle First)<option value='$previous_stop'>$previous_stop";
-				echo makeselect2 ($stops_so_far,getdata($cursor,22));
-				echo "</select>";
-				} else echo "n/a";
-			}
-		echo "</td>";
-
-		$stops_so_far[getdata($cursor,4)]=getdata($cursor,4);
-		if (chop(ora_getColumn($cursor,16))!="Y")
-			$previous_stop=getdata($cursor,4);
-
-
-		echo "<td>";
-
-			
-			$rsa = ora_open($conn);
-
-			if ($printable!="Y")
-			echo "<select name=rsatime_$i>";
-			$ctme = getdata($cursor,14);
-			ora_parse($rsa,"select * from gmt_info where code='$ctme'");
-			ora_exec($rsa);
-			if (ora_fetch($rsa)):
-				if ($printable=="Y")
-					echo getdata($rsa,1);
-				else
-					echo "<option value='$ctme'>", getdata($rsa,1),"</option>";
-			endif;
-			if ($printable!="Y") {
-			ora_parse($rsa,"select * from gmt_info where code<>'$ctme' order by country");
-			ora_exec($rsa);
-			while(ora_fetch($rsa)):
-				
-				echo "<option value='", getdata($rsa,0), "'>";
-				echo getdata($rsa,1), "</option>";
-			endwhile;
-			}
-
-			if ($printable!="Y")
-				echo "</select>";
-
-			ora_close($rsa);
-		echo "<td>";
-			if ($printable=="Y")
-					echo getdata($cursor,10);
-			else {
-			echo "<input type=checkbox name=passport_$i value='Y'";
-			if (chop(ora_getColumn($cursor,10))=="Y"):
-				echo " checked ";
-			endif;
-			echo " onclick='javscript:clearbox(pfee_$i,passport_$i)'>";
-			}
-		echo "</td>";
-
-		// #5
-		// Author: Quintin
-		// Date: 2025-02-25
-		// Commenting out current notes column
-		/*
-		echo "<td><input type=hidden name=pfee_$i value=0>";
-			if ($printable=="Y")
-				echo getdata($cursor,18);
-			else {
-			echo "<input size=30 type=text name=snotes_$i maxlength=80 value='";
-			echo chop(ora_getColumn($cursor,18));
-			echo "'>";
-			}
-		echo "</td>";*/
-		// END #5
-
-		// #6
-		// Author: Quintin
-		// Date: 2025-02-25
-		// Adding new notes column and buttons
-		// echo "<td>CCC</td>";
-		echo "<td>";
-			echo "<input type=hidden name=pfee_$i value=0>";
-			if ($printable=="Y")
-			{
-				echo getdata($cursor,18);
-			}
-			else 
-			{
-				echo "<div style='display: flex; flex-direction: row; align-items: center; column-gap: 5px'>";
-				echo "<input id='snotes_$i' size=30 type=text name=snotes_$i maxlength=80 value='" . getdata($cursor, 18) . "'/>";
-				echo "<div id='add_$i' class='notes_btn' title='Add a note' style='width: 24px; height: 18px; margin-right: 5px;' onclick='showSnippets($i)'><pre>&#x25BC;</pre></div>";
-				echo "</div>";
-			}
-		echo "</td>";
-		// END #6
-
-		if (!$subroute) {
-			echo "<td>";
-					if ($printable=="Y")
-							echo getdata($cursor,19);
-					else {
-					echo "<input type=checkbox name=pstart_$i value='Y'";
-					if (chop(ora_getColumn($cursor,19))=="Y"):
-							echo " checked ";
-					endif;
-					echo ">";
-					}
-			echo "</td>";
-			echo "<td>";
-					if ($printable=="Y")
-							echo getdata($cursor,20);
-					else {
-					echo "<input type=checkbox name=pend_$i value='Y'";
-					if (chop(ora_getColumn($cursor,20))=="Y"):
-							echo " checked ";
-					endif;
-					echo ">";
-					}
-			echo "</td>";
-
-			echo "<td>";
-					if ($printable=="Y")
-							echo getdata($cursor,21);
-					else {
-					echo "<input type=checkbox name=partn_$i value='Y'";
-					if (chop(ora_getColumn($cursor,21))=="Y"):
-							echo " checked ";
-					endif;
-					echo ">";
-					}
-			echo "</td>";
-		}
-
-	echo "</tr>";
-	$i++;
+	if (getdata($cursor,9)==$lastnumber) {
+		echo "<font color=red><b>DUPE!!</b></font>";
 	}
-	$reccnt=$i;
-	?>
-	</table>
+	$lastnumber=getdata($cursor,9);
+	echo "</td>";
+	echo "<td>";
+		if (isset($delstops[chop(ora_getColumn($cursor,4))]))
+			echo "<font color=red>* ";
+		echo chop(ora_getColumn($cursor,4));
+		if ($printable!="Y") {
+		echo "<input type=hidden name='short_$i' value='";
+		echo chop(ora_getColumn($cursor,4));
+		echo "'>";
+		}
+	echo "</td>";
+	echo "<td>";
+		echo chop(ora_getColumn($cursor,12));
+	echo "</td>";
+	echo "<td>";
+		if ($printable=="Y")
+			echo getdata($cursor,5);
+		else {
+		echo "<input size=5 type=text name=arr_$i value='";
+		echo chop(ora_getColumn($cursor,5));
+		echo "'>";
+		}
+	echo "</td>";
+	echo "<td>";
+		if ($printable=="Y")
+			echo getdata($cursor,6);
+		else {
+		echo "<input size=5 type=text name=dep_$i value='";
+		echo chop(ora_getColumn($cursor,6));
+		echo "'>";
+		}
+	echo "</td>";
+	echo "<td>";
+		if ($printable=="Y")
+			echo getdata($cursor,7);
+		else {
+		echo "<input type=checkbox name=nextday_$i value='Y'";
+		if (chop(ora_getColumn($cursor,7))=="Y"):
+			echo " checked ";
+		endif;
+		echo ">";
+		}
+	echo "</td>";
+	echo "<td>";
+		if ($printable=="Y")
+			echo getdata($cursor,8);
+		else {
+		echo "<input type=checkbox name=major_$i value='Y'";
+		if (chop(ora_getColumn($cursor,8))=="Y"):
+			echo " checked ";
+		endif;
+		echo ">";
+		}
+	echo "</td>";
+	echo "<td>";
+		if ($printable=="Y")
+			echo getdata($cursor,13);
+		else {
+		echo "<input type=checkbox name=crossover_$i value='Y'";
+		if (chop(ora_getColumn($cursor,13))=="Y"):
+			echo " checked ";
+		endif;
+		echo ">";
+		}
+	echo "</td>";
+        echo "<td>";
+		if ($printable=="Y")
+			echo getdata($cursor,15);
+		else {
+                echo "<input type=checkbox name=print_m_$i value='Y'";
+                if (chop(ora_getColumn($cursor,15))=="Y"):
+                        echo " checked ";
+                endif;
+                echo ">";
+		}
+        echo "</td>";
+        echo "<td>";
+		if ($printable=="Y")
+			echo getdata($cursor,16);
+		else {
+                echo "<input type=checkbox name=shut_$i value='Y'";
+                if (chop(ora_getColumn($cursor,16))=="Y"):
+                        echo " checked ";
+                endif;
+                echo ">";
+		}
+        echo "</td>";
+	echo "<td>";
+		if ($printable=="Y")
+			echo getdata($cursor,22);
+		else {
+			if (chop(ora_getColumn($cursor,16))=="Y") {
+			echo "<select name=chng_$i><option value=''>NONE (Shuttle First)<option value='$previous_stop'>$previous_stop";
+			echo makeselect2 ($stops_so_far,getdata($cursor,22));
+			echo "</select>";
+			} else echo "n/a";
+		}
+	echo "</td>";
 
-	<!--
-	// #7
-	// Author: Quintin
-	// Date: 2025-02-28
-	// Note builder popup -->
-	<div id="notes_container" style="width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; display: none; flex-direction: row; align-items: center; justify-content: center">
-		<div style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; background-color: #fff; padding: 30px; border-radius: 15px;box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);">
-			<div style="font-size: 18px; font-weight: bold; margin-bottom: 20px">Select a note</div>
-				<div style="display: grid; grid-template-columns: 1fr 40px 40px; gap: 10px; max-height: 500px; overflow-y: auto; width: 100%; padding-right: 20px;">
-					<?php
-					$j = 0;
+	$stops_so_far[getdata($cursor,4)]=getdata($cursor,4);
+	if (chop(ora_getColumn($cursor,16))!="Y")
+		$previous_stop=getdata($cursor,4);
 
-					foreach($phrases as $phrase)
-					{
-						echo "<div id='phrase_$j' style='cursor: pointer'>" . $phrase . "</div>";
-						echo "<div class='notes_btn' onclick='addText($j)'>A</div>";
-						echo "<div class='notes_btn' onclick='removeText($j)'>D</div>";
 
-						$j++;
-					}
-					?>
-				</div>
+	echo "<td>";
 
-				<div style="display: flex; flex-direction: row;  align-items: center; justify-content: center; width: 100%; border-top: 1px solid #ccc; margin-top: 10px;">
-					<div class="notes_btn" style="width: 75px; margin-top: 15px" onclick="hideSnippets()"><pre>Close</pre></div>
-				</div>
-			</div>
-		</div>
-	</div>
-	<!-- END #7 -->
+		
+		$rsa = ora_open($conn);
 
+		if ($printable!="Y")
+		echo "<select name=rsatime_$i>";
+		$ctme = getdata($cursor,14);
+		ora_parse($rsa,"select * from gmt_info where code='$ctme'");
+		ora_exec($rsa);
+		if (ora_fetch($rsa)):
+			if ($printable=="Y")
+				echo getdata($rsa,1);
+			else
+				echo "<option value='$ctme'>", getdata($rsa,1),"</option>";
+		endif;
+		if ($printable!="Y") {
+		ora_parse($rsa,"select * from gmt_info where code<>'$ctme' order by country");
+		ora_exec($rsa);
+		while(ora_fetch($rsa)):
+			
+			echo "<option value='", getdata($rsa,0), "'>";
+			echo getdata($rsa,1), "</option>";
+		endwhile;
+		}
+
+		if ($printable!="Y")
+			echo "</select>";
+
+		ora_close($rsa);
+	echo "<td>";
+		if ($printable=="Y")
+				echo getdata($cursor,10);
+		else {
+		echo "<input type=checkbox name=passport_$i value='Y'";
+		if (chop(ora_getColumn($cursor,10))=="Y"):
+			echo " checked ";
+		endif;
+		echo " onclick='javscript:clearbox(pfee_$i,passport_$i)'>";
+		}
+	echo "</td>";
+	echo "<td><input type=hidden name=pfee_$i value=0>";
+		if ($printable=="Y")
+			echo getdata($cursor,18);
+		else {
+		echo "<input size=30 type=text name=snotes_$i maxlength=80 value='";
+		echo chop(ora_getColumn($cursor,18));
+		echo "'>";
+		}
+	echo "</td>";
+
+	if (!$subroute) {
+        echo "<td>";
+                if ($printable=="Y")
+                        echo getdata($cursor,19);
+                else {
+                echo "<input type=checkbox name=pstart_$i value='Y'";
+                if (chop(ora_getColumn($cursor,19))=="Y"):
+                        echo " checked ";
+                endif;
+                echo ">";
+                }
+        echo "</td>";
+        echo "<td>";
+                if ($printable=="Y")
+                        echo getdata($cursor,20);
+                else {
+                echo "<input type=checkbox name=pend_$i value='Y'";
+                if (chop(ora_getColumn($cursor,20))=="Y"):
+                        echo " checked ";
+                endif;
+                echo ">";
+                }
+        echo "</td>";
+
+        echo "<td>";
+                if ($printable=="Y")
+                        echo getdata($cursor,21);
+                else {
+                echo "<input type=checkbox name=partn_$i value='Y'";
+                if (chop(ora_getColumn($cursor,21))=="Y"):
+                        echo " checked ";
+                endif;
+                echo ">";
+                }
+        echo "</td>";
+	}
+
+  echo "</tr>";
+  $i++;
+}
+$reccnt=$i;
+
+?>
+</table>
 <? if ($subroute)
 	exit;
 ?>
-<br><input type=submit id="upd_button" name=doupdate value="Update"><br><br>
+<br><input type=submit name=doupdate value="Update"><br><br>
 
 <table border=0>
 <tr>
@@ -1096,348 +944,8 @@ echo "<input type=hidden name=passrn value='$passrn'>";
 	}
 
 */
+
 ?>
-
-<!--
-// #8
-// Author: Quintin
-// Date: 2025-02-28
-// JavaScript for time add/minus and note builder popup -->
-<script>
-// baseUrl = window.location.protocol + "//" + window.location.hostname + "/icdev/timeshift/";
-baseUrl = window.location.protocol + "//" + window.location.hostname + "/booking/";
-
-let note_id;
-const tmp_arr = [];
-const tmp_dep = [];
-
-function saveTimes()
-{
-	var arrElements = document.querySelectorAll('.arr');
-	var depElements = document.querySelectorAll('.dep');
-
-	if (tmp_arr.length == 0)
-	{
-		arrElements.forEach(function(element) 
-		{
-			tmp_arr.push(element.value);
-			element.style.backgroundColor = 'white';
-		});
-	}
-
-	if (tmp_dep.length == 0)
-	{
-		depElements.forEach(function(element) 
-		{
-			tmp_dep.push(element.value);
-			element.style.backgroundColor = 'white';
-		});
-	}
-}
-
-function resetTimes()
-{
-	var arrElements = document.querySelectorAll('.arr');
-	var depElements = document.querySelectorAll('.dep');
-
-	if (tmp_arr.length == 0)
-	{
-		arrElements.forEach(function(element) 
-		{
-			tmp_arr.push(element.value);
-			element.style.backgroundColor = 'white';
-		});
-	}
-	else 
-	{
-		arrElements.forEach(function(element, i) 
-		{
-			element.value = tmp_arr[i];
-			element.style.backgroundColor = 'white';
-		});
-	}
-
-	if (tmp_dep.length == 0)
-	{
-		depElements.forEach(function(element) 
-		{
-			tmp_dep.push(element.value);
-			element.style.backgroundColor = 'white';
-		});
-	}
-	else 
-	{
-		depElements.forEach(function(element, i) 
-		{
-			element.value = tmp_dep[i];
-			element.style.backgroundColor = 'white';
-		});
-	}
-
-	console.log('Arr: ', tmp_arr, 'Dep: ', tmp_dep);
-}
-
-function add()
-{
-	saveTimes();
-
-	const afterStop = document.getElementById('after_stop').value;
-	var updButton = document.getElementById('upd_button');
-	updButton.style.backgroundColor = 'orange';
-
-	var minsToAdd = parseInt(document.getElementById('mins').value);
-	var arrElements = document.querySelectorAll('.arr');
-	var depElements = document.querySelectorAll('.dep');
-
-	const x = parseInt(afterStop, 10);
-
-	arrElements.forEach(function(element) 
-	{
-		let timeStr = element.value;
-		let name = element.name;
-		let bits = name.split('_');
-		let i = bits[1];
-
-		if (timeStr != 'NONE' && i > x - 1)
-		{
-			var hours = parseInt(timeStr.substring(0, 2));
-			var minutes = parseInt(timeStr.substring(2, 4));
-
-			// Create a Date object with the extracted time
-			var date = new Date();
-			date.setHours(hours);
-			date.setMinutes(minutes);
-
-			// Add the minutes
-			date.setMinutes(date.getMinutes() + minsToAdd);
-
-			var newHours = date.getHours().toString().padStart(2, '0');
-			var newMinutes = date.getMinutes().toString().padStart(2, '0');
-			var newTimeStr = newHours + newMinutes;
-
-			// Display the new time
-			// console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
-			element.value = newTimeStr;
-
-			element.style.backgroundColor = 'orange';
-		}
-	});
-
-	depElements.forEach(function(element) 
-	{
-		let timeStr = element.value;
-		let name = element.name;
-		let bits = name.split('_');
-		let i = bits[1];
-
-		if (timeStr != 'NONE' && i > x - 1)
-		{
-			var hours = parseInt(timeStr.substring(0, 2));
-			var minutes = parseInt(timeStr.substring(2, 4));
-
-			// Create a Date object with the extracted time
-			var date = new Date();
-			date.setHours(hours);
-			date.setMinutes(minutes);
-
-			// Add the minutes
-			date.setMinutes(date.getMinutes() + minsToAdd);
-
-			var newHours = date.getHours().toString().padStart(2, '0');
-			var newMinutes = date.getMinutes().toString().padStart(2, '0');
-			var newTimeStr = newHours + newMinutes;
-
-			// Display the new time
-			// console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
-			element.value = newTimeStr;
-
-			element.style.backgroundColor = 'orange';
-		}
-	});
-
-	nextDay();
-}
-
-function minus()
-{
-	saveTimes();
-
-	const afterStop = document.getElementById('after_stop').value;
-	var updButton = document.getElementById('upd_button');
-	updButton.style.backgroundColor = 'orange';
-	var minsToAdd = parseInt(document.getElementById('mins').value);
-	var arrElements = document.querySelectorAll('.arr');
-	var depElements = document.querySelectorAll('.dep');
-
-	const x = parseInt(afterStop, 10);
-
-	arrElements.forEach(function(element) 
-	{
-		let timeStr = element.value;
-		let name = element.name;
-		let bits = name.split('_');
-		let i = bits[1];
-
-		if (timeStr != 'NONE' && i > x - 1)
-		{
-			var hours = parseInt(timeStr.substring(0, 2));
-			var minutes = parseInt(timeStr.substring(2, 4));
-
-			// Create a Date object with the extracted time
-			var date = new Date();
-			date.setHours(hours);
-			date.setMinutes(minutes);
-
-			// Add the minutes
-			date.setMinutes(date.getMinutes() - minsToAdd);
-
-			var newHours = date.getHours().toString().padStart(2, '0');
-			var newMinutes = date.getMinutes().toString().padStart(2, '0');
-			var newTimeStr = newHours + newMinutes;
-
-			// Display the new time
-			// console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
-			element.value = newTimeStr;
-
-			element.style.backgroundColor = 'lime';
-		}
-	});
-
-	depElements.forEach(function(element) 
-	{
-		let timeStr = element.value;
-		let name = element.name;
-		let bits = name.split('_');
-		let i = bits[1];
-
-		if (timeStr != 'NONE' && i > x - 1)
-		{
-			var hours = parseInt(timeStr.substring(0, 2));
-			var minutes = parseInt(timeStr.substring(2, 4));
-
-			// Create a Date object with the extracted time
-			var date = new Date();
-			date.setHours(hours);
-			date.setMinutes(minutes);
-
-			// Add the minutes
-			date.setMinutes(date.getMinutes() - minsToAdd);
-
-			var newHours = date.getHours().toString().padStart(2, '0');
-			var newMinutes = date.getMinutes().toString().padStart(2, '0');
-			var newTimeStr = newHours + newMinutes;
-
-			// Display the new time
-			// console.log('Old time: ', timeStr, 'New time: ', newTimeStr);
-			element.value = newTimeStr;
-
-			element.style.backgroundColor = 'lime';
-		}
-	});
-
-	nextDay();
-}
-
-function nextDay()
-{
-	var arrElements = document.querySelectorAll('.arr');
-	var depElements = document.querySelectorAll('.dep');
-	var nextElements = document.querySelectorAll('.next_day');
-
-	// Clear all checkboxes
-	nextElements.forEach(function(element) 
-	{
-		element.checked = false;
-	});
-
-	let lastDep = 0;
-
-	for (let i = 0; i < arrElements.length; i++)
-	{
-		let arrTime = arrElements[i].value;
-		let depTime = depElements[i].value;
-
-		if (arrTime == 'NONE')
-		{
-			arrTime = depTime;
-		}
-
-		if (depTime == 'NONE')
-		{
-			depTime = arrTime;
-		}
-
-		if (depTime < arrTime)
-		{
-			arrElements[i].style.backgroundColor = 'red';
-			depElements[i].style.backgroundColor = 'red';
-			nextElements[i].checked = true;
-		}
-		
-		console.log('Arrive: ', arrTime, 'Depart: ', depTime);
-		if (!(arrTime >= lastDep))
-		{
-			nextElements[i].checked = true;
-		}
-
-		lastDep = depTime;
-	}
-}
-
-function showSnippets(id)
-{
-	note_id = id;
-	let note_field = document.getElementById('snotes_' + id);
-	
-	var notes_container = document.getElementById('notes_container');
-
-	notes_container.style.display = 'flex';
-}
-
-function hideSnippets()
-{
-	var notes_container = document.getElementById('notes_container');
-
-	notes_container.style.display = 'none';
-}
-
-function addText(line_id)
-{
-	let phrase = document.getElementById('phrase_' + line_id).innerText;
-	let note_field = document.getElementById('snotes_' + note_id);
-
-	if (note_field.value.length > 0)
-	{
-		note_field.value += ', ' + phrase;
-	}
-	else 
-	{
-		note_field.value += phrase;
-	}
-}
-
-function removeText(line_id)
-{
-	let phrase = document.getElementById('phrase_' + line_id).innerText;
-	let note_field = document.getElementById('snotes_' + note_id);
-
-	let a = phrase.toLowerCase();
-	let b = note_field.value.toLowerCase();
-	
-	if (b.includes(a))
-	{
-		if (b.includes(', ' + a))
-		{
-			note_field.value = b.replace(', ' + a, '');
-		}
-		else 
-		{
-			note_field.value = b.replace(a, '');
-		}
-	}
-}
-</script>
-<!-- END #8 -->
 </BODY>
 </HTML>
 <? close_oracle() ?>

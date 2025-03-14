@@ -48,6 +48,35 @@ function no_issues($vc_id)
 	// Need the current date plus 30 days: 1729548000
 	$today = date('Y-m-d');
 	$today = strtotime($today);
+	$next_check_date = strtotime("+30 days", $today);
+
+	try 
+	{
+		$sql = "UPDATE vehicle_checklist SET WORK_DATE = $next_check_date WHERE id = $vc_id";
+		ora_parse($cursor, $sql);
+		ora_exec($cursor);
+		
+		$result = '1';
+	} 
+	catch (Exception $e) 
+	{
+		$result = '0';
+	}
+
+	ora_close($cursor);
+
+	echo $result;
+}
+
+function had_issues($vc_id)
+{
+	global $conn;
+
+	$cursor = ora_open($conn);
+
+	// Need the current date plus 30 days: 1729548000
+	$today = date('Y-m-d');
+	$today = strtotime($today);
 	$next_check_date = strtotime("+6 months", $today);
 
 	try 
@@ -116,7 +145,7 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 
 	oci_bind_by_name($cursor, ':vehicle_serial', $vehicle_serial);
 	oci_bind_by_name($cursor, ':remote_user', $REMOTE_USER);
-	oci_bind_by_name($cursor, ':reported_date', $reported_date);
+	// oci_bind_by_name($cursor, ':reported_date', $reported_date);
 	oci_bind_by_name($cursor, ':fault_description', $fault_description);
 	oci_bind_by_name($cursor, ':fault_picture', $fault_picture);
 	oci_bind_by_name($cursor, ':fault', $fault);
@@ -129,6 +158,7 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	// Add record to vehicle_checklist_detail
 	$now = time();
 	try{
+		// $sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID, FAULT_FULL, ITEMSERIAL) VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER, $now, '$fault', '$full_fault', $itemserial)";
 		$sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID, FAULT_FULL, ITEMSERIAL) VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER_SERIAL, $now, '$fault', '$full_fault', $itemserial)";
 		
 		$cursor = oci_parse($conn, $sql);
@@ -141,7 +171,8 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	// Update vehicle_checklist: work_date + 30
 	if ($more == 0)
 	{
-		no_issues($vc_id);
+		// no_issues($vc_id);
+		had_issues($vc_id);
 	} 
 	else 
 	{

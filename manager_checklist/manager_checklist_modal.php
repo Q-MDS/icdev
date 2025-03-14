@@ -44,7 +44,7 @@ function oci_conn()
 	$port = '1521';
 	$sid = 'XE';
 	$username = 'SYSTEM';
-	$password = 'dontletmedown3';
+	$password = 'dontletmedown4';
 
 	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
 
@@ -87,21 +87,51 @@ function no_issues($vc_id)
 		$result = '0';
 	}
 
+	// Add record to vehicle_checklist_detail
+	$REMOTE_USER = 123;
+	$now = time();
+
+	$sql = "INSERT INTO VEHICLE_CHECKLIST_DETAIL (ID, VEHICLE_CHECKLIST_ID, CHECK_BY_ID, CHECK_DATE, FAULT_ID, FAULT_FULL, ITEMSERIAL) 
+	VALUES (VEHICLE_CHECKLIST_DETAIL_ID_SEQ.NEXTVAL, $vc_id, $REMOTE_USER, $now, '0', 'No issues', 0)";
+	$cursor = oci_parse($conn, $sql);
+	oci_execute($cursor);
+	oci_free_statement($cursor);
+
 	oci_close($conn);
 
 	echo $result;
 
-	// ORA
-	/*global $conn;
-	$cursor = ora_open($conn);
+	
+}
 
-	$now = strtotime("now");
+function had_issues($vc_id)
+{
+	global $conn;
 
-	$sql = "UPDATE move_tech_bulletins_read SET mtr_status = 100, mtr_date_updated = $now  WHERE mtr_id = $mtr_id";
-	ora_parse($cursor, $sql);
-	ora_exec($cursor);
+	$conn = oci_conn();
 
-	ora_close($cursor);*/
+	// Need the current date plus 30 days: 1729548000
+	$today = date('Y-m-d');
+	$today = strtotime($today);
+	$next_check_date = strtotime("+6 months", $today);
+
+	try 
+	{
+		$sql = "UPDATE vehicle_checklist SET WORK_DATE = $next_check_date WHERE id = $vc_id";
+		$cursor = oci_parse($conn, $sql);
+		oci_execute($cursor);
+		oci_free_statement($cursor);
+		
+		$result = '1';
+	} 
+	catch (Exception $e) 
+	{
+		$result = '0';
+	}
+
+	oci_close($conn);
+
+	echo $result;
 }
 
 function fetch_faults()
@@ -160,14 +190,14 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	$sql = "INSERT INTO 
         MOVE_JOBCARDITEMS (ITEMSERIAL, JOBCARDSERIAL, UNITSERIAL, REPORTEDWHO, REPORTEDDATE, FAULTCLASS, FAULTDESC, FAULTPICTURE, TYPE, FAULTVALID, STATUSENGINEER, REPORTCOMMENTS, FAULT_CATEGORY) 
         VALUES 
-        (MOVE_ITEMS.nextval, 0, :vehicle_serial, :remote_user, TO_DATE(:reported_date, 'YYYY-MM-DD HH24:MI:SS'), 14616, :fault_description, :fault_picture, '1', 'N', 'Z', '', :fault)
+        (MOVE_ITEMS.nextval, 0, :vehicle_serial, :remote_user, CURRENT_TIMESTAMP, 14616, :fault_description, :fault_picture, '1', 'N', 'Z', '', :fault)
         RETURNING ITEMSERIAL INTO :itemserial";
 
 	$cursor = oci_parse($conn, $sql);
 
 	oci_bind_by_name($cursor, ':vehicle_serial', $vehicle_serial);
 	oci_bind_by_name($cursor, ':remote_user', $REMOTE_USER);
-	oci_bind_by_name($cursor, ':reported_date', $reported_date);
+	// oci_bind_by_name($cursor, ':reported_date', $reported_date);
 	oci_bind_by_name($cursor, ':fault_description', $fault_description);
 	oci_bind_by_name($cursor, ':fault_picture', $fault_picture);
 	oci_bind_by_name($cursor, ':fault', $fault);
@@ -197,12 +227,12 @@ function save_fault($vc_id, $vehicle_serial, $fault_description, $fault, $fault_
 	// Update vehicle_checklist: work_date + 30
 	if ($more == 0)
 	{
-		no_issues($vc_id);
+		had_issues($vc_id);
 	} 
 	else 
 	{
-		// echo '1';
-		echo $itemserial;
+		echo '1';
+		// echo $itemserial;
 	}
 
 	oci_close($conn);

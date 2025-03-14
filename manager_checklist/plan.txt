@@ -110,3 +110,22 @@ tfc_id from technical_faults_category
   YTD Budget, YTD Spend, Feb 2025 Adjustment
 
   number_format
+
+  PROCESS
+  1. How data is built:
+     - get all records from VEHIVLE_CHECKLIST into array
+	 - get all records from VEHICLES where is_current='Y' AND schedule = 'Y' AND class in ('o','c')
+	   - loop thru vehicle data and do an IN_ARRAY
+	    Y Found
+		  - vehicle_checklist_detail is updated
+		    - UPDATE vehicle_checklist SET work_date = '" . $today . "', depot = '" . $depot . "', class = '" . $class . "' WHERE id = '" . $id . "' AND work_date < '" . $today . "' AND checked = 0"; ??? CHECKED ???
+
+		N - record from VEHICLES is ADDED to vehicle_checklist  
+
+
+  2. First run page records are added to VEHICLE_CHECKLIST
+     - Add_date and Work_date are the same 1741906800 & 1741906800
+	 - Selected No Issues on a record and dates changed to 1741906800 (Mar 13 2025) & 1757800800 (Sep 13 2025)
+	   - No record in vehicle_checklist_detail
+	 - Did has a fault and: dates changed to 1741906800 (Mar 13 2025) & 1757800800 (Sep 13 2025)
+	   - Record was added to vehicle_checklist_detail
