@@ -1,50 +1,56 @@
 <?php
-// Global vars
+ob_start();
+require_once ("../php3/oracle.inc");
+require_once ("../php3/misc.inc");
+require_once ("../php3/sec.inc");
+
+if (!open_oracle()) { Exit; };
+if (!AllowedAccess("")) { Exit; };
+
 if (isset($_POST['set_depot']))
 {
 	$the_depot = $_POST['set_depot'];
 }
 else
 {
-	$the_depot = 'PTA';
+	$the_depot = '';
 }
+
 $num_rows = 0;
 
 function init()
 {
-	global $the_depot;
-	
 	$vehicles = [];
 	$vehicle_checklist_id = [];
 	$vehicle_checklist_serial = [];
 
-	// OCI
-	$conn = oci_conn();
+	// ORA
+	global $conn;
+
+	$cursor = ora_open($conn);
 
 	// Get all vehicle_checklist serials into an array
-	$sql = "SELECT id, serial FROM vehicle_checklist";
+	$sql = "SELECT id, vehicleserial FROM vehicle_checklist";
+	ora_parse($cursor, $sql);
+	ora_exec($cursor);
 	
-	$cur2 = oci_parse($conn, $sql);
-	oci_execute($cur2);
-	while ($row = oci_fetch_array($cur2, OCI_ASSOC+OCI_RETURN_NULLS)) 
+	while (ora_fetch_into($cursor, $row, ORA_FETCHINTO_ASSOC)) 
 	{
 		$id = $row['ID'];
-		$serial = $row['SERIAL'];
+		$serial = $row['VEHICLESERIAL'];
 		$vehicle_checklist_id[] = $id;
 		$vehicle_checklist_serial[] = $serial;
 	}
-	// ORA: ora_close($cur2);
+	
 	// print_r($vehicle_checklist_serial);
 
-
 	// Read vehicles and compare
-	$sql = "SELECT SERIAL, DEPOT_AT, CLASS FROM vehicles WHERE is_current='Y' AND schedule = 'Y' AND class in ('o','c')";
+	$sql = "SELECT SERIAL, DEPOT_AT, CLASS FROM VEHICLES WHERE IS_CURRENT='Y' AND SCHEDULE = 'Y' AND CLASS in ('o','c')";
 	//  AND schedule = 'Y' AND class in ('o','c')
+	ora_parse($cursor, $sql);
+	ora_exec($cursor);
 	
-	$cursor = oci_parse($conn, $sql);
-	oci_execute($cursor);
-	
-	while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
+	while (ora_fetch_into($cursor, $row, ORA_FETCHINTO_ASSOC)) 
 	{
 		$serial = $row['SERIAL'];
 		$depot = $row['DEPOT_AT'];
@@ -66,90 +72,71 @@ function init()
 		}
 	}
 	
-	oci_close($conn);
+	ora_close($cursor);
 }
 
 function add_checklist_vehicle($serial, $depot, $class)
 {
-	// OCI
-	$conn = oci_conn();
+	global $conn;
+
+	$cursor = ora_open($conn);
 
 	// Add with today as the work_date and add_date, checked is false, depot and class
 	$today = strtotime(date('Y-m-d'));
-	
-	$sql = "INSERT INTO vehicle_checklist (id, serial, add_date, work_date, checked, depot, class) VALUES (VEHICLE_CHECKLIST_ID_SEQ.NEXTVAL,'" . $serial . "', '" . $today . "', '" . $today . "',0, '" . $depot . "', '" . $class . "')";
-	$cursor = oci_parse($conn, $sql);
-	oci_execute($cursor);
+	// $today = strtotime("now");
+	$sql = "INSERT INTO vehicle_checklist (id, vehicleserial, add_date, work_date, checked, depot, class) VALUES (VEHICLE_CHECKLIST_ID_SEQ.NEXTVAL,'" . $serial . "', '" . $today . "', '" . $today . "',0, '" . $depot . "', '" . $class . "')";
+	ora_parse($cursor, $sql);
+	ora_exec($cursor);
+
+	ora_close($cursor);
 }
 
 function update_checklist_vehicle($id, $depot, $class)
 {
-	// OCI
-	$conn = oci_conn();
+	global $conn;
+
+	$cursor = ora_open($conn);
 
 	// Update if found
 	$today = strtotime(date('Y-m-d'));
 	// $today = strtotime('2024-10-22');
-	// $sql = "UPDATE vehicle_checklist SET work_date = '" . $today . "', depot = '" . $depot . "', class = '" . $class . "' WHERE id = '" . $id . "' AND work_date < '" . $today . "' AND checked = 0";
-	$sql = "UPDATE vehicle_checklist SET work_date = '" . $today . "', depot = '" . $depot . "', class = '" . $class . "' WHERE id = '" . $id . "' AND work_date < '" . $today . "'";
-	
-	$cursor = oci_parse($conn, $sql);
-	oci_execute($cursor);
-}
+	$sql = "UPDATE vehicle_checklist SET work_date = '" . $today . "', depot = '" . $depot . "', class = '" . $class . "' WHERE id = '" . $id . "' AND work_date < '" . $today . "' AND checked = 0";
+	ora_parse($cursor, $sql);
+	ora_exec($cursor);
 
-function oci_conn()
-{
-	$host = 'localhost';
-	$port = '1521';
-	$sid = 'XE';
-	$username = 'SYSTEM';
-	$password = 'dontletmedown4';
-
-	$conn = oci_connect($username, $password, "(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=$host)(PORT=$port)))(CONNECT_DATA=(SID=$sid)))");
-
-	if (!$conn) 
-	{
-		$e = oci_error();
-		exit;
-	} 
-	else 
-	{
-		// echo "Connection succeeded";
-	}
-
-	return $conn;
+	ora_close($cursor);
 }
 
 function get_vehicles()
 {
-	global $the_depot, $num_rows;
-	$today = strtotime(date('Y-m-d'));
-	// $today = strtotime('2024-10-23');
+	global $conn, $the_depot, $num_rows;
 
-	// OCI
-	$conn = oci_conn();
+	$cursor = ora_open($conn);
+	
+	$today = strtotime(date('Y-m-d'));
 
 	if ($the_depot == 0)
 	{
-		$sql = "SELECT vc.SERIAL, vc.CLASS, vc.ID, v.CODE, v.REG_NO, v.MAKE, v.MODEL FROM vehicle_checklist vc JOIN vehicles v ON vc.SERIAL = v.SERIAL WHERE vc.DEPOT IS NULL AND vc.WORK_DATE = " . $today . " ORDER BY vc.SERIAL";
+		$sql = "SELECT vc.VEHICLESERIAL, vc.CLASS, vc.ID, v.CODE, v.REG_NO, v.MAKE, v.MODEL FROM vehicle_checklist vc JOIN vehicles v ON vc.VEHICLESERIAL = v.SERIAL WHERE vc.DEPOT IS NULL AND vc.WORK_DATE = " . $today . " ORDER BY vc.VEHICLESERIAL";
 	}
 	else 
 	{
-		$sql = "SELECT vc.SERIAL, vc.CLASS, vc.ID, v.CODE, v.REG_NO, v.MAKE, v.MODEL FROM vehicle_checklist vc JOIN vehicles v ON vc.SERIAL = v.SERIAL WHERE vc.DEPOT = '" . $the_depot . "' AND vc.WORK_DATE = " . $today . " ORDER BY vc.SERIAL";
+		$sql = "SELECT vc.VEHICLESERIAL, vc.CLASS, vc.ID, v.CODE, v.REG_NO, v.MAKE, v.MODEL FROM vehicle_checklist vc JOIN vehicles v ON vc.VEHICLESERIAL = v.SERIAL WHERE vc.DEPOT = '" . $the_depot . "' AND vc.WORK_DATE = " . $today . " ORDER BY vc.VEHICLESERIAL";
 	}
 	
-	$cursor = oci_parse($conn, $sql);
-	oci_execute($cursor);
+	ora_parse($cursor, $sql);
+	ora_exec($cursor);
 	
 	$results = [];
-	while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
+	// while ($row = oci_fetch_array($cursor, OCI_ASSOC+OCI_RETURN_NULLS)) 
+	while (ora_fetch_into($cursor, $row, ORA_FETCHINTO_ASSOC)) 
 	{
 		$results[] = $row;
 	}
 
 	$num_rows = count($results);
 	
-	oci_close($conn);
+	ora_close($cursor);
 	
 	return $results;
 }
@@ -215,18 +202,13 @@ get_vehicles();
 	</style>
 </head>
 <body onload="fetchFaults();">
-	
-
 <div>
 	<!-- Mock tablet menu -->
 	<div style="display: flex; flex-direction: 'row'; align-items: center; border: 1px solid #000; padding: 8px 10px;">
 		<div style="width: 300px">MANAGER TABLET MENU =></div>
-		<?php
-		$d = date('Y-m-d');
-		?>
-		<div style="flex: 1; cursor: pointer;">Vehicle Checklist<?php echo " Date: ". strtotime(date("Y-M-d")); ?></div>
+		<div style="flex: 1; cursor: pointer;">Vehicle Checklist</div>
 	</div>
-	
+
 	<form action="index.php" method="post">
 		<div style="display: flex; flex-direction: row; align-items: center; margin-top: 20px; margin-bottom: 10px; column-gap: 10px">
 			<div>Select Depot:</div>
@@ -240,8 +222,8 @@ get_vehicles();
 				<option value="DBN" <?php echo ($GLOBALS['the_depot'] == 'DBN') ? 'selected' : ''; ?>>DBN</option> 
 				<option value="DEA" <?php echo ($GLOBALS['the_depot'] == 'DEA') ? 'selected' : ''; ?>>DEA</option> 
 				<option value="ESL" <?php echo ($GLOBALS['the_depot'] == 'ESL') ? 'selected' : ''; ?>>ESL</option> 
-				<option value="GAB" <?php echo ($GLOBALS['the_depot'] == 'GAB') ? 'selected' : ''; ?>>GAB</option> 
-				<option value="JHB" <?php echo ($GLOBALS['the_depot'] == 'JHB') ? 'selected' : ''; ?>>JHB</option> 
+				<option value="GAB" <?php echo ($GLOBALS['the_depot'] == 'GAB') ? 'selected' : ''; ?>>GAB</option>
+				<option value="JHB" <?php echo ($GLOBALS['the_depot'] == 'JHB') ? 'selected' : ''; ?>>JHB</option>  
 				<option value="MAL" <?php echo ($GLOBALS['the_depot'] == 'MAL') ? 'selected' : ''; ?>>MAL</option> 
 				<option value="MAP" <?php echo ($GLOBALS['the_depot'] == 'MAP') ? 'selected' : ''; ?>>MAP</option> 
 				<option value="MAR" <?php echo ($GLOBALS['the_depot'] == 'MAR') ? 'selected' : ''; ?>>MAR</option> 
@@ -267,9 +249,9 @@ get_vehicles();
 	<!-- 
 	Serial, Code, Reg No, Make, Model
 	-->
-	<div style="display: grid; grid-template-columns: repeat(8, auto); column-gap: 0px; row-gap: 5px; border: 1px solid #000; padding: 8px 10px; max-height: 335px; overflow: hidden; overflow-y: auto">
-		<div>Serial</div>
-		<div>Code</div>
+	<div style="display: grid; grid-template-columns: repeat(8, auto); row-gap: 5px; border: 1px solid #000; padding: 8px 10px; max-height: 335px; max-width: 800px; overflow: hidden; overflow-y: auto">
+		<div></div>
+		<div>Vehicle</div>
 		<div>Reg No</div>
 		<div>Make</div>
 		<div>Model</div>
@@ -285,7 +267,7 @@ get_vehicles();
 		foreach ($results as $row)
 		{
 			$id = $row['ID'];
-			$serial = $row['SERIAL'];
+			$serial = $row['VEHICLESERIAL'];
 			$code = $row['CODE'];
 			$reg_no = $row['REG_NO'];
 			$make = $row['MAKE'];
@@ -293,10 +275,9 @@ get_vehicles();
 			$vehicle_class = $row['CLASS'];
 			
 			$vehicle_info = $serial . '@@' . $code . '@@' . $reg_no . '@@' . $make . '@@' . $model;
-
 			
 			echo "<div class='data_row'>";
-				echo '<div style="display: flex; align-items: center;">' . $serial . '</div>';
+				echo '<div style="display: flex; align-items: center;">' . '</div>';
 				echo '<div style="display: flex; align-items: center;">' . $code . '</div>';
 				echo '<div style="display: flex; align-items: center;">' . $reg_no . '</div>';
 				echo '<div style="display: flex; align-items: center;">' . $make . '</div>';
@@ -321,8 +302,8 @@ get_vehicles();
 		</div>
 	<!-- Fault picker -->
 	<div style="display: flex; flex-direction: column; row-gap: 10px;">
-	<div style="display: none;"><input id="vc_id" type="text" style="display: block" /></div>
-	<div style="display: none;"><input id="vehicle_serial" type="text" /></div>
+		<div style="display: none;"><input id="vc_id" type="text" style="display: block" /></div>
+		<div style="display: none;"><input id="vehicle_serial" type="text" /></div>
 	</div>
 	<div id="breadcrumbs" style="display: none; flex-direction: row; align-items: center; column-gap: 10px;"></div>
 	<div style="display: none;"><input type="text" id="full_fault" value="" style="display: block" /></div>
@@ -338,12 +319,7 @@ get_vehicles();
 			<div><input type="file" id="fault_picture" accept="image/*" /></div>
 			<div id="upload_status"></div>
 		</div>
-		<div style="display: flex; flex-direction: row; align-items: center;  margin-top: 10px; column-gap: 10px;">
-			<div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="showCustomConfirm()">Save</div>
-			<div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="faultCancel();">Cancel</div>
-		</div>
-		<!-- <div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="showCustomConfirm()">Save</div>
-		<div>Cancel</div> -->
+		<div style="display: flex; align-items: center; justify-content: center; width: 100px; background: #cacaca; color: black; border-radius: 5px; border: 1px solid #000; margin-top: 10px; padding: 5px 20px; cursor: pointer;" onclick="showCustomConfirm()">Save</div>
 	</div>
 </div>
 
@@ -509,7 +485,7 @@ function noIssues(id)
 		console.log('Result 2: ', result);
 		if (result == 1)
 		{
-			window.location.reload();
+			window.location.reload(); 
 		}
 		else
 		{
@@ -626,11 +602,6 @@ function handleNo()
 	saveIssue(0);
 }
 
-function pageCancel()
-{
-	window.location.reload();
-}
-
 function faultCancel()
 {
 	if (faultCtr > 0)
@@ -689,8 +660,8 @@ async function uploadPicture()
 async function sendData(formData) 
 {
 	console.log('Send data: ', formData);
-	const phpUrl = 'http://localhost/icdev/manager_checklist/manager_checklist_modal.php';
-	// const phpUrl = 'http://192.168.10.239/move/manager_checklist/manager_checklist_modal.php';
+	// const phpUrl = 'https://secure.intercape.co.za/move/manager_checklist/manager_checklist_modal.php';
+	const phpUrl = 'http://192.168.10.239/move/manager_checklist/manager_checklist_modal.php';
 	const response = await fetch(phpUrl, { method: "POST", body: JSON.stringify(formData), headers: {"Content-type": "application/json; charset=UTF-8"} });
 	const result = await response.text();
 	

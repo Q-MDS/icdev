@@ -129,3 +129,7 @@ tfc_id from technical_faults_category
 	   - No record in vehicle_checklist_detail
 	 - Did has a fault and: dates changed to 1741906800 (Mar 13 2025) & 1757800800 (Sep 13 2025)
 	   - Record was added to vehicle_checklist_detail
+
+
+
+	   Morning. I uploaded the changes for manager checklist. I backed up the vehicle_checklist (vehicle_checklist_bak) table and created a new blank one. When I ran the page for the first time it rebuilt the table. I selected PTA and the list of vehicles was there, I selected No issues for 2 of them and it added 2 records to the checklist_detail table and set the next workdate +30 days. I did 1 record with issues and the workdate was set to +6 months. So all seems to be working fine. I'm not 100% sure what to do with the live vehicle_checklist table
